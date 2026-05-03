@@ -32,6 +32,21 @@
 - 不使用外部 hook 机制，靠 skill 流程内嵌规则控制
 - 遵循项目"渐进式改造"原则
 
+### 与现有文档体系的关系
+
+现有 SKILL.md 中引用了 `docs/adr/` 和 `../grill-with-docs/` 的格式文件（`ADR-FORMAT.md`、`CONTEXT-FORMAT.md`）。实际情况：
+
+- `docs/adr/` 目录在项目中不存在
+- `../grill-with-docs/` skill 目录不存在（grill-with-docs 位于 `neptune-lab/.claude/skills/`，路径引用有误）
+- 这些引用是当前 SKILL.md 的断裂点
+
+**决策：**
+
+- ARCHITECTURE-DECISIONS.md **替代** `docs/adr/`，作为 skill 内部的轻量决策记录（增量追加，低门槛）
+- 不创建 `docs/adr/` 目录；如果未来决策足够重要需要正式 ADR，再按需创建
+- SKILL.md 中对 `../grill-with-docs/` 的引用（CONTEXT-FORMAT.md、ADR-FORMAT.md）保留，因为 grill-with-docs skill 实际存在于 `neptune-lab/.claude/skills/grill-with-docs/`
+- `docs/architecture-design.md` 中已有 11 条架构原则（F1-F5 强制 + G1-G6 建议），这些将**迁移**到 ARCHITECTURE-PRINCIPLES.md，`docs/architecture-design.md` 的原则章节变为指向 skill 的引用
+
 ---
 
 ## 二、文件体系设计
@@ -61,13 +76,23 @@ improve-codebase-architecture/
 
 | 文件 | 性质 | 内容 | 更新时机 |
 |------|------|------|----------|
-| ARCHITECTURE-PRINCIPLES.md | 稳定 | 架构原则（如"包装不替代"、"engine/ 零向上穿透"） | 发现新原则或原则被推翻时 |
-| ARCHITECTURE-DECISIONS.md | 增长 | 每条决策一行摘要，复杂决策展开详情 | 每次迭代做决策时追加 |
-| KNOWLEDGE.md | 迭代更新 | 模块状态、待办列表、研究事实 | 每次迭代结束时更新 |
-| decisions/ | 按需 | 单条决策的详细文件 | 决策需要详细记录时 |
-| research-docs/ | 按需 | 研究过程中的事实记录 | 发现需持久化的事实时 |
-| SUMMARY.md | 一次性 | v1-v21 历史总览 | 当前做一次 |
+| SKILL.md | 稳定 | 主入口，包含流程和知识读写规则 | 流程变更时 |
+| LANGUAGE.md | 不变 | 架构术语定义 | — |
+| DEEPENING.md | 不变 | 深化指导 | — |
+| INTERFACE-DESIGN.md | 不变 | 接口设计指导 | — |
+| ARCHITECTURE-PRINCIPLES.md | 稳定 | 架构原则（从 docs/architecture-design.md F1-F5/G1-G6 迁移 + 迭代积累） | 发现新原则或原则被推翻时 |
+| ARCHITECTURE-DECISIONS.md | 增长 | 每条决策一行摘要，复杂决策链接到 decisions/ 详情 | 每次迭代做决策时追加 |
+| KNOWLEDGE.md | 迭代更新 | 模块状态、待办列表、研究事实索引（指向 research-docs/） | 每次迭代结束时更新 |
+| decisions/ | 按需 | 跨 3+ 模块或需 100+ 字解释的决策详细文件 | 复杂决策时 |
+| research-docs/ | 按需 | 研究事实的详细记录 | 发现需持久化的事实时 |
+| upgrade-versions/ | 增长 | 每次迭代的完整记录（保持现有模式） | 每次迭代 |
+| SUMMARY.md | 一次性 | v1-v21 历史总览（五阶段划分在回顾时确定） | 当前做一次 |
 | SYNC-LOG.md | 增长 | 同步到 docs/ 的记录 | 每次同步时追加 |
+
+**KNOWLEDGE.md 与 okr-roadmap.md 的关系：**
+- KNOWLEDGE.md 是模块级粒度（哪个模块什么状态）
+- `docs/okr-roadmap.md` 是版本级粒度（哪个版本哪些 KR）
+- KNOWLEDGE.md 是 okr-roadmap.md 的输入之一，两者不冲突
 
 ### 2.3 真相来源与同步
 
@@ -75,8 +100,9 @@ improve-codebase-architecture/
 - **docs/ = 视图**：从 skill 同步的提炼结论
 
 同步目标：
-- `docs/architecture-design.md` ← 从 ARCHITECTURE-PRINCIPLES.md 同步原则部分
-- `docs/adr/` ← 足够重要的决策同步为正式 ADR
+- `docs/architecture-design.md` ← 替换第三节"架构设计原则"的表格内容为 ARCHITECTURE-PRINCIPLES.md 的引用（指向 skill 目录），保持文档其余部分不变
+- 不创建 `docs/adr/` 目录（由 ARCHITECTURE-DECISIONS.md 替代）
+- `docs/okr-roadmap.md` 的更新由执行流程保证，不纳入 SYNC-LOG 追踪
 - 每次同步记录到 SYNC-LOG.md
 
 ---
@@ -106,26 +132,39 @@ improve-codebase-architecture/
 决策结晶时的写入规则：
 1. 确定了一条新的架构原则 → 追加到 ARCHITECTURE-PRINCIPLES.md
 2. 做出了一个架构决策 → 追加到 ARCHITECTURE-DECISIONS.md
-3. 发现了需要持久化的研究事实 → 写入 research-docs/
-4. 复杂决策需要展开 → 在 decisions/ 下创建单独文件
+3. 发现了需要持久化的研究事实 → 写入 research-docs/，在 KNOWLEDGE.md 研究事实栏目添加索引链接
+4. 复杂决策（跨 3+ 模块或需 100+ 字解释）→ 在 decisions/ 下创建单独文件，在 ARCHITECTURE-DECISIONS.md 表格中链接
 ```
 
 ### 3.3 迭代结束：增加 Reflect 步骤
 
-在用户确认所有工作完成后，执行：
+**触发条件：**
+
+- 当用户明确表示"本次迭代完成"时触发（如"可以了"、"完成了"、"进入收尾"等信号）
+- 如果一次 Explore 产生多个候选，**全部候选处理完毕后统一 Reflect**
+- 如果用户中途放弃某个候选，不触发 Reflect；但如果放弃后有明确的其他工作完成，仍然触发
+
+**执行内容：**
 
 ```
 1. 更新 KNOWLEDGE.md：
    - 标记本次深化的模块
    - 更新模块状态（已深化/待深化/跳过）
    - 记录新发现的待深化候选
+   - 研究事实栏目添加索引链接（指向 research-docs/）
 
 2. 同步到 docs/：
-   - 架构原则有变化 → 更新 docs/architecture-design.md
+   - 架构原则有变化 → 替换 docs/architecture-design.md 第三节内容为指向 skill 的引用
    - 关键决策 → 记录到 SYNC-LOG.md
 
 3. 创建 upgrade-versions/v{N+1}/ 记录本次迭代（保持现有模式）
 ```
+
+**容错机制：**
+
+- Reflect 步骤中的文件更新按顺序执行：先 KNOWLEDGE.md → 再 SYNC-LOG.md → 最后 docs/ 同步
+- 如果中途 context window 溢出，已写入的文件保持有效，未写入的下次迭代时补齐
+- KNOWLEDGE.md 顶部的"最后更新"时间戳可用于判断上次 Reflect 是否完整
 
 ---
 
@@ -193,9 +232,11 @@ engine/ 目录不依赖上层 src/ 根文件。
 
 - [ ] {待办项}
 
-## 研究事实
+## 研究事实索引
 
-- {从迭代中积累的非显而易见的事实}
+> 详细内容见 research-docs/ 目录
+
+- [{事实标题}](research-docs/{文件名}.md) — {一句话摘要}
 ```
 
 ### 4.4 SUMMARY.md（upgrade-versions/）
@@ -218,17 +259,17 @@ v1-v21 的历史总览，包含五阶段演进、反复出现的主题、关键�
 
 ### 阶段 1：初始化（当前）
 
-1. 创建 ARCHITECTURE-PRINCIPLES.md — 从 v1-v21 回顾提炼架构原则
-2. 创建 ARCHITECTURE-DECISIONS.md — 从 v1-v21 回顾提炼关键决策
+1. 创建 ARCHITECTURE-PRINCIPLES.md — 从 `docs/architecture-design.md` F1-F5/G1-G6 迁移 + v1-v21 回顾补充
+2. 创建 ARCHITECTURE-DECISIONS.md — 从 v1-v21 的 01-optimizer-research.md 和 04-work-summary.md 提炼关键决策
 3. 创建 KNOWLEDGE.md — 从 v1-v21 回顾建立模块状态索引
-4. 创建 upgrade-versions/SUMMARY.md — v1-v21 历史总览
+4. 创建 upgrade-versions/SUMMARY.md — v1-v21 历史总览（五阶段划分在回顾时确定）
 5. 创建 SYNC-LOG.md — 初始为空
 
 ### 阶段 2：修改 SKILL.md
 
-1. Explore 阶段增加知识加载规则
-2. Grilling 阶段增加知识写入规则
-3. 增加 Reflect 步骤（迭代结束时）
+1. Explore 阶段增加知识加载规则（在 SKILL.md 第 40 行"Then use the Agent tool"之前插入）
+2. Grilling 阶段增加知识写入规则（在 SKILL.md 第 69 行"Side effects happen inline"段落中追加）
+3. 增加 Reflect 步骤（在 SKILL.md 末尾"### 3. Grilling loop"之后新增"### 4. Reflect"）
 
 ### 阶段 3：验证
 
@@ -244,7 +285,7 @@ v1-v21 的历史总览，包含五阶段演进、反复出现的主题、关键�
 1. skill 目录内存在完整的 6 个新文件
 2. SKILL.md 包含 3 处流程修改
 3. 下次使用 skill 时，Explore 阶段能读取历史认知
-4. 架构原则数量 >= 5 条（从 v1-v21 提炼）
-5. 架构决策记录 >= 10 条（从 v1-v21 提炼）
+4. 架构原则数量 >= 11 条（从 docs/architecture-design.md F1-F5/G1-G6 迁移）
+5. 架构决策记录 >= 10 条（从 v1-v21 回顾提炼）
 6. KNOWLEDGE.md 模块状态 >= 10 条
-7. docs/architecture-design.md 已从 skill 同步最新原则
+7. docs/architecture-design.md 第三节已替换为指向 skill 目录的引用
