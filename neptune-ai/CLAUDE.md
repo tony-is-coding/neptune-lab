@@ -22,6 +22,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ---
 
+## 注意
+
+在开发 [desktop](desktop) 这个项目的时候，一定要遵循 [DESIGN.md](desktop/DESIGN.md) 的规范要求，UI 规范要求。
+
+---
+
 ## 项目目标
 
 Neptune-AI = 培养专属 AI 员工的企业平台。目标用户是非技术业务人员，通过配置 Agent 模板（岗位说明书）、接入企业数据，让 Agent 上岗工作。
