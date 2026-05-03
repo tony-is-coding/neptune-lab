@@ -1,0 +1,11 @@
+{
+  "name": "dara-monorepo",
+  "private": true,
+  "workspaces": [
+    "neptune-engine/claude-code",
+    "neptune-engine/claude-code/packages/*",
+    "neptune-engine/claude-code/packages/@ant/*",
+    "neptune-ai/server",
+    "neptune-cli"
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "name": "@agent-engine/bootstrap",
+  "version": "0.1.0",
+  "description": "Agent Engine Bootstrap - 配置化启动框架",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "workspaces": [
+    "claude-code",
+    "claude-code/packages/*",
+    "claude-code/packages/@ant/*"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "test": "bun test",
+    "test:watch": "bun test --watch",
+    "docs:api": "typedoc --options claude-code/typedoc.json"
+  },
+  "keywords": [
+    "agent",
+    "engine",
+    "bootstrap"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/js-yaml": "^4.0.9",
+    "dts-bundle-generator": "^9.5.1",
+    "typedoc": "^0.28.19",
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.90.0",
+    "bcrypt": "^6.0.0",
+    "js-yaml": "^4.1.1",
+    "lru-cache": "^11.3.5",
+    "vite": "^8.0.9",
+    "zod": "^4.3.6"
+  }
+}

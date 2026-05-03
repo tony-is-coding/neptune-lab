@@ -1,0 +1,12 @@
+{
+  "name": "neptune-cli",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "bun run src/main.tsx",
+    "dev": "bun run --watch src/main.tsx"
+  },
+  "dependencies": {
+    "claude-code-best": "workspace:*"
+  }
+}
