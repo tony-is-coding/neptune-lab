@@ -28,7 +28,7 @@ export default function App() {
         <Route element={<Layout />}>
           <Route path="/" element={<Home />} />
           <Route path="/skills" element={<Skills />} />
-          <Route path="/collaborate/:id?" element={<Collaborate />} />
+          <Route path="/collaborate/:agentId" element={<Collaborate />} />
           <Route path="/agents/create" element={<CreateAgent />} />
           <Route path="/agents/:id?" element={<AgentConfig />} />
         </Route>
