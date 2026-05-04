@@ -1,24 +1,29 @@
 import type { FastifyInstance } from 'fastify';
 import { readFileSync } from 'fs';
 import { join } from 'path';
-import { queryDispatcher } from '../services/session';
+import { threadManager } from '../services/thread-manager';
 
 /**
- * Agent Chat 路由
+ * Agent Chat 路由（旧接口兼容）
  *
- * 提供 Agent 对话和历史查询功能
+ * 提供 Agent 对话和历史查询功能。
+ * 内部已从 QueryDispatcher 切换到 ThreadManager，
+ * API 格式保持不变以兼容旧客户端。
  */
 export async function sessionRoutes(fastify: FastifyInstance) {
   /**
    * POST /:agentId/chat
    * 执行 Agent 对话（SSE 流式响应）
+   *
+   * 旧接口兼容：自动查找或创建 Thread，然后 dispatch 消息。
    */
   fastify.post('/:agentId/chat', {
     preHandler: [fastify.authenticate],
   }, async (request, reply) => {
+    if (!request.user || reply.sent) return;
     const { agentId } = request.params as { agentId: string };
     const { content } = request.body as { content: string };
-    const user = request.user!;
+    const user = request.user;
 
     // 验证 content
     if (!content) {
@@ -47,28 +52,29 @@ export async function sessionRoutes(fastify: FastifyInstance) {
     });
 
     try {
-      // dispatch 返回 AsyncGenerator，直接迭代
-      const stream = queryDispatcher.dispatch({
-        tenantId: user.tenantId,
-        userId: user.userId,
+      // dispatchToAgent 自动查找或创建 Thread，然后执行 query
+      const stream = threadManager.dispatchToAgent(
+        user.tenantId,
+        user.userId,
         agentId,
         content,
-      });
+      );
 
       for await (const event of stream) {
         // 检查是否已取消
         if (abortController.signal.aborted) {
           break;
         }
-        const eventType = (event as any).type || 'message';
         reply.raw.write(`event: message\ndata: ${JSON.stringify(event)}\n\n`);
       }
 
       // 只有未被取消时才发送 done 事件
       if (!abortController.signal.aborted) {
-        const usage = queryDispatcher.getUsage();
+        const usage = threadManager.getLastUsage();
         if (usage) {
           reply.raw.write(`event: done\ndata: ${JSON.stringify({ usage })}\n\n`);
+        } else {
+          reply.raw.write(`event: done\ndata: ${JSON.stringify({})}\n\n`);
         }
       }
     } catch (error) {
@@ -84,37 +90,34 @@ export async function sessionRoutes(fastify: FastifyInstance) {
   /**
    * GET /:agentId/history
    * 获取 Agent 对话历史
+   *
+   * 旧接口兼容：查找最新的 Thread，读取其 transcript.jsonl。
    */
   fastify.get('/:agentId/history', {
     preHandler: [fastify.authenticate],
   }, async (request, reply) => {
+    if (!request.user || reply.sent) return;
     const { agentId } = request.params as { agentId: string };
-    const user = request.user!;
+    const user = request.user;
     const { limit } = request.query as { limit?: string };
 
     try {
-      // 1. 获取该用户的 session workspace（使用最新的活跃 session）
-      const sessions = await queryDispatcher.list({
-        tenantId: user.tenantId,
-        userId: user.userId,
-        agentId,
-        status: 'active',
-        limit: 1,
-      });
+      // 1. 查找最新的 Thread（按 lastActiveAt 排序）
+      const { data: threads } = await threadManager.list(agentId, user.userId, { limit: 1 });
 
-      if (sessions.length === 0) {
+      if (threads.length === 0) {
         return reply.send({
           data: [],
           meta: {
             agentId,
             limit: limit ? parseInt(limit) : 50,
-            message: 'No active session found',
+            message: 'No thread found',
           },
         });
       }
 
-      const session = sessions[0];
-      const workspace = session.workspace;
+      const thread = threads[0];
+      const workspace = thread.workspace;
 
       // 2. 读取 transcript.jsonl
       const transcriptPath = join(workspace, 'transcript.jsonl');
@@ -150,7 +153,7 @@ export async function sessionRoutes(fastify: FastifyInstance) {
         data: messages,
         meta: {
           agentId,
-          sessionId: session.id,
+          threadId: thread.id,
           limit: limit ? parseInt(limit) : 50,
           count: messages.length,
         },
