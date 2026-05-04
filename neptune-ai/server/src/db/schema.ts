@@ -92,6 +92,8 @@ export const sessions = pgTable('sessions', {
   userId: uuid('user_id').notNull().references(() => users.id),
   templateId: uuid('template_id').references(() => agentTemplates.id),
   status: text('status').notNull().default('active'), // 'created' | 'running' | 'paused' | 'terminated' | 'error'
+  title: text('title'),
+  summary: text('summary'),
   workspace: text('workspace').notNull(), // 租户隔离的工作目录
   lastActiveAt: timestamp('last_active_at'), // 最后活跃时间
   createdAt: timestamp('created_at').defaultNow(),
