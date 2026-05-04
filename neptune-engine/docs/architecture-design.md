@@ -1,10 +1,10 @@
 # Agent Engine 架构设计
 
 > 更新时间：2026-04-29（V21 完成 · V7 技术债收尾 + V7.5 全局状态解耦）
-> 覆盖 `claude-code/src/` 目录全部模块
+> 覆盖 `src/` 目录全部模块
 
 **核心文档**：
-- [SDK 纲领文档](../claude-code/ARCHITECTURE.md) — 项目定位 + 架构原则 + 目标架构 + 研发规约（首要参考）
+- [SDK 纲领文档](./ARCHITECTURE.md) — 项目定位 + 架构原则 + 目标架构 + 研发规约（首要参考）
 - [OKR 路线图](okr-roadmap.md) — 版本交付计划与 KR 验收标准
 
 ---
@@ -116,7 +116,7 @@
   SDK   唯一交互入口 — 开发者通过 SDK 与框架交互，不直接接触内部实现
 ```
 
-### 2.2 模块依赖关系（claude-code/src/ 内部完整依赖链）
+### 2.2 模块依赖关系（src/ 内部完整依赖链）
 
 ```
 AgentEngine (SDK 入口) ─ engine/AgentEngine.ts
@@ -258,7 +258,7 @@ bootstrap/ ─── 启动引导 + state.ts 进程单例 (sessionId·CWD·proje
 
 ## 四、项目目录说明
 
-### 4.1 claude-code/src/ 目录树
+### 4.1 src/ 目录树
 
 ```
 src/

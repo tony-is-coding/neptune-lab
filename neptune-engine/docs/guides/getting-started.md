@@ -45,7 +45,7 @@ bun install
 
 ```bash
 # 在你的项目目录
-bun add ../claude-not-only-code/claude-code
+bun add ..
 ```
 
 ## 基础配置

@@ -18,10 +18,10 @@
 
 ## 关键目录说明
 
-- **claude-code**：核心项目框架主代码，对外提供 SDK
-- **auto-upgrade**：版本升级脚本（v1-v21）
-- **docs**：设计文档、API 文档
-- **research-docs**：研究文档
+- **src/**：核心项目框架主代码（engine/ 为 SDK 核心）
+- **packages/**：workspace 子包（builtin-tools, mcp-client 等）
+- **docs/**：设计文档、API 文档
+- **.claude/skills/improve-codebase-architecture/**：架构优化技能及历史迭代记录
 
 ## 测试设计原则
 

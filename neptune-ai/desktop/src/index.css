@@ -1,0 +1,114 @@
+@font-face {
+  font-family: 'Plus Jakarta Sans';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/PlusJakartaSans-Regular.ttf') format('truetype');
+}
+@font-face {
+  font-family: 'Plus Jakarta Sans';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/fonts/PlusJakartaSans-Medium.ttf') format('truetype');
+}
+@font-face {
+  font-family: 'Plus Jakarta Sans';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/fonts/PlusJakartaSans-SemiBold.ttf') format('truetype');
+}
+@font-face {
+  font-family: 'Plus Jakarta Sans';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/PlusJakartaSans-Bold.ttf') format('truetype');
+}
+@import "tailwindcss";
+
+@theme {
+  /* Neptune-AI Design Tokens */
+
+  /* 深色系 */
+  --color-np-dark: #181512;
+  --color-np-primary: #2d2926;
+
+  /* 表面色 */
+  --color-np-bg: #f5f4ed;
+  --color-np-bg-warm: #f7f3f1;
+  --color-np-ivory: #faf9f5;
+  --color-np-surface: #f5f2ed;
+  --color-np-sidebar: #f1edec;
+  --color-np-canvas: #ffffff;
+
+  /* 语义色 */
+  --color-np-terracotta: #c96442;
+  --color-np-coral: #d97757;
+  --color-np-online: #10b981;
+  --color-np-focus: #3898ec;
+  --color-np-green: #4ade80;
+  --color-np-green-dark: #2e7d32;
+  --color-np-red: #ba1a1a;
+  --color-np-blue: #2563eb;
+
+  /* 边框色 */
+  --color-np-border: #cfc4bd;
+  --color-np-border-light: #e6e1e0;
+  --color-np-border-lighter: #e8e4de;
+  --color-np-border-subtle: #e7e5e4;
+  --color-np-border-warm: #e8e6dc;
+  --color-np-border-card: #f1edec;
+
+  /* 文本色 */
+  --color-np-text: #1c1b1b;
+  --color-np-text-secondary: #4d4540;
+  --color-np-text-muted: #78716c;
+  --color-np-text-tertiary: #87867f;
+  --color-np-text-placeholder: #7e756f;
+  --color-np-text-accent: #6f6350;
+  --color-np-text-tab: #a8a29e;
+  --color-np-text-btn-disabled: #96908b;
+
+  /* 强调色 */
+  --color-np-accent: #f2e0c8;
+
+  /* 输入框 */
+  --color-np-input-bg: #fdf8f7;
+  --color-np-input-bg-alt: #f7f3f1;
+
+  /* 字体 */
+  --font-family-sans: 'Plus Jakarta Sans', sans-serif;
+}
+
+/* Base styles */
+body {
+  font-family: var(--font-family-sans);
+  background: var(--color-np-bg);
+  color: var(--color-np-text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-np-border-light);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-np-border);
+}
+
+/* Custom focus ring */
+*:focus-visible {
+  outline: 2px solid var(--color-np-primary);
+  outline-offset: 2px;
+  border-radius: 4px;
+}

@@ -21,17 +21,14 @@
 
 ## 关键目录
 
-- `claude-code/` — 核心 SDK 源码（src/、packages/、完整 bun workspace）
-- `auto-upgrade/` — 版本升级脚本（v1-v21）
+- `src/` — 核心 SDK 源码（engine/ 为框架包装层）
 - `docs/` — 设计文档、API 文档
-- `research-docs/` — 研究文档
 
 ## 如何开发
 
 ```bash
-cd neptune-engine/claude-code
+cd neptune-engine/
 bun install          # 安装依赖
-bun test             # 运行测试（2472 tests / 0 fail）
-bun run dev          # 开发模式
+bun test             # 运行测试
 bunx tsc --noEmit    # 类型检查
 ```

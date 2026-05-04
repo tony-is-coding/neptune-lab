@@ -8,7 +8,7 @@
 
 ```
 claude-not-only-code/
-├── claude-code/          # 框架核心（SDK）
+├── src/                   # 框架核心（SDK）
 │   └── src/
 │       ├── query/        # 查询引擎（agent loop）
 │       ├── tools/        # 工具系统
@@ -18,7 +18,7 @@ claude-not-only-code/
 │       ├── context.ts    # 上下文构建
 │       ├── commands.ts   # 命令注册（从 CLI 包加载实现）
 │       └── ...
-├── claude-code-cli/      # CLI 宿主
+├── claude-code-cli/      # CLI 宿主（独立目录）
 │   ├── package.json
 │   └── src/
 │       ├── entrypoints/
@@ -88,12 +88,12 @@ bun run dev
 CLI 文件通过相对路径导入框架模块：
 
 ```
-claude-code-cli/src/main.tsx          → ../../claude-code/src/...
-claude-code-cli/src/utils/auth.ts     → ../../../claude-code/src/...
-claude-code-cli/src/cli/handlers/     → ../../../../claude-code/src/...
+claude-code-cli/src/main.tsx          → ../../src/...
+claude-code-cli/src/utils/auth.ts     → ../../../src/...
+claude-code-cli/src/cli/handlers/     → ../../../../src/...
 ```
 
-深度计算：从 CLI 源文件到 `claude-code/src/` 的相对路径深度 = 子目录层数 + 2。
+深度计算：从 CLI 源文件到 `src/` 的相对路径深度 = 子目录层数 + 2。
 
 ### CLI 本地导入
 
@@ -111,7 +111,7 @@ CLI 的 `tsconfig.json` 配置了 `src/*` 路径别名：
 ```json
 {
   "paths": {
-    "src/*": ["./src/*", "../../claude-code/src/*"]
+    "src/*": ["./src/*", "../../src/*"]
   }
 }
 ```
@@ -136,7 +136,7 @@ CLI 的 `tsconfig.json` 配置了 `src/*` 路径别名：
 框架通过 `ICommandProvider` 接口定义命令系统抽象。CLI 在启动时注入具体实现。
 
 ```typescript
-// 框架：claude-code/src/types/commandProvider.ts
+// 框架：src/types/commandProvider.ts
 interface ICommandProvider {
   getCommands(cwd: string): Promise<Command[]>
   getSlashCommandToolSkills(cwd: string): Promise<Command[]>
@@ -144,7 +144,7 @@ interface ICommandProvider {
   // ... 更多方法
 }
 
-// 框架：claude-code/src/commands.ts
+// 框架：src/commands.ts
 export function setCommandProvider(p: ICommandProvider): void
 ```
 
@@ -167,7 +167,7 @@ export function setCommandProvider(p: ICommandProvider): void
 
 ## 已知限制
 
-1. **Linter 路径重写**：Biome 可能将 `../../claude-code/src/` 重写为 `./`（基于 tsconfig paths）。修改文件后需要检查导入路径。
+1. **Linter 路径重写**：Biome 可能将 `../../src/` 重写为 `./`（基于 tsconfig paths）。修改文件后需要检查导入路径。
 
 2. **commands.ts 反向依赖**：框架的 `commands.ts` 引用了 CLI 包中的 124 个命令模块。
 

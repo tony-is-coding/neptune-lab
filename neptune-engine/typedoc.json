@@ -1,0 +1,54 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "entryPoints": [
+    "src/engine/index.ts"
+  ],
+  "out": "docs/api",
+  "tsconfig": "./tsconfig.json",
+  "skipErrorChecking": true,
+  "excludePrivate": true,
+  "excludeProtected": false,
+  "excludeInternal": true,
+  "hideGenerator": true,
+  "sort": ["source-order"],
+  "kindSortOrder": [
+    "Document",
+    "Project",
+    "Module",
+    "Namespace",
+    "Enum",
+    "EnumMember",
+    "Class",
+    "Interface",
+    "TypeAlias",
+    "Constructor",
+    "Property",
+    "Method",
+    "Function",
+    "Variable"
+  ],
+  "categorizeByGroup": true,
+  "defaultCategory": "其他",
+  "categoryOrder": [
+    "核心公共 API",
+    "AgentEngine 核心 API",
+    "扩展 API",
+    "SDK 便捷 API",
+    "*"
+  ],
+  "includeVersion": true,
+  "theme": "default",
+  "gitRevision": "main",
+  "readme": "none",
+  "exclude": [
+    "**/*.test.ts",
+    "**/__tests__/**",
+    "**/node_modules/**"
+  ],
+  "plugin": [],
+  "validation": {
+    "notExported": true,
+    "invalidLink": true,
+    "notDocumented": false
+  }
+}

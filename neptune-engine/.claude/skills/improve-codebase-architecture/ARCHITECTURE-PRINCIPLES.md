@@ -11,14 +11,14 @@
 ### P1: 包装不替代
 禁止自建 QueryEngine、工具 handler、LLM 调用层、权限系统、会话存储。
 **Why:** CC 原始能力稳定可靠，重写风险极高。
-**Scope:** 所有对 claude-code/ 的改动。
+**Scope:** 所有对 src/ 的改动。
 **Since:** v1（项目立项即确立）
 **Origin:** F1
 
 ### P2: 单向分层依赖
 L0 ← L1 ← L2 ← L3，禁止反向 import。
 **Why:** 防止循环依赖，保证层间独立可测。v1-V9 耗时 9 个版本才将 engine/ 反向依赖从 74 条清零。
-**Scope:** claude-code/src/ 内所有 import。
+**Scope:** src/ 内所有 import。
 **Since:** v3（确立 L1-L4 分层标准）
 **Origin:** F2
 
