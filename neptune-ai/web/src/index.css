@@ -1,0 +1,84 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --color-brand: #c96442;
+  --color-parchment: #f5f4ed;
+  --color-ivory: #faf9f5;
+  --color-sand: #e8e6dc;
+  --color-stone: #87867f;
+  --color-olive: #5e5d59;
+  --color-charcoal: #141413;
+  --color-border-cream: #f0eee6;
+  --color-border-warm: #e8e6dc;
+  --color-success: #10b981;
+  --color-error: #b53333;
+
+  /* Additional colors from screenshots / styles */
+  --color-surface-lowest: #ffffff;
+  --color-surface-low: #fdfbf7;
+  --color-surface: #faf9f5;
+  --color-surface-container: #faf9f5;
+  --color-surface-container-high: #f5f4ed;
+  --color-surface-container-highest: #e8e6dc;
+  --color-sidebar: #e5e3db;
+  
+  --color-on-surface: #1c1b1b;
+  --color-on-surface-variant: #4d4540;
+
+  --color-primary: #181512;
+  --color-on-primary: #ffffff;
+  --color-primary-container: #2d2926;
+  --color-on-primary-container: #96908b;
+
+  --color-secondary-container: #f2e0c8;
+  --color-on-secondary-container: #6f6350;
+
+  --font-sans: 'Plus Jakarta Sans', system-ui, sans-serif;
+  --font-serif: 'Georgia', serif;
+}
+
+body {
+  background-color: var(--color-parchment);
+  color: var(--color-charcoal);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+.ring-shadow {
+  box-shadow: 0px 0px 0px 1px var(--color-border-cream);
+}
+.ring-shadow-interactive {
+  box-shadow: 0px 0px 0px 1px #d1cfc5;
+}
+.whisper-shadow {
+  box-shadow: 0px 4px 24px rgba(0,0,0,0.05);
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: var(--color-surface-container-highest);
+    border-radius: 20px;
+}
+.custom-scrollbar:hover::-webkit-scrollbar-thumb {
+    background-color: #cfc4bd;
+}
+
+button {
+  cursor: pointer;
+}
+
+@keyframes blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+.animate-blink {
+  animation: blink 1s infinite;
+}
