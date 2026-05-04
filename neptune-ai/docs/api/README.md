@@ -3,7 +3,7 @@
 > Base URL: `http://localhost:3000`
 > API 前缀: `/api/v1`
 > 版本: v1
-> 最后更新: 2026-05-04
+> 最后更新: 2026-05-05
 
 ## 目录
 
@@ -217,7 +217,8 @@ data: {"error":"QUERY_ERROR","message":"..."}
 | 租户 | [tenants.md](./tenants.md) | 租户 CRUD |
 | 用户 | [users.md](./users.md) | 用户 CRUD |
 | Agent 模板 | [agents.md](./agents.md) | Agent CRUD、激活/停用、统计、文档管理 |
-| 对话 | [sessions.md](./sessions.md) | SSE 流式对话、历史记录 |
+| Thread | [threads.md](./threads.md) | 对话线程 CRUD、SSE 流式对话、历史记录 |
+| 对话（旧） | [sessions.md](./sessions.md) | SSE 流式对话、历史记录（已废弃，建议使用 Thread） |
 | 计费 | [billing.md](./billing.md) | 租户账单汇总 |
 | 缺口分析 | [gap-analysis.md](./gap-analysis.md) | 前端需求 vs 现有接口差异 |
 

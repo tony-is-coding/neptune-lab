@@ -1,5 +1,7 @@
 # 对话模块 (Sessions)
 
+> **已废弃**：Sessions 模块已被 [Thread 模块](./threads.md) 替代。Thread 提供显式的对话线程管理、多对话支持、状态追踪等能力。旧的 Sessions 接口（`/:agentId/chat`、`/:agentId/history`）仍可使用，内部已委托给 ThreadManager 实现以保持向后兼容。建议新功能使用 Thread 接口。
+
 ## 接口总览
 
 | 方法 | 路径 | 认证 | 角色 | 说明 |
