@@ -365,7 +365,25 @@ GET /api/v1/agents?limit=20&offset=0&active=true
 
 **200 OK**:
 
-统计数据格式由 `agentTemplateService.getStats()` 返回，具体结构待确认。
+```json
+{
+  "mtdCost": 142.50,
+  "budgetLimit": 500,
+  "thirtyDaySessions": 1204,
+  "avgLatency": 450,
+  "activeSessions": 3
+}
+```
+
+**字段说明**:
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| mtdCost | number | 本月至今费用（美元），从 billing_records 聚合 |
+| budgetLimit | number | 预算上限（当前硬编码 500 美元） |
+| thirtyDaySessions | number | 最近 30 天会话总数 |
+| avgLatency | number | 平均延迟（ms，当前为 mock 值 450ms） |
+| activeSessions | number | 当前活跃会话数 |
 
 ### 错误响应
 
@@ -391,6 +409,8 @@ GET /api/v1/agents?limit=20&offset=0&active=true
 ### 响应
 
 **200 OK**:
+
+> 注意：此接口只返回 `{ data: [] }`，不包含 `meta` 字段（与其他列表接口不同）。
 
 ```json
 {

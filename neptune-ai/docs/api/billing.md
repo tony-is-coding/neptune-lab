@@ -6,7 +6,8 @@
 |------|------|------|------|------|
 | GET | `/api/v1/tenants/:id/billing` | Bearer | platform_admin 或该租户的 tenant_admin | 获取租户账单汇总 |
 
-> 权限要求：用户必须是 `platform_admin`，或者是该租户的 `admin`（`tenantId` 匹配）。
+> 权限要求：用户角色必须为 `platform_admin`，或者是该租户的 `admin` 且 `tenantId` 匹配。
+> 注意：代码中角色判断使用 `tenant_admin`。
 
 ---
 
@@ -32,16 +33,32 @@
   "database": {
     "totalInputTokens": 50000,
     "totalOutputTokens": 120000,
-    "totalCostCents": 14250
+    "totalCostCents": 14250,
+    "recordCount": 35
   },
   "realtime": {
-    "currentDayTokens": 15000,
-    "quotaLimit": 1000000
+    "inputTokens": "15000",
+    "outputTokens": "30000",
+    "totalCost": "14250"
   }
 }
 ```
 
-> 注意：具体响应结构取决于 `costAggregator.getTenantUsage()` 和 `costAggregator.getQuotaCounter()` 的实现。
+**字段说明**:
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| database | object | 数据库聚合的累计用量 |
+| database.totalInputTokens | number | 累计输入 Token 数 |
+| database.totalOutputTokens | number | 累计输出 Token 数 |
+| database.totalCostCents | number | 累计费用（分） |
+| database.recordCount | number | 计费记录总数 |
+| realtime | object | Redis 中的实时配额计数器 |
+| realtime.inputTokens | string | 当日输入 Token 数（Redis 返回值为 string） |
+| realtime.outputTokens | string | 当日输出 Token 数 |
+| realtime.totalCost | string | 当日累计费用（分） |
+
+> 注意：`realtime` 字段来自 Redis `hgetall`，所有值均为 string 类型，前端需要自行转换。
 
 ### 错误响应
 

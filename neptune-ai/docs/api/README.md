@@ -58,8 +58,11 @@ Authorization: Bearer <accessToken>
 
 | 角色 | 说明 |
 |------|------|
-| `admin` | 租户管理员 / 平台管理员，可执行创建/更新/删除操作 |
+| `platform_admin` | 平台管理员，可查看所有租户的账单等跨租户操作 |
+| `admin` / `tenant_admin` | 租户管理员，可执行租户内的创建/更新/删除操作 |
 | `user` | 普通用户，仅可查看和使用 |
+
+> 注意：注册时创建租户的用户角色为 `admin`，billing 接口中使用 `tenant_admin` 做权限判断。
 
 ---
 
@@ -180,7 +183,7 @@ X-Accel-Buffering: no
 | event | 数据格式 | 说明 |
 |-------|----------|------|
 | `connected` | `{ agentId, timestamp }` | 连接建立确认，首次事件 |
-| `message` | `{ type, ... }` | Agent 回复消息，流式逐条推送 |
+| `message` | `{ type, ... }` | Agent 回复消息，流式逐条推送。SSE event name 固定为 `message`，事件的具体类型通过 `data.type` 区分 |
 | `done` | `{ usage: { ... } }` | 对话完成，携带 token 用量统计 |
 | `error` | `{ error, message }` | 发生错误 |
 
@@ -188,7 +191,7 @@ X-Accel-Buffering: no
 
 ```
 event: connected
-data: {"agentId":"xxx","timestamp":1714800000}
+data: {"agentId":"xxx","timestamp":1714800000000}
 
 event: message
 data: {"type":"assistant","content":"..."}
@@ -217,3 +220,46 @@ data: {"error":"QUERY_ERROR","message":"..."}
 | 对话 | [sessions.md](./sessions.md) | SSE 流式对话、历史记录 |
 | 计费 | [billing.md](./billing.md) | 租户账单汇总 |
 | 缺口分析 | [gap-analysis.md](./gap-analysis.md) | 前端需求 vs 现有接口差异 |
+
+---
+
+## 健康检查端点
+
+以下端点不在 `/api/v1` 前缀下，无需认证：
+
+### GET /health
+
+应用健康状态。
+
+**响应**:
+
+```json
+{
+  "status": "ok",
+  "timestamp": "2026-05-04T10:30:00.000Z",
+  "uptime": 3600.5
+}
+```
+
+### GET /health/db
+
+数据库连接状态。
+
+**响应**（正常）:
+
+```json
+{
+  "status": "ok",
+  "database": "connected"
+}
+```
+
+**响应**（异常）:
+
+```json
+{
+  "status": "error",
+  "database": "disconnected",
+  "error": "Connection refused"
+}
+```
