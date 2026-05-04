@@ -98,23 +98,15 @@ export async function optionalAuthMiddleware(
  * @param allowedRoles 允许的角色列表
  */
 export function roleMiddleware(...allowedRoles: string[]) {
-  return async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
+  return async (request: FastifyRequest, _reply: FastifyReply): Promise<void> => {
     const user = request.user;
 
     if (!user) {
-      reply.status(401).send({
-        error: 'UNAUTHORIZED',
-        message: '需要认证',
-      });
-      return;
+      throw { statusCode: 401, error: 'UNAUTHORIZED', message: '需要认证' };
     }
 
     if (!allowedRoles.includes(user.role)) {
-      reply.status(403).send({
-        error: 'FORBIDDEN',
-        message: '权限不足',
-      });
-      return;
+      throw { statusCode: 403, error: 'FORBIDDEN', message: '权限不足' };
     }
   };
 }
