@@ -54,14 +54,19 @@ data: {"agentId":"uuid","timestamp":1714800000000}
 
 #### 事件 2+: message（多次）
 
-Agent 回复消息，逐条推送。
+Agent 回复消息，逐条推送。所有消息事件统一使用 `event: message`，具体类型通过 `data.type` 区分。
 
-```
-event: message
-data: {"type":"assistant","content":"正在分析您的销售数据..."}
-```
+**支持的事件类型**：
 
-> 注意：当前 `event` 字段固定为 `message`，具体事件类型需要通过 `data.type` 字段区分。
+| data.type | data 结构 | 说明 |
+|-----------|----------|------|
+| `text` | `{ type: "text", content: string }` | 流式文字输出 |
+| `tool_use` | `{ type: "tool_use", id: string, name: string, input: object, status: "running" }` | 工具调用开始 |
+| `tool_result` | `{ type: "tool_result", toolUseId: string, output: unknown }` | 工具调用结果 |
+| `tool_status` | `{ type: "tool_status", id: string, status: "completed" \| "error" }` | 工具状态更新 |
+| `error` | `{ type: "error", message: string }` | 执行出错 |
+
+> SSE 事件格式与 Thread 接口一致，详见 [Thread SSE 文档](./threads.md#post-apiv1agentsagentidthreadsthreadididchat)。
 
 #### 事件 N: done
 
@@ -149,19 +154,25 @@ GET /api/v1/agents/agent-id/history?limit=50
 {
   "data": [
     {
+      "id": "msg-uuid-1",
       "role": "user",
-      "content": "帮我分析一下这个月的销售数据",
-      "timestamp": "2026-05-04T10:30:00.000Z"
+      "blocks": [
+        { "type": "text", "content": "帮我分析一下这个月的销售数据" }
+      ],
+      "status": "complete"
     },
     {
+      "id": "msg-uuid-2",
       "role": "assistant",
-      "content": "正在分析您的销售数据...",
-      "timestamp": "2026-05-04T10:30:05.000Z"
+      "blocks": [
+        { "type": "text", "content": "正在分析您的销售数据..." }
+      ],
+      "status": "complete"
     }
   ],
   "meta": {
     "agentId": "uuid",
-    "sessionId": "session-id-string",
+    "threadId": "thread-id-string",
     "limit": 50,
     "count": 2
   }
@@ -169,11 +180,11 @@ GET /api/v1/agents/agent-id/history?limit=50
 ```
 
 > 注意：
-> - 消息来源于文件系统的 `transcript.jsonl`，格式由 SDK 定义
-> - 如果没有活跃的 Session，`data` 为空数组，`meta.message` 为 `"No active session found"`
+> - 历史数据经 `transformHistory()` 转换为结构化 `blocks` 格式，与 Thread History 接口格式一致
+> - 如果没有活跃的 Thread，`data` 为空数组，`meta.message` 为 `"No thread found"`
 > - 消息按时间正序排列，`limit` 生效时返回最近 N 条
 
-### 无活跃 Session 的响应
+### 无 Thread 的响应
 
 ```json
 {
@@ -181,7 +192,7 @@ GET /api/v1/agents/agent-id/history?limit=50
   "meta": {
     "agentId": "uuid",
     "limit": 50,
-    "message": "No active session found"
+    "message": "No thread found"
   }
 }
 ```

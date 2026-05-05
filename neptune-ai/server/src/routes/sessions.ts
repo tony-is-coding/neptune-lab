@@ -2,6 +2,8 @@ import type { FastifyInstance } from 'fastify';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import { threadManager } from '../services/thread-manager';
+import { mapSSEEvent } from '../services/sse-event-mapper';
+import { transformHistory } from '../services/history-transformer';
 
 /**
  * Agent Chat 路由（旧接口兼容）
@@ -60,12 +62,16 @@ export async function sessionRoutes(fastify: FastifyInstance) {
         content,
       );
 
-      for await (const event of stream) {
+      for await (const sdkEvent of stream) {
         // 检查是否已取消
         if (abortController.signal.aborted) {
           break;
         }
-        reply.raw.write(`event: message\ndata: ${JSON.stringify(event)}\n\n`);
+        // 将 SDK 事件映射为前端格式
+        const sseEvents = mapSSEEvent(sdkEvent as any);
+        for (const event of sseEvents) {
+          reply.raw.write(`event: message\ndata: ${JSON.stringify(event)}\n\n`);
+        }
       }
 
       // 只有未被取消时才发送 done 事件
@@ -149,13 +155,16 @@ export async function sessionRoutes(fastify: FastifyInstance) {
         console.warn('读取 transcript.jsonl 失败:', error);
       }
 
+      // 转换为前端结构化格式（blocks）
+      const transformed = transformHistory(messages);
+
       reply.send({
-        data: messages,
+        data: transformed,
         meta: {
           agentId,
           threadId: thread.id,
           limit: limit ? parseInt(limit) : 50,
-          count: messages.length,
+          count: transformed.length,
         },
       });
     } catch (error) {

@@ -1,0 +1,1 @@
+ALTER TABLE "agent_templates" ADD COLUMN "icon" text DEFAULT 'smart_toy';

@@ -311,14 +311,40 @@ data: {"threadId":"uuid","timestamp":1714800000000}
 
 #### 事件 2+: message（多次）
 
-Agent 回复消息，逐条推送。
+Agent 回复消息，逐条推送。所有消息事件统一使用 `event: message`，具体类型通过 `data.type` 区分。
+
+**支持的事件类型**：
+
+| data.type | data 结构 | 说明 |
+|-----------|----------|------|
+| `text` | `{ type: "text", content: string }` | 流式文字输出 |
+| `tool_use` | `{ type: "tool_use", id: string, name: string, input: object, status: "running" }` | 工具调用开始 |
+| `tool_result` | `{ type: "tool_result", toolUseId: string, output: unknown }` | 工具调用结果 |
+| `tool_status` | `{ type: "tool_status", id: string, status: "completed" \| "error" }` | 工具状态更新 |
+| `error` | `{ type: "error", message: string }` | 执行出错 |
+
+**示例**：
 
 ```
 event: message
-data: {"type":"assistant","content":"正在分析您的销售数据..."}
+data: {"type":"text","content":"正在分析您的销售数据..."}
+
+event: message
+data: {"type":"tool_use","id":"tool-1","name":"read_file","input":{"path":"sales.csv"},"status":"running"}
+
+event: message
+data: {"type":"tool_result","toolUseId":"tool-1","output":{"rows":1000}}
+
+event: message
+data: {"type":"tool_status","id":"tool-1","status":"completed"}
+
+event: message
+data: {"type":"text","content":"分析完成，发现以下趋势..."}
 ```
 
-> 注意：当前 `event` 字段固定为 `message`，具体事件类型需要通过 `data.type` 字段区分。
+> **映射规则**：SDK 产出的 `assistant` 事件映射为 `text`，`tool_result` 事件同时映射为 `tool_result` + `tool_status`。`system` 事件静默丢弃。
+>
+> **当前不支持的事件**：`thinking`、`artifact`、`plan_task`、`bg_task` — 这些需要 SDK 后续支持或后端业务层实现。
 
 #### 事件 N: done
 
@@ -410,14 +436,23 @@ GET /api/v1/agents/agent-id/threads/thread-id/history?limit=50
 {
   "data": [
     {
+      "id": "msg-uuid-1",
       "role": "user",
-      "content": "帮我分析一下这个月的销售数据",
-      "timestamp": "2026-05-05T10:30:00.000Z"
+      "blocks": [
+        { "type": "text", "content": "帮我分析一下这个月的销售数据" }
+      ],
+      "status": "complete"
     },
     {
+      "id": "msg-uuid-2",
       "role": "assistant",
-      "content": "正在分析您的销售数据...",
-      "timestamp": "2026-05-05T10:30:05.000Z"
+      "blocks": [
+        { "type": "text", "content": "正在分析您的销售数据..." },
+        { "type": "tool_use", "id": "tool-1", "name": "read_file", "input": { "path": "sales.csv" }, "status": "completed" },
+        { "type": "tool_result", "toolUseId": "tool-1", "output": { "rows": 1000 } },
+        { "type": "text", "content": "分析完成，发现以下趋势..." }
+      ],
+      "status": "complete"
     }
   ],
   "meta": {
@@ -429,10 +464,28 @@ GET /api/v1/agents/agent-id/threads/thread-id/history?limit=50
 }
 ```
 
+**HistoryMessage 结构**：
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| id | string | 消息唯一标识（UUID） |
+| role | `"user"` \| `"assistant"` | 角色 |
+| blocks | HistoryBlock[] | 结构化内容块数组 |
+| status | `"complete"` | 消息状态 |
+
+**HistoryBlock 类型**：
+
+| type | 结构 | 说明 |
+|------|------|------|
+| `text` | `{ type: "text", content: string }` | 文本内容 |
+| `tool_use` | `{ type: "tool_use", id: string, name: string, input?: object, status: "completed" }` | 工具调用 |
+| `tool_result` | `{ type: "tool_result", toolUseId: string, output?: unknown }` | 工具结果 |
+
 > 注意：
-> - 消息来源于文件系统的 `transcript.jsonl`，格式由 SDK 定义
+> - 消息来源于文件系统的 `transcript.jsonl`，经 `transformHistory()` 转换为结构化格式
 > - 如果 transcript 文件不存在，`data` 为空数组
 > - 消息按时间正序排列，`limit` 生效时返回最近 N 条
+> - **兼容性**：前端如果只处理 `content` 字段，后端也支持旧格式（包装为 `[{ type: "text", content }]`）
 
 ### 无历史记录的响应
 

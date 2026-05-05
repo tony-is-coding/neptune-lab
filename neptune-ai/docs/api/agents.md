@@ -30,6 +30,7 @@
 | tenantId | UUID | 所属租户 |
 | name | string | Agent 名称 |
 | description | string | 描述 |
+| icon | string | Material Symbols 图标名，默认 `smart_toy`（如 `receipt_long`、`monitoring`、`smart_toy`） |
 | systemPrompt | string | 系统提示词 |
 | modelConfig | object | 模型配置 |
 | modelConfig.provider | string | 模型提供商 |
@@ -68,6 +69,7 @@
 |------|------|------|------|
 | name | string | 是 | Agent 名称 |
 | description | string | 否 | 描述 |
+| icon | string | 否 | Material Symbols 图标名，默认 `smart_toy` |
 | systemPrompt | string | 是 | 系统提示词 |
 | modelConfig | object | 是 | 模型配置 |
 | modelConfig.provider | string | 是 | 提供商 |
@@ -93,6 +95,7 @@
 {
   "name": "客服助手",
   "description": "处理客户咨询的 AI 助手",
+  "icon": "support_agent",
   "systemPrompt": "你是一个专业的客服代表...",
   "modelConfig": {
     "provider": "openai",
@@ -240,6 +243,7 @@ GET /api/v1/agents?limit=20&offset=0&active=true
 |------|------|------|
 | name | string | Agent 名称 |
 | description | string | 描述 |
+| icon | string | Material Symbols 图标名 |
 | systemPrompt | string | 系统提示词 |
 | modelConfig | object | 模型配置 |
 | tools | string[] | 工具列表 |

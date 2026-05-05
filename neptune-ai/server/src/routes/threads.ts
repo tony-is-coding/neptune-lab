@@ -15,6 +15,8 @@ import type { FastifyInstance } from 'fastify';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import { threadManager } from '../services/thread-manager';
+import { mapSSEEvent } from '../services/sse-event-mapper';
+import { transformHistory } from '../services/history-transformer';
 import { roleMiddleware } from '../middleware/auth';
 
 export async function threadRoutes(fastify: FastifyInstance) {
@@ -274,20 +276,20 @@ export async function threadRoutes(fastify: FastifyInstance) {
     try {
       const stream = threadManager.dispatch(threadId, content);
 
-      for await (const event of stream) {
+      for await (const sdkEvent of stream) {
         if (abortController.signal.aborted) {
           break;
         }
-        reply.raw.write(`event: message\ndata: ${JSON.stringify(event)}\n\n`);
+        // 将 SDK 事件映射为前端格式
+        const sseEvents = mapSSEEvent(sdkEvent as any);
+        for (const event of sseEvents) {
+          reply.raw.write(`event: message\ndata: ${JSON.stringify(event)}\n\n`);
+        }
       }
 
       if (!abortController.signal.aborted) {
         const usage = threadManager.getLastUsage();
-        if (usage) {
-          reply.raw.write(`event: done\ndata: ${JSON.stringify({ usage })}\n\n`);
-        } else {
-          reply.raw.write(`event: done\ndata: ${JSON.stringify({})}\n\n`);
-        }
+        reply.raw.write(`event: done\ndata: ${JSON.stringify({ usage: usage || {} })}\n\n`);
       }
     } catch (error) {
       if (!abortController.signal.aborted) {
@@ -353,13 +355,16 @@ export async function threadRoutes(fastify: FastifyInstance) {
         console.warn('读取 transcript.jsonl 失败:', error);
       }
 
+      // 转换为前端结构化格式（blocks）
+      const transformed = transformHistory(messages);
+
       reply.send({
-        data: messages,
+        data: transformed,
         meta: {
           threadId,
           agentId,
           limit: limit ? parseInt(limit) : 50,
-          count: messages.length,
+          count: transformed.length,
         },
       });
     } catch (error) {

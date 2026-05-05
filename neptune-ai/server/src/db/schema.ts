@@ -51,6 +51,7 @@ export const agentTemplates = pgTable('agent_templates', {
   tenantId: uuid('tenant_id').notNull().references(() => tenants.id),
   name: text('name').notNull(),
   description: text('description'),
+  icon: text('icon').default('smart_toy'),
   systemPrompt: text('system_prompt').notNull(),
   modelConfig: jsonb('model_config').$type<{
     provider: string;
