@@ -1,25 +1,32 @@
 import { useState, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { listAgents } from "../api/agents";
+import type { AgentTemplate } from "../types/chat";
 
 export function Home() {
   const [isAgentDropdownOpen, setIsAgentDropdownOpen] = useState(false);
   const [agentSearchQuery, setAgentSearchQuery] = useState("");
   const [chatInput, setChatInput] = useState("");
+  const [agents, setAgents] = useState<AgentTemplate[]>([]);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
-  const agents = [
-    { id: "invoice-processor", name: "Invoice Processor", icon: "receipt_long", color: "bg-secondary-container text-on-secondary-container" },
-    { id: "data-analyst", name: "Data Analyst", icon: "monitoring", color: "bg-surface-container-high text-charcoal" },
-    { id: "code-reviewer", name: "Code Reviewer", icon: "code", color: "bg-[#e6f4ea] text-[#137333]" },
-    { id: "1", name: "Customer Support", icon: "support_agent", color: "bg-surface-container-high text-charcoal" },
-    { id: "2", name: "Sales Assistant", icon: "shopping_cart", color: "bg-surface-container-high text-charcoal" },
-    { id: "3", name: "DevOps Copilot", icon: "terminal", color: "bg-surface-container-high text-charcoal" }
-  ];
+  useEffect(() => {
+    listAgents({ active: true })
+      .then(res => setAgents(res.data))
+      .catch(err => console.error('Failed to load agents:', err));
+  }, []);
 
-  const [selectedAgent, setSelectedAgent] = useState<{ id: string, name: string, icon: string, color: string } | null>(null);
+  const agentOptions = agents.map(a => ({
+    id: a.id,
+    name: a.name,
+    description: a.description,
+    icon: a.icon,
+  }));
 
-  const filteredAgents = agents.filter(a => a.name.toLowerCase().includes(agentSearchQuery.toLowerCase()));
+  const [selectedAgent, setSelectedAgent] = useState<{ id: string; name: string; description: string | null; icon: string } | null>(null);
+
+  const filteredAgents = agentOptions.filter(a => a.name.toLowerCase().includes(agentSearchQuery.toLowerCase()));
 
   const handleStartChat = () => {
     if (!selectedAgent) return;
@@ -77,12 +84,12 @@ export function Home() {
 
           <div className="w-full max-w-2xl bg-surface-lowest border border-surface-container rounded-full p-2 shadow-whisper flex items-center mb-16 focus-within:ring-1 focus-within:ring-border-cream transition-all relative">
             <div className="relative" ref={dropdownRef}>
-              <button 
+              <button
                 onClick={() => setIsAgentDropdownOpen(!isAgentDropdownOpen)}
                 className="flex items-center gap-2 bg-surface-container hover:bg-surface-container-high px-5 py-3 rounded-full text-charcoal text-sm font-semibold transition-colors border border-transparent min-w-[160px] justify-between"
               >
                 <div className="flex items-center gap-2">
-                  <span className={`material-symbols-outlined text-[20px] ${selectedAgent ? selectedAgent.color.split(' ')[1] : 'text-brand'}`}>
+                  <span className="material-symbols-outlined text-[20px] text-brand">
                     {selectedAgent ? selectedAgent.icon : 'smart_toy'}
                   </span>
                   {selectedAgent ? selectedAgent.name : 'Select Agent'}
@@ -94,7 +101,7 @@ export function Home() {
                 <div className="absolute top-full left-0 mt-2 w-64 bg-surface-lowest border border-border-cream rounded-xl shadow-md z-50 overflow-hidden flex flex-col">
                   <div className="p-2 border-b border-surface-container px-3 flex items-center gap-2 bg-surface-container-low/50">
                     <span className="material-symbols-outlined text-[18px] text-stone">search</span>
-                    <input 
+                    <input
                       type="text"
                       className="bg-transparent border-none focus:ring-0 text-sm outline-none w-full"
                       placeholder="Search agents..."
@@ -105,7 +112,7 @@ export function Home() {
                   </div>
                   <div className="max-h-60 overflow-y-auto w-full custom-scrollbar py-1">
                     {filteredAgents.length > 0 ? filteredAgents.map(agent => (
-                      <button 
+                      <button
                         key={agent.id}
                         onClick={() => {
                           setSelectedAgent(agent);
@@ -113,8 +120,8 @@ export function Home() {
                         }}
                         className="w-full px-3 py-2 flex items-center gap-3 hover:bg-surface-container transition-colors text-left"
                       >
-                        <div className={`w-8 h-8 rounded-full ${agent.color} flex items-center justify-center shrink-0 text-[16px]`}>
-                          <span className="material-symbols-outlined text-[16px]">{agent.icon}</span>
+                        <div className="w-8 h-8 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center shrink-0">
+                          <span className="material-symbols-outlined text-[16px]">{agent.icon || 'smart_toy'}</span>
                         </div>
                         <span className="text-sm font-medium text-charcoal">{agent.name}</span>
                       </button>
@@ -145,43 +152,33 @@ export function Home() {
 
           <div className="w-full max-w-3xl mt-8">
             <h2 className="text-[12px] font-bold text-stone mb-6 pl-2 tracking-widest uppercase">Active Agents</h2>
-            
+
             <div className="flex flex-col gap-4">
-              <Link to="/collaborate/invoice-processor" className="group flex items-center justify-between p-5 bg-surface-lowest border border-surface-container-highest rounded-xl shadow-whisper hover:ring-shadow transition-all cursor-pointer">
-                <div className="flex items-center gap-5">
-                  <div className="w-12 h-12 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center">
-                    <span className="material-symbols-outlined">receipt_long</span>
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="font-serif text-[18px] font-medium text-charcoal mb-1">Invoice Processor</span>
-                    <div className="flex items-center gap-2 text-sm text-stone">
-                      <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
-                      <span>20:03 - Processed invoice values from Vendor A...</span>
+              {agents.length === 0 ? (
+                <div className="text-center py-8">
+                  <span className="text-[12px] text-stone">No agents available</span>
+                </div>
+              ) : (
+                agents.slice(0, 5).map(agent => (
+                  <Link key={agent.id} to={`/collaborate/${agent.id}`} className="group flex items-center justify-between p-5 bg-surface-lowest border border-surface-container-highest rounded-xl shadow-whisper hover:border-border-cream transition-all cursor-pointer">
+                    <div className="flex items-center gap-5">
+                      <div className="w-12 h-12 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center">
+                        <span className="material-symbols-outlined">{agent.icon || 'smart_toy'}</span>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="font-serif text-[18px] font-medium text-charcoal mb-1">{agent.name}</span>
+                        <div className="flex items-center gap-2 text-sm text-stone">
+                          <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
+                          <span>{agent.description || 'AI Agent'}</span>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
-                <div className="w-8 h-8 rounded-full flex items-center justify-center text-stone group-hover:text-charcoal group-hover:bg-surface-container transition-all">
-                  <span className="material-symbols-outlined">chevron_right</span>
-                </div>
-              </Link>
-              
-              <Link to="/collaborate/data-analyst" className="group flex items-center justify-between p-5 bg-surface-lowest border border-surface-container-highest rounded-xl shadow-whisper hover:ring-shadow transition-all cursor-pointer">
-                <div className="flex items-center gap-5">
-                  <div className="w-12 h-12 rounded-full bg-surface-container-high text-charcoal flex items-center justify-center">
-                    <span className="material-symbols-outlined">monitoring</span>
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="font-serif text-[18px] font-medium text-charcoal mb-1">Data Analyst</span>
-                    <div className="flex items-center gap-2 text-sm text-stone">
-                      <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
-                      <span>18:45 - Generated weekly sales pipeline report...</span>
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-stone group-hover:text-charcoal group-hover:bg-surface-container transition-all">
+                      <span className="material-symbols-outlined">chevron_right</span>
                     </div>
-                  </div>
-                </div>
-                <div className="w-8 h-8 rounded-full flex items-center justify-center text-stone group-hover:text-charcoal group-hover:bg-surface-container transition-all">
-                  <span className="material-symbols-outlined">chevron_right</span>
-                </div>
-              </Link>
+                  </Link>
+                ))
+              )}
             </div>
           </div>
         </div>

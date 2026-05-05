@@ -1,29 +1,6 @@
 import type { Thread } from '../types/chat'
-
-const API_BASE = 'http://localhost:3000/api/v1'
-
-/**
- * 从 localStorage 读取认证 token
- *
- * 与 desktop 项目保持一致，使用 Zustand persist 存储结构:
- * { state: { token, ... }, version: 0 }
- *
- * 后续 web 端 auth store 建立后，只需更新此函数即可。
- */
-function getAuthHeaders(): Record<string, string> {
-  try {
-    const raw = localStorage.getItem('neptune-auth')
-    if (!raw) return {}
-    const parsed = JSON.parse(raw)
-    const token = parsed?.state?.token
-    if (token) {
-      return { Authorization: `Bearer ${token}` }
-    }
-  } catch {
-    // 解析失败，返回空 headers
-  }
-  return {}
-}
+import { API_BASE, getAuthHeaders, handleUnauthorized } from './client'
+import { getStoredToken } from '../stores/auth'
 
 // === Thread CRUD ===
 
@@ -55,6 +32,7 @@ export async function listThreads(
   const res = await fetch(`${API_BASE}/agents/${agentId}/threads${qs}`, {
     headers: getAuthHeaders(),
   })
+  if (res.status === 401) { handleUnauthorized(res); throw new Error('Unauthorized'); }
   if (!res.ok) throw new Error(`listThreads failed: ${res.status}`)
   return res.json()
 }
@@ -69,6 +47,7 @@ export async function createThread(
     headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
     body: JSON.stringify({ title }),
   })
+  if (res.status === 401) { handleUnauthorized(res); throw new Error('Unauthorized'); }
   if (!res.ok) throw new Error(`createThread failed: ${res.status}`)
   return res.json()
 }
@@ -84,6 +63,7 @@ export async function getThread(
       headers: getAuthHeaders(),
     },
   )
+  if (res.status === 401) { handleUnauthorized(res); throw new Error('Unauthorized'); }
   if (!res.ok) throw new Error(`getThread failed: ${res.status}`)
   return res.json()
 }
@@ -105,6 +85,7 @@ export async function updateThread(
       body: JSON.stringify(data),
     },
   )
+  if (res.status === 401) { handleUnauthorized(res); throw new Error('Unauthorized'); }
   if (!res.ok) throw new Error(`updateThread failed: ${res.status}`)
   return res.json()
 }
@@ -121,6 +102,7 @@ export async function deleteThread(
       headers: getAuthHeaders(),
     },
   )
+  if (res.status === 401) { handleUnauthorized(res); throw new Error('Unauthorized'); }
   if (!res.ok) throw new Error(`deleteThread failed: ${res.status}`)
 }
 
@@ -138,6 +120,7 @@ export async function getThreadHistory(
       headers: getAuthHeaders(),
     },
   )
+  if (res.status === 401) { handleUnauthorized(res); throw new Error('Unauthorized'); }
   if (!res.ok) throw new Error(`getThreadHistory failed: ${res.status}`)
   return res.json()
 }
@@ -164,17 +147,7 @@ export function sendThreadMessage(
 ): AbortController {
   const controller = new AbortController()
 
-  // 读取 token（需要裸值，不是 header 格式）
-  let token = ''
-  try {
-    const raw = localStorage.getItem('neptune-auth')
-    if (raw) {
-      const parsed = JSON.parse(raw)
-      token = parsed?.state?.token || ''
-    }
-  } catch {
-    // ignore
-  }
+  const token = getStoredToken() || ''
 
   fetch(`${API_BASE}/agents/${agentId}/threads/${threadId}/chat`, {
     method: 'POST',
@@ -221,7 +194,15 @@ export function sendThreadMessage(
                     (parsed as { message?: string }).message || 'SSE error',
                   ),
                 )
+              } else if (currentEvent === 'message') {
+                // Backend sends content events as `event: message`
+                // with actual type in `data.type`
+                const subType = (parsed as { type?: string }).type || 'text'
+                callbacks.onEvent({ type: subType, data: parsed })
+              } else if (currentEvent === 'connected') {
+                // Connection confirmation, ignore
               } else {
+                // Fallback: use SSE event name directly
                 callbacks.onEvent({ type: currentEvent, data: parsed })
               }
             } catch {

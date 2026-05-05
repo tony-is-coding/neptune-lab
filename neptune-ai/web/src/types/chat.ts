@@ -23,19 +23,52 @@ export interface BackgroundTask {
   summary?: string
 }
 
+// === Agent Template Types (from API) ===
+
+export interface AgentTemplate {
+  id: string
+  tenantId: string
+  name: string
+  description: string | null
+  icon: string
+  systemPrompt: string
+  modelConfig: {
+    provider: string
+    model: string
+    temperature: number
+    maxTokens: number
+  }
+  tools: string[]
+  skills: Array<{ id: string; name: string; version?: string }>
+  mcpServers: Array<{ name: string; url: string; authConfig?: Record<string, unknown> }>
+  constraints: {
+    maxTokensPerTurn?: number
+    maxTurnsPerSession?: number
+    maxConcurrentSessions?: number
+  }
+  version: number
+  isActive: boolean
+  createdAt: string
+  updatedAt: string
+}
+
 // === Thread Types ===
 
 export interface Thread {
   id: string
-  agentId: string
+  tenantId: string
+  userId: string
+  templateId: string
+  status: 'running' | 'idle' | 'completed' | 'error'
   title: string | null
   summary: string | null
-  status: 'running' | 'idle' | 'completed' | 'error'
-  lastActiveAt: string
+  workspace: string
+  lastActiveAt: string | null
   createdAt: string
+  updatedAt: string
 }
 
-// === Chat Types (existing) ===
+// === Chat Types ===
 
 export type MessageBlock =
   | { type: 'thinking'; content: string; duration?: number }
@@ -49,13 +82,4 @@ export interface ChatMessage {
   role: 'user' | 'assistant'
   blocks: MessageBlock[]
   status: 'streaming' | 'complete'
-}
-
-export interface Agent {
-  id: string
-  agentName: string
-  agentRole: string
-  title: string
-  time: string
-  icon: string
 }

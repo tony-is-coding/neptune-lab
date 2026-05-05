@@ -12,7 +12,7 @@ export function PrimarySidebar() {
   ];
 
   return (
-    <nav className="fixed left-0 top-0 h-full w-[72px] border-r border-surface-container-highest bg-sidebar flex flex-col items-center py-6 z-50 shrink-0">
+    <nav data-testid="primary-sidebar" className="fixed left-0 top-0 h-full w-[72px] border-r border-surface-container-highest bg-sidebar flex flex-col items-center py-6 z-50 shrink-0">
       <div className="mb-8 flex items-center justify-center w-12 h-12 bg-primary rounded-xl text-on-primary shadow-sm" style={{ backgroundColor: '#141413' }}>
         <span className="font-bold text-2xl font-serif">N</span>
       </div>
@@ -26,6 +26,7 @@ export function PrimarySidebar() {
             <Link
               key={to}
               to={to}
+              data-testid={`nav-${label.toLowerCase()}`}
               className={cn(
                 "w-full aspect-square flex flex-col items-center justify-center gap-1 rounded-xl transition-all duration-300 group relative",
                 trulyActive 

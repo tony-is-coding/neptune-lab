@@ -1,51 +1,159 @@
 import { useState, useRef, useEffect } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useNavigate } from "react-router-dom";
 import { useResizableSidebar } from '../hooks/useResizableSidebar';
-
-const MOCK_AGENTS = [
-  { id: "customer-support", name: "Customer Support", status: "Active • Tier 1", icon: "support_agent" },
-  { id: "sales-assistant", name: "Sales Assistant", status: "Active • Inbound", icon: "shopping_cart" },
-  { id: "devops-copilot", name: "DevOps Copilot", status: "Offline • Internal", icon: "code" }
-];
+import { listAgents, getAgent, updateAgent, deleteAgent, uploadAgentDocument, deleteAgentDocument, getAgentStats, type AgentStats } from '../api/agents';
+import { listThreads, createThread } from '../api/threads';
+import type { AgentTemplate } from '../types/chat';
 
 export function AgentConfig() {
   const { id } = useParams();
-  
-  const activeAgentId = id || MOCK_AGENTS[0].id;
-  const activeAgent = MOCK_AGENTS.find(a => a.id === activeAgentId) || MOCK_AGENTS[0];
+  const navigate = useNavigate();
+
+  const [agents, setAgents] = useState<AgentTemplate[]>([]);
+  const [agentsLoading, setAgentsLoading] = useState(true);
+  const [activeAgent, setActiveAgent] = useState<AgentTemplate | null>(null);
+  const [agentLoading, setAgentLoading] = useState(true);
+  const [stats, setStats] = useState<AgentStats | null>(null);
+  const [statsLoading, setStatsLoading] = useState(true);
 
   const { sidebarWidth, isResizing, startResizing } = useResizableSidebar(240, 200, 400);
 
   const [isEditingCore, setIsEditingCore] = useState(false);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
+
   const [profileData, setProfileData] = useState({
-    name: activeAgent.name,
-    description: "Expert agent configured for this role.",
-    status: activeAgent.status
+    name: "",
+    description: "",
+    status: "Active"
   });
 
   const [coreConfig, setCoreConfig] = useState({
-    model: "GPT-4 Optimized (neptune-v2)",
-    role: "Tier 1 Technical Support Representative",
-    systemPrompt: "You are an empathetic, efficient, and highly technical support agent for Neptune AI. Your primary goal is to resolve user issues regarding workspace configuration, agent deployment, and billing. Always verify the user's workspace ID before providing account-specific details. Maintain a professional yet approachable tone. If an issue requires escalation, use the `escalate_ticket` skill immediately."
+    model: "",
+    role: "",
+    systemPrompt: ""
   });
 
-  const [memories, setMemories] = useState([
-    { id: 1, name: "knowledge_base_v3.pdf", type: "PDF Document", date: "Oct 24, 2023", icon: "description" },
-    { id: 2, name: "product_catalog_export.csv", type: "Data Table", date: "Oct 20, 2023", icon: "csv" },
-    { id: 3, name: "troubleshooting_guide.md", type: "Markdown", date: "Oct 15, 2023", icon: "article" },
-  ]);
-
-  const [knowledge, setKnowledge] = useState([
-    { id: 1, name: "product_manual_v2.pdf", type: "PDF Document", size: "2.4 MB", date: "Nov 10, 2023", icon: "picture_as_pdf", color: "text-rose-500" },
-    { id: 2, name: "technical_spec.docx", type: "Word Document", size: "1.1 MB", date: "Oct 28, 2023", icon: "description", color: "text-blue-500" },
-    { id: 3, name: "customer_faqs.xlsx", type: "Excel Spreadsheet", size: "842 KB", date: "Oct 15, 2023", icon: "table_chart", color: "text-emerald-500" },
-    { id: 4, name: "api_documentation.md", type: "Markdown", size: "156 KB", date: "Oct 12, 2023", icon: "markdown", color: "text-stone" },
-  ]);
+  const [memories, setMemories] = useState<Array<{ id: string; name: string; type: string; date: string; icon: string }>>([]);
+  const [knowledge, setKnowledge] = useState<Array<{ id: string; name: string; type: string; size?: string; date: string; icon: string; color: string }>>([]);
 
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteInputText, setDeleteInputText] = useState("");
   const [expectedDeleteCode, setExpectedDeleteCode] = useState("");
+
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Load agents list
+  useEffect(() => {
+    let cancelled = false;
+    setAgentsLoading(true);
+
+    listAgents()
+      .then(res => {
+        if (cancelled) return;
+        setAgents(res.data);
+      })
+      .catch(err => {
+        console.error('Failed to load agents:', err);
+      })
+      .finally(() => {
+        if (!cancelled) setAgentsLoading(false);
+      });
+
+    return () => { cancelled = true; };
+  }, []);
+
+  // Load active agent
+  useEffect(() => {
+    if (!id) return;
+
+    const activeAgentId = id;
+    setAgentLoading(true);
+    setStatsLoading(true);
+
+    Promise.all([
+      getAgent(activeAgentId),
+      getAgentStats(activeAgentId).catch(() => null),
+    ])
+      .then(([agentData, statsData]) => {
+        setActiveAgent(agentData);
+        setStats(statsData);
+
+        setProfileData({
+          name: agentData.name,
+          description: agentData.description || "",
+          status: agentData.isActive ? "Active" : "Inactive"
+        });
+
+        setCoreConfig({
+          model: agentData.modelConfig.model,
+          role: agentData.description || "",
+          systemPrompt: agentData.systemPrompt
+        });
+      })
+      .catch(err => {
+        console.error('Failed to load agent:', err);
+        if (err instanceof Error && err.message.includes('401')) {
+          navigate('/login');
+        }
+      })
+      .finally(() => {
+        setAgentLoading(false);
+        setStatsLoading(false);
+      });
+  }, [id, navigate]);
+
+  const handleSaveProfile = async () => {
+    if (!activeAgent) return;
+
+    setIsSaving(true);
+    setSaveError(null);
+
+    try {
+      const updated = await updateAgent(activeAgent.id, {
+        name: profileData.name,
+        description: profileData.description,
+      });
+
+      setActiveAgent(updated);
+      setIsEditingProfile(false);
+
+      // Update agents list
+      setAgents(prev => prev.map(a => a.id === updated.id ? updated : a));
+    } catch (err) {
+      console.error('Failed to update agent:', err);
+      setSaveError(err instanceof Error ? err.message : 'Failed to save');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleSaveCore = async () => {
+    if (!activeAgent) return;
+
+    setIsSaving(true);
+    setSaveError(null);
+
+    try {
+      const updated = await updateAgent(activeAgent.id, {
+        systemPrompt: coreConfig.systemPrompt,
+        modelConfig: {
+          model: coreConfig.model,
+        },
+      });
+
+      setActiveAgent(updated);
+      setIsEditingCore(false);
+
+      // Update agents list
+      setAgents(prev => prev.map(a => a.id === updated.id ? updated : a));
+    } catch (err) {
+      console.error('Failed to update agent:', err);
+      setSaveError(err instanceof Error ? err.message : 'Failed to save');
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const handleDeleteClick = () => {
     setExpectedDeleteCode(Math.random().toString(36).substring(2, 6).toUpperCase());
@@ -53,88 +161,113 @@ export function AgentConfig() {
     setIsDeleting(true);
   };
 
-  const confirmDelete = () => {
-    if (deleteInputText === expectedDeleteCode) {
-      alert("Agent deleted (mock)");
+  const confirmDelete = async () => {
+    if (!activeAgent || deleteInputText !== expectedDeleteCode) return;
+
+    try {
+      await deleteAgent(activeAgent.id);
+      navigate('/agents');
+    } catch (err) {
+      console.error('Failed to delete agent:', err);
+      alert('Failed to delete agent');
       setIsDeleting(false);
     }
   };
 
-  const [skills, setSkills] = useState([
-    { id: 1, name: "Zendesk Integration", desc: "Read/Write ticket access", icon: "headset_mic" },
-    { id: 2, name: "Stripe Refunds", desc: "Process limited refunds", icon: "payments" },
-  ]);
+  const handleStartCollaborate = async () => {
+    if (!activeAgent) return;
 
-  // Reset local state when active agent changes to simulate loading new agent data
-  useEffect(() => {
-    setIsEditingCore(false);
-    setIsEditingProfile(false);
-    
-    // You could also re-seed memories/knowledge/skills here based on activeAgentId
-    // to give the illusion that different agents have different data.
-    if (activeAgentId === "sales-assistant") {
-      setCoreConfig({
-        model: "GPT-4 Sales (neptune-v2)",
-        role: "Inbound Sales Representative",
-        systemPrompt: "You are a sales assistant helping prospect customers. Answer questions about pricing and pitch the Enterprise plan if they have more than 10 users."
-      });
-      setProfileData({
-        name: MOCK_AGENTS.find(a => a.id === "sales-assistant")?.name || "Sales Assistant",
-        description: "Handles inbound sales inquiries and lead qualification.",
-        status: "Active • Inbound"
-      });
-      setSkills([{ id: 3, name: "CRM Sync", desc: "Syncs leads to Salesforce", icon: "sync" }]);
-    } else {
-      setCoreConfig({
-        model: "GPT-4 Optimized (neptune-v2)",
-        role: "Tier 1 Technical Support Representative",
-        systemPrompt: "You are an empathetic, efficient, and highly technical support agent for Neptune AI. Your primary goal is to resolve user issues regarding workspace configuration, agent deployment, and billing. Always verify the user's workspace ID before providing account-specific details. Maintain a professional yet approachable tone. If an issue requires escalation, use the `escalate_ticket` skill immediately."
-      });
-      setProfileData({
-        name: activeAgent.name,
-        description: "Customer-facing support agent for initial technical triage and issue resolution.",
-        status: activeAgent.status
-      });
-      setSkills([
-        { id: 1, name: "Zendesk Integration", desc: "Read/Write ticket access", icon: "headset_mic" },
-        { id: 2, name: "Stripe Refunds", desc: "Process limited refunds", icon: "payments" },
-      ]);
+    try {
+      // 查询是否已有 Thread
+      const res = await listThreads(activeAgent.id);
+      let threadId: string;
+
+      if (res.data.length > 0) {
+        // 非第一次：进入最新的 Thread
+        threadId = res.data[0].id;
+      } else {
+        // 第一次：创建新的 Thread
+        const newThread = await createThread(activeAgent.id);
+        threadId = newThread.data.id;
+      }
+
+      navigate(`/collaborate/${activeAgent.id}`, { state: { threadId } });
+    } catch (err) {
+      console.error('Failed to start collaborate:', err);
+      // 降级：直接导航到 collaborate 页面
+      navigate(`/collaborate/${activeAgent.id}`);
     }
-  }, [activeAgentId, activeAgent.name, activeAgent.status]);
+  };
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const knowledgeInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, target: 'memory' | 'knowledge') => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, target: 'memory' | 'knowledge') => {
     const file = e.target.files?.[0];
-    if (!file) return;
-    
-    const newItem = {
-      id: Date.now(),
-      name: file.name,
-      type: file.type || "Document",
-      date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-      icon: "description",
-      size: target === 'knowledge' ? `${(file.size / 1024 / 1024).toFixed(1)} MB` : undefined,
-      color: "text-brand"
-    };
+    if (!file || !activeAgent) return;
 
-    if (target === 'memory') {
-      setMemories(prev => [newItem, ...prev]);
-    } else {
-      setKnowledge(prev => [newItem, ...prev]);
+    try {
+      const doc = await uploadAgentDocument(activeAgent.id, file);
+      const newItem = {
+        id: doc.id,
+        name: doc.name,
+        type: doc.type,
+        date: new Date(doc.uploadedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+        icon: "description",
+        size: target === 'knowledge' ? doc.size : undefined,
+        color: "text-brand"
+      };
+
+      if (target === 'memory') {
+        setMemories(prev => [newItem, ...prev]);
+      } else {
+        setKnowledge(prev => [newItem, ...prev]);
+      }
+    } catch (err) {
+      console.error('Failed to upload document:', err);
+      alert('Failed to upload document');
+    }
+
+    // Reset file input
+    if (e.target) e.target.value = '';
+  };
+
+  const handleDeleteMemory = async (memoryId: string) => {
+    if (!activeAgent) return;
+
+    try {
+      await deleteAgentDocument(activeAgent.id, memoryId);
+      setMemories(prev => prev.filter(m => m.id !== memoryId));
+    } catch (err) {
+      console.error('Failed to delete document:', err);
+      alert('Failed to delete document');
     }
   };
 
-  const handleAddSkill = () => {
-    const newSkill = { id: Date.now(), name: "New Custom Skill", desc: "Configure this new skill", icon: "extension" };
-    setSkills(prev => [...prev, newSkill]);
+  const handleDeleteKnowledge = async (knowledgeId: string) => {
+    if (!activeAgent) return;
+
+    try {
+      await deleteAgentDocument(activeAgent.id, knowledgeId);
+      setKnowledge(prev => prev.filter(k => k.id !== knowledgeId));
+    } catch (err) {
+      console.error('Failed to delete document:', err);
+      alert('Failed to delete document');
+    }
   };
 
+  if (agentLoading || !activeAgent) {
+    return (
+      <div className="flex h-full bg-surface-container-low items-center justify-center">
+        <div className="w-6 h-6 border-2 border-stone/30 border-t-charcoal rounded-full animate-spin" />
+      </div>
+    );
+  }
+
   return (
-    <div className="flex h-full bg-parchment">
+    <div className="flex h-full bg-surface-container-low">
       {/* Secondary Drawer (Agents List) */}
-      <div 
+      <div
         className="h-full bg-surface-container border-r border-surface-container-highest flex flex-col shrink-0 relative"
         style={{ width: sidebarWidth }}
       >
@@ -145,29 +278,33 @@ export function AgentConfig() {
             <input className="w-full pl-9 pr-3 py-2 bg-ivory border border-transparent rounded-lg text-sm focus:border-border-cream focus:ring-1 focus:ring-border-cream transition-all placeholder:text-stone/60" placeholder="Search agents..." type="text"/>
           </div>
         </div>
-        
+
         <div className="flex-grow overflow-y-auto p-3 space-y-1 custom-scrollbar">
           <div className="px-3 py-2 mt-2">
             <span className="text-[10px] font-bold text-stone uppercase tracking-widest">All Agents</span>
           </div>
-          
-          {MOCK_AGENTS.map(agent => (
-            <Link 
+
+          {agentsLoading ? (
+            <div className="flex items-center justify-center h-32">
+              <span className="text-[11px] text-stone">Loading agents...</span>
+            </div>
+          ) : agents.map(agent => (
+            <Link
               key={agent.id}
               to={`/agents/${agent.id}`}
-              className={`w-full flex items-center gap-3 p-3 rounded-xl transition-colors text-left group ${activeAgentId === agent.id ? 'bg-surface-container-high border border-border-cream text-charcoal shadow-sm' : 'hover:bg-surface-container-highest border border-transparent text-charcoal'}`}
+              className={`w-full flex items-center gap-3 p-3 rounded-xl transition-colors text-left group ${activeAgent.id === agent.id ? 'bg-surface-container-high border border-border-cream text-charcoal shadow-sm' : 'hover:bg-surface-container-highest border border-transparent text-charcoal'}`}
             >
               <div className="w-8 h-8 rounded-full bg-ivory flex items-center justify-center shrink-0 border border-border-cream">
-                <span className="material-symbols-outlined text-[16px] text-charcoal">{agent.icon}</span>
+                <span className="material-symbols-outlined text-[16px] text-charcoal">{agent.icon || 'smart_toy'}</span>
               </div>
               <div className="overflow-hidden">
-                <p className={`text-sm truncate ${activeAgentId === agent.id ? 'font-semibold' : ''}`}>{agent.name}</p>
-                <p className="text-[11px] text-stone truncate">{agent.status}</p>
+                <p className={`text-sm truncate ${activeAgent.id === agent.id ? 'font-semibold' : ''}`}>{agent.name}</p>
+                <p className="text-[11px] text-stone truncate">{agent.isActive ? 'Active' : 'Inactive'}</p>
               </div>
             </Link>
           ))}
         </div>
-        
+
         <div className="mt-auto p-4 border-t border-surface-container-highest">
           <Link to="/agents/create" className="w-full flex items-center justify-center gap-2 bg-primary-container text-white text-sm font-semibold py-2.5 rounded-lg hover:bg-charcoal transition-colors">
             <span className="material-symbols-outlined text-[18px]">add</span>
@@ -175,7 +312,7 @@ export function AgentConfig() {
           </Link>
         </div>
 
-        <div 
+        <div
           onMouseDown={startResizing}
           className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-brand/50 z-50 transition-colors -mr-[0.5px]"
         >
@@ -197,33 +334,44 @@ export function AgentConfig() {
         {/* Canvas */}
         <div className="flex-1 overflow-y-auto p-6 md:p-10 custom-scrollbar">
           <div className="max-w-[1200px] mx-auto flex flex-col gap-8">
-            
+
             {/* Agent Profile Section */}
             <section className="bg-ivory border border-border-cream rounded-xl p-6 shadow-whisper">
               <div className="flex justify-between items-center mb-6 border-b border-border-cream pb-4">
                 <h2 className="font-serif text-[20px] text-charcoal">Agent Profile</h2>
-                {isEditingProfile ? (
-                  <div className="flex items-center gap-2">
-                    <button onClick={() => setIsEditingProfile(false)} className="px-4 py-1.5 rounded-lg text-sm font-semibold text-stone hover:bg-surface-container transition-colors">
-                      Cancel
-                    </button>
-                    <button onClick={() => setIsEditingProfile(false)} className="flex items-center gap-2 text-sm font-semibold text-white bg-brand hover:bg-brand/90 transition-colors px-4 py-1.5 rounded-lg shadow-sm">
-                      <span className="material-symbols-outlined text-[18px]">save</span>
-                      Save Profile
-                    </button>
-                  </div>
-                ) : (
-                  <button onClick={() => setIsEditingProfile(true)} className="flex items-center gap-2 text-sm font-semibold text-stone hover:text-brand transition-colors px-3 py-1.5 rounded-lg hover:bg-surface-container">
-                    <span className="material-symbols-outlined text-[18px]">edit</span>
-                    Edit
+                <div className="flex items-center gap-3">
+                  {/* Starting Collaborate Button */}
+                  <button
+                    onClick={handleStartCollaborate}
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm bg-brand text-white hover:bg-brand/90 transition-colors shadow-sm"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">forum</span>
+                    Start Collaborate
                   </button>
-                )}
+
+                  {isEditingProfile ? (
+                    <div className="flex items-center gap-2">
+                      <button onClick={() => setIsEditingProfile(false)} className="px-4 py-1.5 rounded-lg text-sm font-semibold text-stone hover:bg-surface-container transition-colors">
+                        Cancel
+                      </button>
+                      <button onClick={handleSaveProfile} disabled={isSaving} className="flex items-center gap-2 text-sm font-semibold text-white bg-brand hover:bg-brand/90 transition-colors px-4 py-1.5 rounded-lg shadow-sm disabled:opacity-50">
+                        <span className="material-symbols-outlined text-[18px]">save</span>
+                        Save Profile
+                      </button>
+                    </div>
+                  ) : (
+                    <button onClick={() => setIsEditingProfile(true)} className="flex items-center gap-2 text-sm font-semibold text-stone hover:text-brand transition-colors px-3 py-1.5 rounded-lg hover:bg-surface-container">
+                      <span className="material-symbols-outlined text-[18px]">edit</span>
+                      Edit
+                    </button>
+                  )}
+                </div>
               </div>
-              
+
               <div className="flex flex-col lg:flex-row items-start gap-8">
                 <div className="flex flex-col items-center gap-3 shrink-0">
                   <div className="h-24 w-24 rounded-full bg-secondary-container flex items-center justify-center border-2 border-[#d5c4ad] relative group cursor-pointer overflow-hidden">
-                    <span className="material-symbols-outlined text-on-secondary-container text-[40px] group-hover:opacity-0 transition-opacity" style={{ fontVariationSettings: "'FILL' 1" }}>{activeAgent.icon}</span>
+                    <span className="material-symbols-outlined text-on-secondary-container text-[40px] group-hover:opacity-0 transition-opacity" style={{ fontVariationSettings: "'FILL' 1" }}>{activeAgent.icon || 'smart_toy'}</span>
                     <div className="absolute inset-0 bg-charcoal/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                       <span className="material-symbols-outlined text-white">edit</span>
                     </div>
@@ -256,26 +404,26 @@ export function AgentConfig() {
                     {isEditingProfile ? (
                       <>
                         <label className="relative inline-flex items-center cursor-pointer">
-                          <input type="checkbox" className="sr-only peer" checked={profileData.status.includes('Active')} onChange={(e) => setProfileData({...profileData, status: e.target.checked ? "Active • Tier 1" : "Offline • Tier 1"})} />
+                          <input type="checkbox" className="sr-only peer" checked={profileData.status === 'Active'} onChange={(e) => setProfileData({...profileData, status: e.target.checked ? "Active" : "Inactive"})} />
                           <div className="w-11 h-6 bg-surface-container-highest peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-container"></div>
                         </label>
                       </>
                     ) : (
-                      <div className={`w-2 h-2 rounded-full ${profileData.status.includes('Active') ? 'bg-emerald-500' : 'bg-stone'}`}></div>
+                      <div className={`w-2 h-2 rounded-full ${profileData.status === 'Active' ? 'bg-emerald-500' : 'bg-stone'}`}></div>
                     )}
-                    <span className="font-semibold text-sm text-primary-container">{profileData.status.split(' •')[0]}</span>
+                    <span className="font-semibold text-sm text-primary-container">{profileData.status}</span>
                   </div>
-                  <p className="text-xs text-stone">ID: agt_{activeAgent.id}</p>
+                  <p className="text-xs text-stone">ID: {activeAgent.id}</p>
                 </div>
               </div>
             </section>
 
             {/* Bento Grid Layout */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              
+
               {/* Left Column (Spans 2) */}
               <div className="lg:col-span-2 flex flex-col gap-6">
-                
+
                 {/* Core Configuration Section */}
                 <section className="bg-ivory border border-border-cream rounded-xl p-6 shadow-whisper">
                   <div className="flex justify-between items-center mb-6">
@@ -285,7 +433,7 @@ export function AgentConfig() {
                         <button onClick={() => setIsEditingCore(false)} className="px-4 py-1.5 rounded-lg text-sm font-semibold text-stone hover:bg-surface-container transition-colors">
                           Cancel
                         </button>
-                        <button onClick={() => setIsEditingCore(false)} className="flex items-center gap-2 text-sm font-semibold text-white bg-brand hover:bg-brand/90 transition-colors px-4 py-1.5 rounded-lg shadow-sm">
+                        <button onClick={handleSaveCore} disabled={isSaving} className="flex items-center gap-2 text-sm font-semibold text-white bg-brand hover:bg-brand/90 transition-colors px-4 py-1.5 rounded-lg shadow-sm disabled:opacity-50">
                           <span className="material-symbols-outlined text-[18px]">save</span>
                           Save config
                         </button>
@@ -297,17 +445,17 @@ export function AgentConfig() {
                       </button>
                     )}
                   </div>
-                  
+
                   <div className="flex flex-col gap-6">
                     <div>
                       <label className="block text-[12px] font-bold tracking-widest uppercase text-stone mb-2">Base Model</label>
                       {isEditingCore ? (
-                        <select 
-                          value={coreConfig.model} 
+                        <select
+                          value={coreConfig.model}
                           onChange={(e) => setCoreConfig({...coreConfig, model: e.target.value})}
                           className="w-full bg-surface-container-lowest border border-border-cream rounded-lg p-3 text-[16px] text-charcoal shadow-sm outline-none focus:border-brand"
                         >
-                          <option>GPT-4 Optimized (neptune-v2)</option>
+                          <option>GPT-4o</option>
                           <option>Claude 3.5 Sonnet</option>
                           <option>Gemini 1.5 Pro</option>
                         </select>
@@ -319,25 +467,10 @@ export function AgentConfig() {
                       )}
                     </div>
                     <div>
-                      <label className="block text-[12px] font-bold tracking-widest uppercase text-stone mb-2">Role</label>
-                      {isEditingCore ? (
-                        <input 
-                          type="text" 
-                          value={coreConfig.role} 
-                          onChange={(e) => setCoreConfig({...coreConfig, role: e.target.value})}
-                          className="w-full bg-surface-container-lowest border border-border-cream rounded-lg p-3 text-[16px] text-charcoal shadow-sm outline-none focus:border-brand"
-                        />
-                      ) : (
-                        <div className="bg-surface-container-low border border-border-cream rounded-lg p-3 text-[16px] text-charcoal shadow-sm">
-                          {coreConfig.role}
-                        </div>
-                      )}
-                    </div>
-                    <div>
                       <label className="block text-[12px] font-bold tracking-widest uppercase text-stone mb-2">System Prompt</label>
                       {isEditingCore ? (
-                        <textarea 
-                          value={coreConfig.systemPrompt} 
+                        <textarea
+                          value={coreConfig.systemPrompt}
                           onChange={(e) => setCoreConfig({...coreConfig, systemPrompt: e.target.value})}
                           className="w-full bg-surface-container-lowest border border-border-cream rounded-lg p-4 text-sm text-charcoal h-32 overflow-y-auto leading-relaxed custom-scrollbar shadow-sm outline-none focus:border-brand resize-vertical"
                         />
@@ -355,11 +488,11 @@ export function AgentConfig() {
                   <div className="flex justify-between items-center mb-6">
                     <h2 className="font-serif text-[24px] text-charcoal">Memories</h2>
                     <div>
-                      <input 
-                        type="file" 
-                        ref={fileInputRef} 
-                        onChange={(e) => handleFileUpload(e, 'memory')} 
-                        className="hidden" 
+                      <input
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={(e) => handleFileUpload(e, 'memory')}
+                        className="hidden"
                       />
                       <button onClick={() => fileInputRef.current?.click()} className="flex items-center gap-2 font-semibold text-sm text-charcoal bg-sand hover:bg-[#d5c4ad] transition-colors px-4 py-2 rounded-lg border border-border-cream cursor-pointer">
                         <span className="material-symbols-outlined text-[18px]">upload_file</span>
@@ -367,7 +500,7 @@ export function AgentConfig() {
                       </button>
                     </div>
                   </div>
-                  
+
                   <div className="border border-border-cream rounded-lg overflow-hidden">
                     <table className="w-full text-left border-collapse">
                       <thead>
@@ -392,8 +525,8 @@ export function AgentConfig() {
                             <td className="py-3 px-4 text-sm text-stone">{memory.type}</td>
                             <td className="py-3 px-4 text-sm text-stone">{memory.date}</td>
                             <td className="py-3 px-4 text-right">
-                              <button 
-                                onClick={() => setMemories(memories.filter(m => m.id !== memory.id))}
+                              <button
+                                onClick={() => handleDeleteMemory(memory.id)}
                                 className="text-stone hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
                                 title="Delete"
                               >
@@ -406,37 +539,51 @@ export function AgentConfig() {
                     </table>
                   </div>
                 </section>
-                
+
               </div>
 
               {/* Right Column */}
               <div className="flex flex-col gap-6">
-                
+
                 {/* Cost Control Section */}
                 <section className="bg-ivory border border-border-cream rounded-xl p-6 shadow-whisper">
                   <h2 className="font-serif text-[24px] text-charcoal mb-6">Cost Control</h2>
                   <div className="flex flex-col gap-4">
-                    <div className="bg-surface-container-low rounded-xl p-5 border border-border-cream">
-                      <span className="text-[12px] font-bold tracking-widest uppercase text-stone mb-1 block">MTD Token Cost</span>
-                      <div className="flex items-baseline gap-2">
-                        <span className="font-serif text-[30px] text-charcoal font-medium">$142.50</span>
-                        <span className="text-sm text-stone">/ $500 limit</span>
+                    {statsLoading ? (
+                      <div className="bg-surface-container-low rounded-xl p-5 border border-border-cream">
+                        <span className="text-[12px] font-bold tracking-widest uppercase text-stone mb-1 block">MTD Token Cost</span>
+                        <div className="w-full h-8 bg-surface-container-highest rounded animate-pulse" />
                       </div>
-                      <div className="w-full bg-[#e6e1e0] h-1.5 rounded-full mt-4 overflow-hidden">
-                        <div className="bg-charcoal h-full rounded-full" style={{ width: '28%' }}></div>
+                    ) : stats ? (
+                      <>
+                        <div className="bg-surface-container-low rounded-xl p-5 border border-border-cream">
+                          <span className="text-[12px] font-bold tracking-widest uppercase text-stone mb-1 block">MTD Token Cost</span>
+                          <div className="flex items-baseline gap-2">
+                            <span className="font-serif text-[30px] text-charcoal font-medium">${stats.mtdTokenCost.toFixed(2)}</span>
+                            <span className="text-sm text-stone">/ ${stats.mtdTokenLimit} limit</span>
+                          </div>
+                          <div className="w-full bg-[#e6e1e0] h-1.5 rounded-full mt-4 overflow-hidden">
+                            <div className="bg-charcoal h-full rounded-full" style={{ width: `${(stats.mtdTokenCost / stats.mtdTokenLimit) * 100}%` }}></div>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="bg-surface-container-low border border-border-cream rounded-xl p-4">
+                            <span className="text-[12px] font-bold tracking-widest uppercase text-stone mb-2 block">30-Day Sessions</span>
+                            <span className="font-serif text-[24px] text-charcoal">{stats.sessions30Days.toLocaleString()}</span>
+                          </div>
+                          <div className="bg-surface-container-low border border-border-cream rounded-xl p-4">
+                            <span className="text-[12px] font-bold tracking-widest uppercase text-stone mb-2 block">Avg Latency</span>
+                            <span className="font-serif text-[24px] text-charcoal">{stats.avgLatency}ms</span>
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="bg-surface-container-low rounded-xl p-5 border border-border-cream">
+                        <span className="text-[12px] font-bold tracking-widest uppercase text-stone mb-1 block">MTD Token Cost</span>
+                        <p className="text-sm text-stone">Stats not available</p>
                       </div>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="bg-surface-container-low border border-border-cream rounded-xl p-4">
-                        <span className="text-[12px] font-bold tracking-widest uppercase text-stone mb-2 block">30-Day Sessions</span>
-                        <span className="font-serif text-[24px] text-charcoal">1,204</span>
-                      </div>
-                      <div className="bg-surface-container-low border border-border-cream rounded-xl p-4">
-                        <span className="text-[12px] font-bold tracking-widest uppercase text-stone mb-2 block">Avg Latency</span>
-                        <span className="font-serif text-[24px] text-charcoal">450ms</span>
-                      </div>
-                    </div>
+                    )}
                   </div>
                 </section>
 
@@ -444,42 +591,39 @@ export function AgentConfig() {
                 <section className="bg-ivory border border-border-cream rounded-xl p-6 shadow-whisper flex-1">
                   <div className="flex justify-between items-center mb-6">
                     <h2 className="font-serif text-[24px] text-charcoal">Assigned Skills</h2>
-                    <button onClick={handleAddSkill} className="text-charcoal hover:text-brand transition-colors">
+                    <button className="text-charcoal hover:text-brand transition-colors">
                       <span className="material-symbols-outlined">add_circle</span>
                     </button>
                   </div>
-                  
+
                   <div className="flex flex-col gap-3">
-                    {skills.map(skill => (
+                    {activeAgent.skills.map(skill => (
                       <div key={skill.id} className="flex items-center gap-4 p-3 rounded-xl border border-border-cream bg-white hover:bg-surface-container-lowest transition-colors shadow-sm group">
                         <div className="h-10 w-10 rounded bg-[#e3e2e4] flex items-center justify-center text-[#1a1c1d]">
-                          <span className="material-symbols-outlined text-[20px]">{skill.icon}</span>
+                          <span className="material-symbols-outlined text-[20px]">extension</span>
                         </div>
                         <div className="flex-1 min-w-0">
                           <h3 className="text-[16px] font-medium text-charcoal truncate">{skill.name}</h3>
-                          <p className="text-sm text-stone truncate">{skill.desc}</p>
+                          <p className="text-sm text-stone truncate">{skill.version || 'v1.0'}</p>
                         </div>
                         <div className="flex items-center gap-2">
                           <div className="px-2.5 py-1 bg-surface-container-low rounded-full border border-border-cream">
                             <span className="text-[10px] font-bold tracking-widest uppercase text-stone">Active</span>
                           </div>
-                          <button 
-                            onClick={() => setSkills(skills.filter(s => s.id !== skill.id))}
-                            className="text-stone hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100 p-1"
-                            title="Remove Skill"
-                          >
-                            <span className="material-symbols-outlined text-[18px]">close</span>
-                          </button>
                         </div>
                       </div>
                     ))}
-                    
-                    <button onClick={handleAddSkill} className="w-full flex items-center gap-3 p-3 rounded-xl border border-border-cream border-dashed bg-surface-container-low hover:bg-surface-container transition-colors justify-center mt-2">
+
+                    {activeAgent.skills.length === 0 && (
+                      <p className="text-sm text-stone text-center py-4">No skills assigned</p>
+                    )}
+
+                    <button className="w-full flex items-center gap-3 p-3 rounded-xl border border-border-cream border-dashed bg-surface-container-low hover:bg-surface-container transition-colors justify-center mt-2">
                       <span className="font-semibold text-sm text-stone">Browse Skill Catalog</span>
                     </button>
                   </div>
                 </section>
-                
+
               </div>
             </div>
 
@@ -491,11 +635,11 @@ export function AgentConfig() {
                   <p className="text-sm text-stone mt-1">Manage domain-specific documents (PDF, Markdown, Word, Excel)</p>
                 </div>
                 <div>
-                  <input 
-                    type="file" 
-                    ref={knowledgeInputRef} 
-                    onChange={(e) => handleFileUpload(e, 'knowledge')} 
-                    className="hidden" 
+                  <input
+                    type="file"
+                    ref={knowledgeInputRef}
+                    onChange={(e) => handleFileUpload(e, 'knowledge')}
+                    className="hidden"
                   />
                   <button onClick={() => knowledgeInputRef.current?.click()} className="flex items-center gap-2 font-semibold text-sm text-charcoal bg-sand hover:bg-[#d5c4ad] transition-colors px-4 py-2 rounded-lg border border-border-cream">
                     <span className="material-symbols-outlined text-[18px]">upload_file</span>
@@ -503,7 +647,7 @@ export function AgentConfig() {
                   </button>
                 </div>
               </div>
-              
+
               <div className="border border-border-cream rounded-lg overflow-hidden">
                 <table className="w-full text-left border-collapse">
                   <thead>
@@ -530,8 +674,8 @@ export function AgentConfig() {
                         <td className="py-3 px-4 text-sm text-stone">{item.size}</td>
                         <td className="py-3 px-4 text-sm text-stone">{item.date}</td>
                         <td className="py-3 px-4 text-right">
-                          <button 
-                            onClick={() => setKnowledge(knowledge.filter(k => k.id !== item.id))}
+                          <button
+                            onClick={() => handleDeleteKnowledge(item.id)}
                             className="text-stone hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
                             title="Delete"
                           >
@@ -547,7 +691,7 @@ export function AgentConfig() {
 
             {/* Danger Zone */}
             <section className="mt-8 border-t border-border-cream pt-8">
-              <button 
+              <button
                 onClick={handleDeleteClick}
                 className="w-full flex items-center justify-center gap-2 font-semibold text-base text-white bg-red-700 hover:bg-red-800 transition-colors px-6 py-3.5 rounded-xl shadow-sm"
               >
@@ -570,13 +714,13 @@ export function AgentConfig() {
                     <p className="text-sm text-charcoal leading-relaxed">
                       This action <strong>cannot</strong> be undone. This will permanently delete the <strong>{profileData.name}</strong> agent, including all associated memories, knowledge bases, and core configurations.
                     </p>
-                    
+
                     <div className="bg-surface-container-lowest p-4 rounded-lg border border-border-cream shadow-inner">
                       <label className="text-sm font-semibold text-charcoal">
                         Please type <span className="font-mono bg-red-100 text-red-700 px-1.5 py-0.5 rounded select-all selection:bg-red-200">{expectedDeleteCode}</span> to confirm.
                       </label>
-                      <input 
-                        type="text" 
+                      <input
+                        type="text"
                         value={deleteInputText}
                         onChange={(e) => setDeleteInputText(e.target.value)}
                         className="w-full bg-white border border-border-cream rounded-lg px-4 py-2.5 text-sm font-mono text-charcoal focus:border-red-500 focus:ring-1 focus:ring-red-500 outline-none transition-all mt-3"
@@ -585,13 +729,13 @@ export function AgentConfig() {
                     </div>
                   </div>
                   <div className="p-5 border-t border-border-cream bg-surface-container-lowest flex justify-end gap-3 rounded-b-xl border-t-0 p-t-4">
-                    <button 
-                      onClick={() => setIsDeleting(false)} 
+                    <button
+                      onClick={() => setIsDeleting(false)}
                       className="px-5 py-2.5 rounded-lg text-sm font-semibold text-stone hover:bg-surface-container-highest transition-colors"
                     >
                       Cancel
                     </button>
-                    <button 
+                    <button
                       onClick={confirmDelete}
                       disabled={deleteInputText !== expectedDeleteCode}
                       className="flex items-center gap-2 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 disabled:bg-red-300 disabled:border-red-300 disabled:text-white/70 disabled:cursor-not-allowed transition-colors px-6 py-2.5 rounded-lg shadow-sm border border-red-600"

@@ -8,6 +8,11 @@ export function useThreads(agentId: string) {
   const [loading, setLoading] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval>>();
 
+  // Reset active thread when agent changes
+  useEffect(() => {
+    setActiveThreadId(null);
+  }, [agentId]);
+
   // Load threads
   const loadThreads = useCallback(async () => {
     if (!agentId) return;
