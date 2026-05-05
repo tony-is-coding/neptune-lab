@@ -92,8 +92,8 @@
 | 知识范围 | `server/test/`、`web/tests/`、`.claude/skills/test-neptune/` |
 
 **测试体系认知**：
-- Server：9 个 `bun:test` 测试文件（`server/test/`）
-- Web：7 个 Playwright 测试（`web/tests/`）
+- Server：8 个 `bun:test` 测试文件（`server/test/`）
+- Web：6 个 Playwright 测试（`web/tests/`）
 - Shell：15 个测试用例脚本（`.claude/skills/test-neptune/test_cases/`）
 - E2E：`test/e2e-smoke.sh`（15 步完整用户旅程）
 
