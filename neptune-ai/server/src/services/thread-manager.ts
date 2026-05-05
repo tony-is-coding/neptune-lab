@@ -195,6 +195,74 @@ export class ThreadManager {
   }
 
   /**
+   * 列出用户最近的 Thread（跨所有 Agent）
+   * 用于 Collaborate 首页的"最近协作记录"视图
+   */
+  async listRecentThreads(
+    userId: string,
+    tenantId: string,
+    limit = 10,
+  ): Promise<Array<{
+    id: string;
+    tenantId: string;
+    userId: string;
+    templateId: string | null;
+    status: string;
+    title: string | null;
+    summary: string | null;
+    workspace: string;
+    lastActiveAt: Date | null;
+    createdAt: Date | null;
+    updatedAt: Date | null;
+    agentName: string | null;
+    agentIcon: string | null;
+  }>> {
+    // 查询用户最近的 Thread，包含 Agent 信息
+    const results = await db
+      .select({
+        id: sessionsTable.id,
+        tenantId: sessionsTable.tenantId,
+        userId: sessionsTable.userId,
+        templateId: sessionsTable.templateId,
+        status: sessionsTable.status,
+        title: sessionsTable.title,
+        summary: sessionsTable.summary,
+        workspace: sessionsTable.workspace,
+        lastActiveAt: sessionsTable.lastActiveAt,
+        createdAt: sessionsTable.createdAt,
+        updatedAt: sessionsTable.updatedAt,
+        agentName: agentTemplates.name,
+        agentIcon: agentTemplates.icon,
+      })
+      .from(sessionsTable)
+      .leftJoin(agentTemplates, eq(sessionsTable.templateId, agentTemplates.id))
+      .where(
+        and(
+          eq(sessionsTable.userId, userId),
+          eq(sessionsTable.tenantId, tenantId),
+        ),
+      )
+      .orderBy(desc(sessionsTable.lastActiveAt))
+      .limit(limit);
+
+    return results.map(r => ({
+      id: r.id,
+      tenantId: r.tenantId,
+      userId: r.userId,
+      templateId: r.templateId,
+      status: r.status,
+      title: r.title,
+      summary: r.summary,
+      workspace: r.workspace,
+      lastActiveAt: r.lastActiveAt,
+      createdAt: r.createdAt,
+      updatedAt: r.updatedAt,
+      agentName: r.agentName ?? null,
+      agentIcon: r.agentIcon ?? null,
+    }));
+  }
+
+  /**
    * 获取单个 Thread
    */
   async get(threadId: string): Promise<Thread | null> {

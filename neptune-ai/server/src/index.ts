@@ -1,7 +1,10 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
+import bcrypt from 'bcrypt';
+import { eq } from 'drizzle-orm';
 import { config } from './config';
 import { db } from './db';
+import { users, tenants } from './db/schema';
 import { authRoutes } from './routes/auth';
 import { tenantRoutes } from './routes/tenants';
 import { userRoutes } from './routes/users';
@@ -9,6 +12,8 @@ import { agentRoutes } from './routes/agents';
 import { sessionRoutes } from './routes/sessions';
 import { threadRoutes } from './routes/threads';
 import { billingRoutes } from './routes/billing';
+import { skillRoutes } from './routes/skills';
+import { collaborationRoutes } from './routes/collaborations';
 import { authMiddleware } from './middleware/auth';
 
 
@@ -79,9 +84,48 @@ async function createApp() {
 
     // 计费路由
     await app.register(billingRoutes, { prefix: '/tenants' });
+
+    // Skills 路由
+    await app.register(skillRoutes, { prefix: '/skills' });
+
+    // 协作路由
+    await app.register(collaborationRoutes, { prefix: '/collaborations' });
   }, { prefix: '/api/v1' });
 
   return app;
+}
+
+/**
+ * 确保默认管理员用户存在
+ *
+ * 邮箱: admin  密码: admin  角色: admin
+ * 如果 admin 邮箱已存在则跳过。
+ */
+async function ensureDefaultAdmin() {
+  try {
+    const existing = await db.query.users.findFirst({
+      where: eq(users.email, 'admin'),
+    });
+
+    if (existing) return;
+
+    // 创建默认租户
+    const [tenant] = await db.insert(tenants).values({ name: 'Default' }).returning();
+
+    // 创建管理员用户
+    const passwordHash = await bcrypt.hash('admin', 10);
+    await db.insert(users).values({
+      tenantId: tenant.id,
+      name: 'Admin',
+      email: 'admin@neptune.ai',
+      passwordHash,
+      role: 'admin',
+    });
+
+    console.log('👤 默认管理员已创建 — 邮箱: admin@neptune.ai  密码: admin');
+  } catch (error) {
+    console.warn('默认管理员创建跳过:', (error as Error).message);
+  }
 }
 
 /**
@@ -91,6 +135,9 @@ async function start() {
   const app = await createApp();
 
   try {
+    // 启动前确保默认管理员存在
+    await ensureDefaultAdmin();
+
     await app.listen({
       port: config.server.port,
       host: config.server.host,

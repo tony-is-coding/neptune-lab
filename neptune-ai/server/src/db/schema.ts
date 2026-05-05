@@ -140,6 +140,39 @@ export const documents = pgTable('documents', {
   templateIdx: index('documents_template_id_idx').on(table.templateId),
 }));
 
+/**
+ * Skills 表
+ * 存储 Agent 技能模板
+ */
+export const skills = pgTable('skills', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id),
+  name: text('name').notNull(),
+  description: text('description'),
+  content: text('content'), // 技能的具体内容（可选）
+  status: text('status').notNull().default('active'), // 'active' | 'draft'
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+}, (table) => ({
+  tenantIdx: index('skills_tenant_id_idx').on(table.tenantId),
+  statusIdx: index('skills_status_idx').on(table.status),
+}));
+
+/**
+ * Agent-Skills 关联表
+ * 存储 Agent 与 Skill 的多对多关系
+ */
+export const agentSkills = pgTable('agent_skills', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  agentId: uuid('agent_id').notNull().references(() => agentTemplates.id, { onDelete: 'cascade' }),
+  skillId: uuid('skill_id').notNull().references(() => skills.id, { onDelete: 'cascade' }),
+  assignedAt: timestamp('assigned_at').defaultNow(),
+}, (table) => ({
+  agentIdx: index('agent_skills_agent_id_idx').on(table.agentId),
+  skillIdx: index('agent_skills_skill_id_idx').on(table.skillId),
+  uniqueAgentSkill: index('agent_skills_agent_skill_unique_idx').on(table.agentId, table.skillId),
+}));
+
 // 类型导出
 export type Tenant = typeof tenants.$inferSelect;
 export type NewTenant = typeof tenants.$inferInsert;
@@ -158,3 +191,9 @@ export type NewBillingRecord = typeof billingRecords.$inferInsert;
 
 export type Document = typeof documents.$inferSelect;
 export type NewDocument = typeof documents.$inferInsert;
+
+export type Skill = typeof skills.$inferSelect;
+export type NewSkill = typeof skills.$inferInsert;
+
+export type AgentSkill = typeof agentSkills.$inferSelect;
+export type NewAgentSkill = typeof agentSkills.$inferInsert;

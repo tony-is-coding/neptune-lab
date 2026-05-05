@@ -24,7 +24,7 @@ export async function authMiddleware(
     const authHeader = request.headers.authorization;
 
     if (!authHeader) {
-      reply.status(401).send({
+      reply.code(401).send({
         error: 'UNAUTHORIZED',
         message: '缺少认证令牌',
       });
@@ -35,7 +35,7 @@ export async function authMiddleware(
     const [, token] = authHeader.split(' ');
 
     if (!token) {
-      reply.status(401).send({
+      reply.code(401).send({
         error: 'UNAUTHORIZED',
         message: '无效的认证令牌格式',
       });
@@ -51,7 +51,7 @@ export async function authMiddleware(
     // 注入租户上下文
     request.tenantId = payload.tenantId;
   } catch (error) {
-    reply.status(401).send({
+    reply.code(401).send({
       error: 'UNAUTHORIZED',
       message: '认证令牌无效或已过期',
     });
@@ -98,15 +98,23 @@ export async function optionalAuthMiddleware(
  * @param allowedRoles 允许的角色列表
  */
 export function roleMiddleware(...allowedRoles: string[]) {
-  return async (request: FastifyRequest, _reply: FastifyReply): Promise<void> => {
+  return async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
     const user = request.user;
 
     if (!user) {
-      throw { statusCode: 401, error: 'UNAUTHORIZED', message: '需要认证' };
+      reply.code(401).send({
+        error: 'UNAUTHORIZED',
+        message: '需要认证',
+      });
+      return;
     }
 
     if (!allowedRoles.includes(user.role)) {
-      throw { statusCode: 403, error: 'FORBIDDEN', message: '权限不足' };
+      reply.code(403).send({
+        error: 'FORBIDDEN',
+        message: '权限不足',
+      });
+      return;
     }
   };
 }
@@ -122,7 +130,7 @@ export async function tenantContextMiddleware(
 ): Promise<void> {
   // 检查用户是否已认证
   if (!request.user) {
-    reply.status(401).send({
+    reply.code(401).send({
       error: 'UNAUTHORIZED',
       message: '需要认证',
     });

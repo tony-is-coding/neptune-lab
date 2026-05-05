@@ -15,6 +15,13 @@
       "when": 1777956635694,
       "tag": "0001_chemical_the_twelve",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1777972792650,
+      "tag": "0002_plain_hawkeye",
+      "breakpoints": true
     }
   ]
 }
