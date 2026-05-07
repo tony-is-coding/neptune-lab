@@ -1,5 +1,5 @@
 import { db, agentTemplates, sessions, billingRecords, type NewAgentTemplate, type AgentTemplate } from '../db';
-import { eq, and, gte, count, sum, sql } from 'drizzle-orm';
+import { eq, and, gte, count, sum, sql, desc, asc } from 'drizzle-orm';
 
 /**
  * Agent 模板服务类
@@ -194,6 +194,90 @@ export class AgentTemplateService {
       avgLatency: 450, // Mock — to be collected from actual request metrics
       activeSessions: sessionStats[0]?.active || 0,
     };
+  }
+
+  /**
+   * 获取租户的 Agent 列表，每个 Agent 包含 Thread 聚合摘要
+   * @param tenantId 租户 ID
+   * @param options 选项
+   * @returns 带 Thread 聚合摘要的 Agent 列表
+   */
+  async listWithThreadSummary(
+    tenantId: string,
+    options?: {
+      userId?: string; // 用户 ID，用于过滤该用户的 Threads
+      activeOnly?: boolean;
+      limit?: number;
+      offset?: number;
+    },
+  ): Promise<Array<AgentTemplate & { threadSummary?: {
+    totalThreads: number;
+    latestStatus: 'running' | 'idle' | 'completed' | 'error' | null;
+    latestThreadTitle: string | null;
+    lastActiveAt: string | null;
+  } | null }>> {
+    const {
+      userId,
+      activeOnly = false,
+      limit = 100,
+      offset = 0,
+    } = options ?? {};
+
+    // 获取 Agent 列表
+    const agents = await this.findByTenantId(tenantId, activeOnly, limit, offset);
+
+    // 为每个 Agent 获取 Thread 聚合信息
+    const result = await Promise.all(
+      agents.map(async (agent) => {
+        // 构建 session 查询条件
+        const sessionConditions = [eq(sessions.templateId, agent.id)];
+        if (userId) {
+          sessionConditions.push(eq(sessions.userId, userId));
+        }
+
+        // 获取该 Agent 的 Thread 统计
+        const threadStats = await db
+          .select({
+            totalCount: count(sessions.id),
+          })
+          .from(sessions)
+          .where(and(...sessionConditions));
+
+        const totalThreads = threadStats[0]?.totalCount ?? 0;
+
+        // 如果没有 Thread，返回 null
+        if (totalThreads === 0) {
+          return {
+            ...agent,
+            threadSummary: null,
+          };
+        }
+
+        // 获取最新的 Thread（按 lastActiveAt 降序，NULL 值排在最后）
+        const [latestThread] = await db
+          .select({
+            status: sessions.status,
+            title: sessions.title,
+            lastActiveAt: sessions.lastActiveAt,
+          })
+          .from(sessions)
+          .where(and(...sessionConditions))
+          .orderBy(sql`COALESCE(${sessions.lastActiveAt}, '1970-01-01'::timestamp) DESC`)
+          .limit(1);
+
+        return {
+          ...agent,
+          threadSummary: {
+            totalThreads,
+            latestStatus: (latestThread?.status ?? null) as 'running' | 'idle' | 'completed' | 'error' | null,
+            latestThreadTitle: latestThread?.title ?? null,
+            lastActiveAt: latestThread?.lastActiveAt ? latestThread.lastActiveAt.toISOString() : null,
+          },
+        };
+      }),
+    );
+
+    return result;
   }
 }
 

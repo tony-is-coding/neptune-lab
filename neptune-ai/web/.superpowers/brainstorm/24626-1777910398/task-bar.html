@@ -1,0 +1,149 @@
+<h2>Task Bar — 输入框上方设计</h2>
+<p class="subtitle">任务放在输入框正上方，默认收起只播报最新一条，可展开全部</p>
+
+<div class="section">
+  <div class="split">
+    <!-- 收起态 -->
+    <div class="mockup">
+      <div class="mockup-header">收起态 — 播报最新任务</div>
+      <div class="mockup-body">
+        <div style="font-family:'Plus Jakarta Sans',system-ui,sans-serif; display:flex; flex-direction:column; height:420px; background:#f5f4ed; border-radius:8px; overflow:hidden;">
+
+          <!-- Chat placeholder -->
+          <div style="flex:1; padding:20px; overflow:hidden;">
+            <div style="text-align:center; margin-bottom:16px;"><span style="font-size:10px; padding:4px 12px; background:#e8e6dc; border-radius:12px; color:#87867f; font-weight:700; letter-spacing:1px;">TODAY</span></div>
+            <div style="display:flex; justify-content:flex-end; margin-bottom:12px;">
+              <div style="max-width:70%; padding:10px 14px; background:#faf9f5; border:1px solid #f0eee6; border-radius:12px 4px 12px 12px; font-size:12px; color:#141413;">Process the vendor invoices from Q3</div>
+            </div>
+            <div style="max-width:85%; font-size:12px; color:#141413; line-height:1.5;">
+              I've created a 4-step execution plan. Let me start working on it. Research complete. Now starting implementation...
+              <span style="display:inline-block; width:2px; height:12px; background:#141413; margin-left:1px; animation:blink 1s infinite; vertical-align:text-bottom;"></span>
+            </div>
+          </div>
+
+          <!-- ===== TASK BAR (collapsed) ===== -->
+          <div style="padding:0 24px 6px; flex-shrink:0;">
+            <div style="background:#faf9f5; border:1px solid #f0eee6; border-radius:10px; padding:7px 12px; display:flex; align-items:center; gap:7px; cursor:pointer;">
+              <div style="width:15px; height:15px; border-radius:50%; background:#87867f; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                <span style="color:white; font-size:5px; letter-spacing:1px;">●●●</span>
+              </div>
+              <div style="flex:1; min-width:0; display:flex; align-items:center; gap:6px;">
+                <span style="font-size:11px; font-weight:600; color:#141413;">#2 Implement core logic</span>
+                <span style="font-size:10px; color:#87867f;">Running tests...</span>
+              </div>
+              <div style="display:flex; align-items:center; gap:5px;">
+                <span style="font-size:10px; color:#87867f; font-weight:500;">2/4</span>
+                <div style="width:36px; height:3px; background:#e8e6dc; border-radius:2px; overflow:hidden;">
+                  <div style="width:50%; height:100%; background:#10b981; border-radius:2px;"></div>
+                </div>
+                <span style="color:#cfc4bd; font-size:9px;">▼</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Input -->
+          <div style="padding:0 24px 16px; flex-shrink:0;">
+            <div style="background:#faf9f5; border:1px solid #f0eee6; border-radius:14px; padding:6px; display:flex; align-items:center; gap:6px;">
+              <span style="color:#87867f; font-size:16px; padding:4px;">📎</span>
+              <span style="flex:1; font-size:12px; color:#87867f; padding:4px;">Message Invoice Processor...</span>
+              <div style="width:28px; height:28px; background:#141413; border-radius:8px; display:flex; align-items:center; justify-content:center; opacity:0.5;"><span style="color:white; font-size:10px;">➤</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 展开态 -->
+    <div class="mockup">
+      <div class="mockup-header">展开态 — 全部任务</div>
+      <div class="mockup-body">
+        <div style="font-family:'Plus Jakarta Sans',system-ui,sans-serif; display:flex; flex-direction:column; height:420px; background:#f5f4ed; border-radius:8px; overflow:hidden;">
+
+          <!-- Chat (smaller) -->
+          <div style="flex:1; padding:20px; overflow:hidden;">
+            <div style="font-size:12px; color:#141413; line-height:1.5; opacity:0.5;">I've created a 4-step execution plan...</div>
+          </div>
+
+          <!-- ===== TASK BAR (expanded) ===== -->
+          <div style="padding:0 24px 4px; flex-shrink:0;">
+            <div style="background:#faf9f5; border:1px solid #f0eee6; border-radius:10px; overflow:hidden;">
+              <!-- Header -->
+              <div style="padding:7px 12px; display:flex; align-items:center; gap:6px; border-bottom:1px solid #f0eee6;">
+                <span style="font-size:11px; font-weight:600; color:#141413;">Plan</span>
+                <span style="font-size:10px; color:#10b981; font-weight:500;">2/4</span>
+                <div style="flex:1; height:2px; background:#e8e6dc; border-radius:2px; overflow:hidden;">
+                  <div style="width:50%; height:100%; background:#10b981; border-radius:2px;"></div>
+                </div>
+                <span style="color:#cfc4bd; font-size:9px; cursor:pointer;">▲</span>
+              </div>
+              <!-- Tasks -->
+              <div style="padding:4px 0;">
+                <div style="display:flex; align-items:center; gap:6px; padding:4px 12px;">
+                  <div style="width:14px; height:14px; border-radius:50%; background:#10b981; display:flex; align-items:center; justify-content:center; flex-shrink:0;"><span style="color:white; font-size:8px; font-weight:700;">✓</span></div>
+                  <span style="font-size:11px; color:#87867f; text-decoration:line-through;">#1 Research codebase</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:6px; padding:4px 12px; background:rgba(255,255,255,0.5);">
+                  <div style="width:14px; height:14px; border-radius:50%; background:#87867f; display:flex; align-items:center; justify-content:center; flex-shrink:0;"><span style="color:white; font-size:5px;">●●●</span></div>
+                  <span style="font-size:11px; font-weight:600; color:#141413;">#2 Implement core logic</span>
+                  <span style="font-size:10px; color:#87867f; margin-left:auto;">Running tests...</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:6px; padding:4px 12px;">
+                  <div style="width:14px; height:14px; border-radius:50%; border:1.5px solid #87867f30; flex-shrink:0;"></div>
+                  <span style="font-size:11px; color:#87867f;">#3 Write unit tests</span>
+                  <span style="font-size:9px; color:#87867f80; margin-left:auto;">blocked</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:6px; padding:4px 12px;">
+                  <div style="width:14px; height:14px; border-radius:50%; border:1.5px solid #87867f30; flex-shrink:0;"></div>
+                  <span style="font-size:11px; color:#87867f;">#4 Generate docs</span>
+                  <span style="font-size:9px; color:#87867f80; margin-left:auto;">blocked</span>
+                </div>
+              </div>
+              <!-- Background -->
+              <div style="padding:4px 12px 6px; border-top:1px solid #f0eee6; display:flex; align-items:center; gap:6px;">
+                <span style="font-size:9px; color:#87867f; font-weight:700; letter-spacing:0.5px;">BG</span>
+                <div style="width:12px; height:12px; border-radius:50%; background:#87867f; display:flex; align-items:center; justify-content:center; flex-shrink:0;"><span style="color:white; font-size:4px;">●●●</span></div>
+                <span style="font-size:10px; color:#141413;">Shell: npm run build</span>
+                <span style="font-size:9px; color:#87867f80;">12s</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Input -->
+          <div style="padding:8px 24px 16px; flex-shrink:0;">
+            <div style="background:#faf9f5; border:1px solid #f0eee6; border-radius:14px; padding:6px; display:flex; align-items:center; gap:6px;">
+              <span style="color:#87867f; font-size:16px; padding:4px;">📎</span>
+              <span style="flex:1; font-size:12px; color:#87867f; padding:4px;">Message Invoice Processor...</span>
+              <div style="width:28px; height:28px; background:#141413; border-radius:8px; display:flex; align-items:center; justify-content:center; opacity:0.5;"><span style="color:white; font-size:10px;">➤</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:24px;">
+  <h3>完成态预览</h3>
+  <div class="mockup">
+    <div class="mockup-header">全部完成 — 收起态</div>
+    <div class="mockup-body" style="padding:8px 24px; background:#f5f4ed;">
+      <div style="background:#faf9f5; border:1px solid #f0eee6; border-radius:10px; padding:7px 12px; display:flex; align-items:center; gap:7px; cursor:pointer; font-family:'Plus Jakarta Sans',system-ui,sans-serif;">
+        <div style="width:15px; height:15px; border-radius:50%; background:#10b981; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+          <span style="color:white; font-size:8px; font-weight:700;">✓</span>
+        </div>
+        <span style="font-size:11px; font-weight:600; color:#10b981;">All 4 tasks completed</span>
+        <div style="margin-left:auto; display:flex; align-items:center; gap:5px;">
+          <div style="width:36px; height:3px; background:#10b981; border-radius:2px;"></div>
+          <span style="color:#cfc4bd; font-size:9px;">▼</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  @keyframes blink {
+    0%, 50% { opacity: 1; }
+    51%, 100% { opacity: 0; }
+  }
+</style>

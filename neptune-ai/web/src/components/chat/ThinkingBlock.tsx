@@ -15,15 +15,28 @@ export function ThinkingBlock({ content, duration, isStreaming }: ThinkingBlockP
       onClick={() => setIsExpanded(!isExpanded)}
     >
       <div className="flex items-center gap-2">
-        <span className="text-stone text-[12px]">💭</span>
         {isStreaming ? (
-          <span className="text-[12px] text-stone font-medium animate-pulse">Thinking...</span>
+          <span className="text-stone text-[12px]">💭</span>
         ) : (
-          <span className="text-[12px] text-stone font-medium">
-            Thought for {duration ? `${duration}s` : 'a moment'}
+          <span className="text-stone/50 text-[12px]">✅</span>
+        )}
+        {isStreaming ? (
+          <div className="flex items-center gap-1">
+            <span className="text-[12px] text-charcoal/60 font-medium">思考中</span>
+            <span className="flex gap-0.5">
+              <span className="w-1 h-1 bg-charcoal/40 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+              <span className="w-1 h-1 bg-charcoal/40 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+              <span className="w-1 h-1 bg-charcoal/40 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+            </span>
+          </div>
+        ) : (
+          <span className="text-[12px] text-charcoal font-medium">
+            思考了 {duration ? `${duration}秒` : '片刻'}
           </span>
         )}
-        <span className={`text-stone/50 text-[10px] ml-auto transition-transform ${isExpanded ? 'rotate-90' : ''}`}>▶</span>
+        {!isStreaming && (
+          <span className={`text-stone/50 text-[10px] ml-auto transition-transform ${isExpanded ? 'rotate-90' : ''}`}>▶</span>
+        )}
       </div>
       {isExpanded && !isStreaming && (
         <div className="mt-2 pt-2 border-t border-border-cream/50 text-[12px] text-stone leading-relaxed">

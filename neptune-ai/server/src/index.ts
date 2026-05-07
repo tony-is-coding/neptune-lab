@@ -13,7 +13,6 @@ import { sessionRoutes } from './routes/sessions';
 import { threadRoutes } from './routes/threads';
 import { billingRoutes } from './routes/billing';
 import { skillRoutes } from './routes/skills';
-import { collaborationRoutes } from './routes/collaborations';
 import { authMiddleware } from './middleware/auth';
 
 
@@ -87,9 +86,6 @@ async function createApp() {
 
     // Skills 路由
     await app.register(skillRoutes, { prefix: '/skills' });
-
-    // 协作路由
-    await app.register(collaborationRoutes, { prefix: '/collaborations' });
   }, { prefix: '/api/v1' });
 
   return app;

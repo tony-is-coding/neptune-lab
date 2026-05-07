@@ -24,22 +24,20 @@ export async function authMiddleware(
     const authHeader = request.headers.authorization;
 
     if (!authHeader) {
-      reply.code(401).send({
+      return reply.code(401).send({
         error: 'UNAUTHORIZED',
         message: '缺少认证令牌',
       });
-      return;
     }
 
     // 提取 Bearer 令牌
     const [, token] = authHeader.split(' ');
 
     if (!token) {
-      reply.code(401).send({
+      return reply.code(401).send({
         error: 'UNAUTHORIZED',
         message: '无效的认证令牌格式',
       });
-      return;
     }
 
     // 验证令牌
@@ -51,7 +49,7 @@ export async function authMiddleware(
     // 注入租户上下文
     request.tenantId = payload.tenantId;
   } catch (error) {
-    reply.code(401).send({
+    return reply.code(401).send({
       error: 'UNAUTHORIZED',
       message: '认证令牌无效或已过期',
     });
@@ -102,19 +100,17 @@ export function roleMiddleware(...allowedRoles: string[]) {
     const user = request.user;
 
     if (!user) {
-      reply.code(401).send({
+      return reply.code(401).send({
         error: 'UNAUTHORIZED',
         message: '需要认证',
       });
-      return;
     }
 
     if (!allowedRoles.includes(user.role)) {
-      reply.code(403).send({
+      return reply.code(403).send({
         error: 'FORBIDDEN',
         message: '权限不足',
       });
-      return;
     }
   };
 }

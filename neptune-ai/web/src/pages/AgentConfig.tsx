@@ -1,7 +1,7 @@
-import { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import { useResizableSidebar } from '../hooks/useResizableSidebar';
-import { listAgents, getAgent, updateAgent, deleteAgent, uploadAgentDocument, deleteAgentDocument, getAgentStats, type AgentStats } from '../api/agents';
+import { listAgents, getAgent, updateAgent, deleteAgent, uploadAgentDocument, deleteAgentDocument, getAgentStats, listAgentDocuments, listSkills, assignSkillToAgent, removeSkillFromAgent, type AgentStats, type Skill } from '../api/agents';
 import { listThreads, createThread } from '../api/threads';
 import type { AgentTemplate } from '../types/chat';
 
@@ -15,6 +15,9 @@ export function AgentConfig() {
   const [agentLoading, setAgentLoading] = useState(true);
   const [stats, setStats] = useState<AgentStats | null>(null);
   const [statsLoading, setStatsLoading] = useState(true);
+
+  // 使用 useCallback 稳定 navigate 引用，避免 useEffect 无限循环
+  const stableNavigate = useCallback(navigate, []);
 
   const { sidebarWidth, isResizing, startResizing } = useResizableSidebar(240, 200, 400);
 
@@ -33,7 +36,7 @@ export function AgentConfig() {
     systemPrompt: ""
   });
 
-  const [memories, setMemories] = useState<Array<{ id: string; name: string; type: string; date: string; icon: string }>>([]);
+  const [memories, setMemories] = useState<Array<{ id: string; name: string; type: string; size?: string; date: string; icon: string; color: string }>>([]);
   const [knowledge, setKnowledge] = useState<Array<{ id: string; name: string; type: string; size?: string; date: string; icon: string; color: string }>>([]);
 
   const [isDeleting, setIsDeleting] = useState(false);
@@ -42,6 +45,13 @@ export function AgentConfig() {
 
   const [saveError, setSaveError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  // Skills 弹窗状态
+  const [showSkillModal, setShowSkillModal] = useState(false);
+  const [allSkills, setAllSkills] = useState<Skill[]>([]);
+  const [skillsLoading, setSkillsLoading] = useState(false);
+  const [assigningSkillId, setAssigningSkillId] = useState<string | null>(null);
 
   // Load agents list
   useEffect(() => {
@@ -52,9 +62,15 @@ export function AgentConfig() {
       .then(res => {
         if (cancelled) return;
         setAgents(res.data);
+
+        // 如果 URL 有 id，确保 id 在列表中
+        if (id && !res.data.some(a => a.id === id)) {
+          setLoadError(`Agent ${id} not found`);
+        }
       })
       .catch(err => {
         console.error('Failed to load agents:', err);
+        if (!cancelled) setLoadError('Failed to load agents. Please check if the server is running.');
       })
       .finally(() => {
         if (!cancelled) setAgentsLoading(false);
@@ -65,19 +81,22 @@ export function AgentConfig() {
 
   // Load active agent
   useEffect(() => {
-    if (!id) return;
+    if (!id) {
+      setActiveAgent(null);
+      setAgentLoading(false);
+      setStatsLoading(false);
+      return;
+    }
 
     const activeAgentId = id;
     setAgentLoading(true);
     setStatsLoading(true);
+    setLoadError(null);
 
-    Promise.all([
-      getAgent(activeAgentId),
-      getAgentStats(activeAgentId).catch(() => null),
-    ])
-      .then(([agentData, statsData]) => {
+    // 先加载 Agent 数据
+    getAgent(activeAgentId)
+      .then(agentData => {
         setActiveAgent(agentData);
-        setStats(statsData);
 
         setProfileData({
           name: agentData.name,
@@ -90,18 +109,62 @@ export function AgentConfig() {
           role: agentData.description || "",
           systemPrompt: agentData.systemPrompt
         });
+
+        // Agent 加载成功后，并行加载 stats 和文档列表（失败不影响主体内容）
+        const statsPromise = getAgentStats(activeAgentId)
+          .then(statsData => {
+            setStats(statsData);
+          })
+          .catch(() => {
+            setStats(null);
+          })
+          .finally(() => {
+            setStatsLoading(false);
+          });
+
+        const docsPromise = listAgentDocuments(activeAgentId)
+          .then(docs => {
+            const formatted = docs.map(doc => ({
+              id: doc.id,
+              name: doc.name,
+              type: doc.type,
+              date: doc.uploadedAt
+                ? new Date(doc.uploadedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                : '',
+              icon: getFileIcon(doc.type),
+              size: doc.size ? formatFileSize(doc.size) : undefined,
+              color: 'text-brand',
+            }));
+            // 后端没有 category 字段，暂将所有文档视为 memory
+            setMemories(formatted);
+            setKnowledge([]);
+          })
+          .catch(err => {
+            console.warn('Failed to load documents:', err);
+          });
+
+        return Promise.all([statsPromise, docsPromise]);
       })
       .catch(err => {
         console.error('Failed to load agent:', err);
-        if (err instanceof Error && err.message.includes('401')) {
-          navigate('/login');
+        if (err instanceof Error) {
+          if (err.message === 'Request timeout') {
+            setLoadError('Request timeout. Please check if the server is running.');
+          } else if (err.message === 'Agent not found') {
+            setLoadError('Agent not found');
+          } else if (err.message.includes('401') || err.message === 'Unauthorized') {
+            stableNavigate('/login');
+          } else {
+            setLoadError('Failed to load agent details. Please check if the server is running.');
+          }
+        } else {
+          setLoadError('Failed to load agent details. Please check if the server is running.');
         }
       })
       .finally(() => {
         setAgentLoading(false);
-        setStatsLoading(false);
       });
-  }, [id, navigate]);
+  }, [id, stableNavigate]);
 
   const handleSaveProfile = async () => {
     if (!activeAgent) return;
@@ -188,7 +251,7 @@ export function AgentConfig() {
       } else {
         // 第一次：创建新的 Thread
         const newThread = await createThread(activeAgent.id);
-        threadId = newThread.data.id;
+        threadId = newThread.id;
       }
 
       navigate(`/collaborate/${activeAgent.id}`, { state: { threadId } });
@@ -213,8 +276,8 @@ export function AgentConfig() {
         name: doc.name,
         type: doc.type,
         date: new Date(doc.uploadedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-        icon: "description",
-        size: target === 'knowledge' ? doc.size : undefined,
+        icon: getFileIcon(doc.type),
+        size: doc.size ? formatFileSize(doc.size) : undefined,
         color: "text-brand"
       };
 
@@ -256,10 +319,99 @@ export function AgentConfig() {
     }
   };
 
-  if (agentLoading || !activeAgent) {
+  // 根据文件类型返回 Material Symbols 图标名
+  function getFileIcon(type: string): string {
+    const t = (type || '').toLowerCase();
+    if (t.includes('pdf')) return 'picture_as_pdf';
+    if (t.includes('csv') || t.includes('excel') || t.includes('spreadsheet') || t.includes('xls')) return 'table_chart';
+    if (t.includes('markdown') || t.includes('md')) return 'article';
+    if (t.includes('json')) return 'data_object';
+    if (t.includes('word') || t.includes('doc')) return 'description';
+    if (t.includes('text') || t.includes('txt')) return 'text_snippet';
+    return 'description';
+  }
+
+  // 格式化文件大小
+  function formatFileSize(bytes: number): string {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  }
+
+  // 打开 Skill Catalog 弹窗
+  const handleBrowseSkills = async () => {
+    if (!activeAgent) return;
+    setShowSkillModal(true);
+    setSkillsLoading(true);
+    try {
+      const skills = await listSkills();
+      setAllSkills(skills);
+    } catch (err) {
+      console.error('Failed to load skills:', err);
+      setAllSkills([]);
+    } finally {
+      setSkillsLoading(false);
+    }
+  };
+
+  // 分配 Skill 给当前 Agent
+  const handleAssignSkill = async (skill: Skill) => {
+    if (!activeAgent) return;
+    setAssigningSkillId(skill.id);
+    try {
+      await assignSkillToAgent(skill.id, activeAgent.id);
+      // 更新 agent 的 skills 列表
+      const updated = {
+        ...activeAgent,
+        skills: [...activeAgent.skills, { id: skill.id, name: skill.name, version: 'v1.0' }],
+      };
+      setActiveAgent(updated);
+      setAgents(prev => prev.map(a => a.id === updated.id ? updated : a));
+    } catch (err) {
+      console.error('Failed to assign skill:', err);
+      alert('Failed to assign skill');
+    } finally {
+      setAssigningSkillId(null);
+    }
+  };
+
+  // 从当前 Agent 移除 Skill
+  const handleRemoveSkill = async (skillId: string) => {
+    if (!activeAgent) return;
+    try {
+      await removeSkillFromAgent(skillId, activeAgent.id);
+      const updated = {
+        ...activeAgent,
+        skills: activeAgent.skills.filter(s => s.id !== skillId),
+      };
+      setActiveAgent(updated);
+      setAgents(prev => prev.map(a => a.id === updated.id ? updated : a));
+    } catch (err) {
+      console.error('Failed to remove skill:', err);
+      alert('Failed to remove skill');
+    }
+  };
+
+  // 当有 id 时，加载 agent 数据期间显示加载状态
+  if (id && agentLoading) {
     return (
       <div className="flex h-full bg-surface-container-low items-center justify-center">
         <div className="w-6 h-6 border-2 border-stone/30 border-t-charcoal rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  // 当有 id 但 agent 加载失败或未找到时，显示错误状态
+  if (id && (!activeAgent || loadError)) {
+    return (
+      <div className="flex h-full bg-surface-container-low items-center justify-center">
+        <div className="text-center">
+          <span className="material-symbols-outlined text-[40px] text-stone/40 block mb-3">error_outline</span>
+          <p className="text-sm text-stone mb-2">{loadError || 'Agent not found'}</p>
+          <Link to="/agents" className="text-sm text-charcoal font-medium hover:underline">
+            &larr; Back to Agents
+          </Link>
+        </div>
       </div>
     );
   }
@@ -292,13 +444,13 @@ export function AgentConfig() {
             <Link
               key={agent.id}
               to={`/agents/${agent.id}`}
-              className={`w-full flex items-center gap-3 p-3 rounded-xl transition-colors text-left group ${activeAgent.id === agent.id ? 'bg-surface-container-high border border-border-cream text-charcoal shadow-sm' : 'hover:bg-surface-container-highest border border-transparent text-charcoal'}`}
+              className={`w-full flex items-center gap-3 p-3 rounded-xl transition-colors text-left group ${activeAgent?.id === agent.id ? 'bg-surface-container-high border border-border-cream text-charcoal shadow-sm' : 'hover:bg-surface-container-highest border border-transparent text-charcoal'}`}
             >
               <div className="w-8 h-8 rounded-full bg-ivory flex items-center justify-center shrink-0 border border-border-cream">
                 <span className="material-symbols-outlined text-[16px] text-charcoal">{agent.icon || 'smart_toy'}</span>
               </div>
               <div className="overflow-hidden">
-                <p className={`text-sm truncate ${activeAgent.id === agent.id ? 'font-semibold' : ''}`}>{agent.name}</p>
+                <p className={`text-sm truncate ${activeAgent?.id === agent.id ? 'font-semibold' : ''}`}>{agent.name}</p>
                 <p className="text-[11px] text-stone truncate">{agent.isActive ? 'Active' : 'Inactive'}</p>
               </div>
             </Link>
@@ -322,6 +474,13 @@ export function AgentConfig() {
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
+        {!activeAgent ? (
+          <div className="flex-1 flex flex-col items-center justify-center text-stone">
+            <span className="material-symbols-outlined text-[48px] text-stone/30">smart_toy</span>
+            <p className="text-sm mt-3">Select an agent to view configuration</p>
+          </div>
+        ) : (
+        <>
         {/* TopAppBar */}
         <header className="bg-ivory/80 backdrop-blur-md sticky top-0 w-full border-b border-border-cream shadow-sm flex items-center px-6 py-4 z-30 shrink-0">
           <div className="flex items-center gap-2 text-sm">
@@ -559,18 +718,18 @@ export function AgentConfig() {
                         <div className="bg-surface-container-low rounded-xl p-5 border border-border-cream">
                           <span className="text-[12px] font-bold tracking-widest uppercase text-stone mb-1 block">MTD Token Cost</span>
                           <div className="flex items-baseline gap-2">
-                            <span className="font-serif text-[30px] text-charcoal font-medium">${stats.mtdTokenCost.toFixed(2)}</span>
-                            <span className="text-sm text-stone">/ ${stats.mtdTokenLimit} limit</span>
+                            <span className="font-serif text-[30px] text-charcoal font-medium">${(stats.mtdTokenCost ?? stats.mtdCost ?? 0).toFixed(2)}</span>
+                            <span className="text-sm text-stone">/ ${stats.mtdTokenLimit ?? stats.budgetLimit ?? 0} limit</span>
                           </div>
                           <div className="w-full bg-[#e6e1e0] h-1.5 rounded-full mt-4 overflow-hidden">
-                            <div className="bg-charcoal h-full rounded-full" style={{ width: `${(stats.mtdTokenCost / stats.mtdTokenLimit) * 100}%` }}></div>
+                            <div className="bg-charcoal h-full rounded-full" style={{ width: `${((stats.mtdTokenCost ?? stats.mtdCost ?? 0) / (stats.mtdTokenLimit ?? stats.budgetLimit ?? 1)) * 100}%` }}></div>
                           </div>
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
                           <div className="bg-surface-container-low border border-border-cream rounded-xl p-4">
                             <span className="text-[12px] font-bold tracking-widest uppercase text-stone mb-2 block">30-Day Sessions</span>
-                            <span className="font-serif text-[24px] text-charcoal">{stats.sessions30Days.toLocaleString()}</span>
+                            <span className="font-serif text-[24px] text-charcoal">{(stats.sessions30Days ?? stats.thirtyDaySessions ?? 0).toLocaleString()}</span>
                           </div>
                           <div className="bg-surface-container-low border border-border-cream rounded-xl p-4">
                             <span className="text-[12px] font-bold tracking-widest uppercase text-stone mb-2 block">Avg Latency</span>
@@ -610,6 +769,13 @@ export function AgentConfig() {
                           <div className="px-2.5 py-1 bg-surface-container-low rounded-full border border-border-cream">
                             <span className="text-[10px] font-bold tracking-widest uppercase text-stone">Active</span>
                           </div>
+                          <button
+                            onClick={() => handleRemoveSkill(skill.id)}
+                            className="text-stone hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
+                            title="Remove skill"
+                          >
+                            <span className="material-symbols-outlined text-[20px]">close</span>
+                          </button>
                         </div>
                       </div>
                     ))}
@@ -618,7 +784,10 @@ export function AgentConfig() {
                       <p className="text-sm text-stone text-center py-4">No skills assigned</p>
                     )}
 
-                    <button className="w-full flex items-center gap-3 p-3 rounded-xl border border-border-cream border-dashed bg-surface-container-low hover:bg-surface-container transition-colors justify-center mt-2">
+                    <button
+                      onClick={handleBrowseSkills}
+                      className="w-full flex items-center gap-3 p-3 rounded-xl border border-border-cream border-dashed bg-surface-container-low hover:bg-surface-container transition-colors justify-center mt-2"
+                    >
                       <span className="font-semibold text-sm text-stone">Browse Skill Catalog</span>
                     </button>
                   </div>
@@ -747,8 +916,74 @@ export function AgentConfig() {
                 </div>
               </div>
             )}
+
+            {/* Skill Catalog Modal */}
+            {showSkillModal && activeAgent && (
+              <div className="fixed inset-0 bg-charcoal/40 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowSkillModal(false)}>
+                <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden border border-border-cream max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
+                  <div className="p-6 border-b border-border-cream">
+                    <h3 className="text-xl font-serif text-charcoal flex items-center gap-2">
+                      <span className="material-symbols-outlined">extension</span>
+                      Skill Catalog
+                    </h3>
+                    <p className="text-sm text-stone mt-1">Select skills to assign to {activeAgent.name}</p>
+                  </div>
+                  <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
+                    {skillsLoading ? (
+                      <div className="flex items-center justify-center h-32">
+                        <div className="w-6 h-6 border-2 border-stone/30 border-t-charcoal rounded-full animate-spin" />
+                      </div>
+                    ) : allSkills.length === 0 ? (
+                      <p className="text-sm text-stone text-center py-8">No skills available. Create skills first.</p>
+                    ) : (
+                      <div className="flex flex-col gap-2">
+                        {allSkills.map(skill => {
+                          const isAssigned = activeAgent.skills.some(s => s.id === skill.id);
+                          const isAssigning = assigningSkillId === skill.id;
+                          return (
+                            <div key={skill.id} className="flex items-center gap-3 p-3 rounded-lg border border-border-cream hover:bg-surface-container-low transition-colors">
+                              <div className="h-9 w-9 rounded bg-[#e3e2e4] flex items-center justify-center shrink-0">
+                                <span className="material-symbols-outlined text-[18px] text-[#1a1c1d]">extension</span>
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <h4 className="text-sm font-medium text-charcoal truncate">{skill.name}</h4>
+                                <p className="text-xs text-stone truncate">{skill.description || 'No description'}</p>
+                              </div>
+                              <div className="shrink-0">
+                                {isAssigned ? (
+                                  <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">Assigned</span>
+                                ) : isAssigning ? (
+                                  <div className="w-5 h-5 border-2 border-stone/30 border-t-charcoal rounded-full animate-spin" />
+                                ) : (
+                                  <button
+                                    onClick={() => handleAssignSkill(skill)}
+                                    className="text-xs font-semibold text-white bg-brand hover:bg-brand/90 px-3 py-1.5 rounded-lg transition-colors"
+                                  >
+                                    Add
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                  <div className="p-4 border-t border-border-cream bg-surface-container-lowest flex justify-end">
+                    <button
+                      onClick={() => setShowSkillModal(false)}
+                      className="px-5 py-2 rounded-lg text-sm font-semibold text-stone hover:bg-surface-container-highest transition-colors"
+                    >
+                      Done
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
+        </>
+        )}
       </div>
     </div>
   );

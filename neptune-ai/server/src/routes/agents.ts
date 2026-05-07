@@ -115,25 +115,44 @@ export async function agentRoutes(fastify: FastifyInstance) {
   /**
    * GET /api/agents
    * 获取 Agent 模板列表
+   * 支持查询参数：
+   * - active: boolean - 只返回激活的 Agent
+   * - limit: number - 限制返回数量
+   * - offset: number - 偏移量
+   * - include: string - 包含额外信息，支持 'thread_summary'
    */
   fastify.get('/', {
     preHandler: [fastify.authenticate],
   }, async (request, reply) => {
-    const { active, limit, offset } = request.query as {
+    const { active, limit, offset, include } = request.query as {
       active?: string;
       limit?: string;
       offset?: string;
+      include?: string;
     };
 
     const tenantId = request.user!.tenantId;
+    const userId = request.user!.userId;
 
     try {
-      const templates = await agentTemplateService.findByTenantId(
-        tenantId,
-        active === 'true',
-        limit ? parseInt(limit, 10) : 100,
-        offset ? parseInt(offset, 10) : 0,
-      );
+      const includeThreadSummary = include === 'thread_summary';
+
+      const templates = includeThreadSummary
+        ? await agentTemplateService.listWithThreadSummary(
+            tenantId,
+            {
+              userId,
+              activeOnly: active === 'true',
+              limit: limit ? parseInt(limit, 10) : 100,
+              offset: offset ? parseInt(offset, 10) : 0,
+            },
+          )
+        : await agentTemplateService.findByTenantId(
+            tenantId,
+            active === 'true',
+            limit ? parseInt(limit, 10) : 100,
+            offset ? parseInt(offset, 10) : 0,
+          );
 
       reply.send({
         data: templates,
@@ -141,6 +160,7 @@ export async function agentRoutes(fastify: FastifyInstance) {
           count: templates.length,
           limit: limit ? parseInt(limit, 10) : 100,
           offset: offset ? parseInt(offset, 10) : 0,
+          include: includeThreadSummary ? 'thread_summary' : undefined,
         },
       });
     } catch (error) {
@@ -342,16 +362,31 @@ export async function agentRoutes(fastify: FastifyInstance) {
   // ===== BE-2: Document Management Endpoints =====
 
   /**
+   * 文件存储根路径
+   * 优先使用 DATA_ROOT 环境变量，默认 ./data
+   */
+  const dataRoot = process.env.DATA_ROOT || './data';
+
+  /**
    * GET /api/agents/:id/documents
    * 获取 Agent 文档列表
+   * 支持查询参数 category 过滤
    */
   fastify.get('/:id/documents', {
     preHandler: [fastify.authenticate],
   }, async (request, reply) => {
     const { id } = request.params as { id: string };
+    const { category } = request.query as { category?: string };
 
     try {
-      const docs = await db.select().from(documents).where(eq(documents.templateId, id));
+      const conditions = [eq(documents.templateId, id)];
+      if (category) {
+        conditions.push(eq(documents.category, category));
+      }
+
+      const docs = await db.select().from(documents).where(
+        conditions.length === 1 ? conditions[0] : and(...conditions),
+      );
       reply.send({ data: docs });
     } catch (error) {
       request.log.error(error);
@@ -365,45 +400,99 @@ export async function agentRoutes(fastify: FastifyInstance) {
   /**
    * POST /api/agents/:id/documents
    * 上传文档到 Agent
+   *
+   * 同时支持两种上传方式：
+   * 1. multipart/form-data — 前端 FormData 方式（file 字段 + 可选 category 字段）
+   * 2. application/json — base64 编码方式（兼容旧前端）
    */
   fastify.post('/:id/documents', {
     preHandler: [fastify.authenticate],
   }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const tenantId = request.user!.tenantId;
+    const contentType = request.headers['content-type'] || '';
 
     try {
-      const data = request.body as {
-        name: string;
-        type: string;
-        size: number;
-        content: string; // base64 encoded
-      };
+      let fileName: string;
+      let fileType: string;
+      let fileSize: number;
+      let fileBuffer: Buffer;
+      let category: string = 'document';
 
-      if (!data.name || !data.type) {
+      if (contentType.includes('multipart/form-data')) {
+        // ===== multipart/form-data 方式 =====
+        const formData = await request.formData();
+        const file = formData.get('file');
+
+        if (!file || !(file instanceof File)) {
+          return reply.status(400).send({
+            error: 'BAD_REQUEST',
+            message: '缺少 file 字段',
+          });
+        }
+
+        fileName = file.name;
+        fileType = file.type || fileName.split('.').pop()?.toUpperCase() || 'FILE';
+        fileBuffer = Buffer.from(await file.arrayBuffer());
+        fileSize = fileBuffer.length;
+
+        // 可选的 category 字段
+        const categoryField = formData.get('category');
+        if (categoryField && typeof categoryField === 'string') {
+          category = categoryField;
+        }
+      } else {
+        // ===== JSON base64 方式（兼容旧前端） =====
+        const data = request.body as {
+          name: string;
+          type: string;
+          size: number;
+          content: string;
+          category?: string;
+        };
+
+        if (!data.name || !data.type) {
+          return reply.status(400).send({
+            error: 'BAD_REQUEST',
+            message: '缺少文件名或类型',
+          });
+        }
+
+        fileName = data.name;
+        fileType = data.type;
+        fileBuffer = Buffer.from(data.content, 'base64');
+        fileSize = data.size || fileBuffer.length;
+        if (data.category) {
+          category = data.category;
+        }
+      }
+
+      // 验证 category 值
+      const validCategories = ['memory', 'knowledge', 'document'];
+      if (!validCategories.includes(category)) {
         return reply.status(400).send({
           error: 'BAD_REQUEST',
-          message: '缺少文件名或类型',
+          message: `无效的 category 值，允许: ${validCategories.join(', ')}`,
         });
       }
 
-      // Store file
-      const storageDir = path.join(process.cwd(), 'data', 'tenants', tenantId, 'agents', id, 'documents');
+      // 存储文件
+      const storageDir = path.join(dataRoot, 'tenants', tenantId, 'agents', id, 'documents');
       if (!existsSync(storageDir)) {
         await mkdir(storageDir, { recursive: true });
       }
 
-      const filePath = path.join(storageDir, data.name);
-      const buffer = Buffer.from(data.content, 'base64');
-      await writeFile(filePath, buffer);
+      const filePath = path.join(storageDir, fileName);
+      await writeFile(filePath, fileBuffer);
 
-      // Save to DB
+      // 写入数据库
       const [doc] = await db.insert(documents).values({
         templateId: id,
         tenantId,
-        name: data.name,
-        type: data.type,
-        size: data.size || buffer.length,
+        name: fileName,
+        type: fileType,
+        category,
+        size: fileSize,
         path: filePath,
       }).returning();
 

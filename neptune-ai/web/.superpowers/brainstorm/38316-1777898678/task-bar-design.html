@@ -1,0 +1,198 @@
+<h2>Task Bar 设计讨论</h2>
+<p class="subtitle">任务放在输入框正上方，默认收起只播报最新一条，可展开</p>
+
+<div class="section">
+  <h3>方案：输入框上方的 Task Bar</h3>
+
+  <div class="split">
+    <!-- 收起态 -->
+    <div class="mockup">
+      <div class="mockup-header">收起态 — 只显示最新一条任务</div>
+      <div class="mockup-body">
+        <div style="font-family:'Plus Jakarta Sans',system-ui,sans-serif; display:flex; flex-direction:column; height:500px; background:#f5f4ed; border-radius:8px; overflow:hidden;">
+
+          <!-- Chat area (placeholder) -->
+          <div style="flex:1; padding:20px; overflow:hidden; display:flex; flex-direction:column; gap:16px;">
+            <div style="text-align:center;"><span style="font-size:10px; padding:4px 12px; background:#e8e6dc; border-radius:12px; color:#87867f; font-weight:700; letter-spacing:1px;">TODAY</span></div>
+
+            <!-- User msg -->
+            <div style="display:flex; justify-content:flex-end;">
+              <div style="max-width:70%; padding:10px 14px; background:#faf9f5; border:1px solid #f0eee6; border-radius:12px 4px 12px 12px; font-size:12px; color:#141413;">
+                Process the vendor invoices from Q3
+              </div>
+            </div>
+
+            <!-- Agent msg -->
+            <div style="max-width:85%;">
+              <div style="font-size:12px; color:#141413; line-height:1.5;">
+                I'll help you with that. Let me break this down into a plan first.
+                <br/><br/>
+                I've created a 4-step execution plan. Let me start working on it.
+                <br/><br/>
+                Research complete. Now starting implementation...
+                <span style="display:inline-block; width:2px; height:12px; background:#141413; margin-left:1px; animation:blink 1s infinite; vertical-align:text-bottom;"></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- ===== TASK BAR (collapsed) ===== -->
+          <div style="padding:0 24px 8px; flex-shrink:0;">
+            <div style="background:#faf9f5; border:1px solid #f0eee6; border-radius:10px; padding:8px 12px; display:flex; align-items:center; gap:8px; cursor:pointer;">
+              <div style="width:16px; height:16px; border-radius:50%; background:#87867f; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                <span style="color:white; font-size:5px; letter-spacing:1px;">●●●</span>
+              </div>
+              <div style="flex:1; min-width:0;">
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <span style="font-size:11px; font-weight:600; color:#141413;">#2 Implement core logic</span>
+                  <span style="font-size:10px; color:#87867f;">Running tests...</span>
+                </div>
+              </div>
+              <!-- Progress -->
+              <div style="display:flex; align-items:center; gap:6px;">
+                <span style="font-size:10px; color:#87867f; font-weight:500;">1/4</span>
+                <div style="width:40px; height:3px; background:#e8e6dc; border-radius:2px; overflow:hidden;">
+                  <div style="width:25%; height:100%; background:#10b981; border-radius:2px;"></div>
+                </div>
+                <span style="color:#cfc4bd; font-size:8px;">▼</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Input -->
+          <div style="padding:0 24px 16px; flex-shrink:0;">
+            <div style="background:#faf9f5; border:1px solid #f0eee6; border-radius:14px; padding:6px; display:flex; align-items:center; gap:6px;">
+              <span style="color:#87867f; font-size:16px; padding:4px;">📎</span>
+              <span style="flex:1; font-size:12px; color:#87867f; padding:4px;">Message Invoice Processor...</span>
+              <div style="width:28px; height:28px; background:#141413; border-radius:8px; display:flex; align-items:center; justify-content:center; opacity:0.5;">
+                <span style="color:white; font-size:10px;">➤</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 展开态 -->
+    <div class="mockup">
+      <div class="mockup-header">展开态 — 显示全部任务列表</div>
+      <div class="mockup-body">
+        <div style="font-family:'Plus Jakarta Sans',system-ui,sans-serif; display:flex; flex-direction:column; height:500px; background:#f5f4ed; border-radius:8px; overflow:hidden;">
+
+          <!-- Chat area (smaller) -->
+          <div style="flex:1; padding:20px; overflow:hidden;">
+            <div style="max-width:85%; font-size:12px; color:#141413; line-height:1.5; opacity:0.6;">
+              I'll help you with that. Let me break this down...
+            </div>
+          </div>
+
+          <!-- ===== TASK BAR (expanded) ===== -->
+          <div style="padding:0 24px 4px; flex-shrink:0;">
+            <div style="background:#faf9f5; border:1px solid #f0eee6; border-radius:10px; overflow:hidden;">
+              <!-- Header with progress -->
+              <div style="padding:8px 12px; display:flex; align-items:center; gap:8px; border-bottom:1px solid #f0eee6;">
+                <span style="font-size:11px; font-weight:600; color:#141413;">Execution Plan</span>
+                <span style="font-size:10px; color:#10b981; font-weight:500;">2/4</span>
+                <div style="flex:1; height:3px; background:#e8e6dc; border-radius:2px; overflow:hidden; margin:0 4px;">
+                  <div style="width:50%; height:100%; background:#10b981; border-radius:2px;"></div>
+                </div>
+                <span style="color:#cfc4bd; font-size:8px; cursor:pointer;">▲</span>
+              </div>
+
+              <!-- Task list -->
+              <div style="padding:6px 0;">
+                <!-- Task 1: completed -->
+                <div style="display:flex; align-items:center; gap:6px; padding:5px 12px;">
+                  <div style="width:14px; height:14px; border-radius:50%; background:#10b981; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                    <span style="color:white; font-size:8px; font-weight:700;">✓</span>
+                  </div>
+                  <span style="font-size:11px; color:#87867f; text-decoration:line-through;">#1 Research codebase</span>
+                </div>
+
+                <!-- Task 2: in_progress -->
+                <div style="display:flex; align-items:center; gap:6px; padding:5px 12px; background:rgba(255,255,255,0.5);">
+                  <div style="width:14px; height:14px; border-radius:50%; background:#87867f; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                    <span style="color:white; font-size:5px;">●●●</span>
+                  </div>
+                  <span style="font-size:11px; font-weight:600; color:#141413;">#2 Implement core logic</span>
+                  <span style="font-size:10px; color:#87867f; margin-left:auto;">Running tests...</span>
+                </div>
+
+                <!-- Task 3: pending (blocked) -->
+                <div style="display:flex; align-items:center; gap:6px; padding:5px 12px;">
+                  <div style="width:14px; height:14px; border-radius:50%; border:1.5px solid #87867f30; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                    <span style="font-size:7px; color:#87867f40;">🔒</span>
+                  </div>
+                  <span style="font-size:11px; color:#87867f;">#3 Write unit tests</span>
+                  <span style="font-size:9px; color:#87867f80; margin-left:auto;">blocked by #2</span>
+                </div>
+
+                <!-- Task 4: pending (blocked) -->
+                <div style="display:flex; align-items:center; gap:6px; padding:5px 12px;">
+                  <div style="width:14px; height:14px; border-radius:50%; border:1.5px solid #87867f30; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                    <span style="font-size:7px; color:#87867f40;">🔒</span>
+                  </div>
+                  <span style="font-size:11px; color:#87867f;">#4 Generate docs</span>
+                  <span style="font-size:9px; color:#87867f80; margin-left:auto;">blocked by #2, #3</span>
+                </div>
+              </div>
+
+              <!-- Background activity -->
+              <div style="padding:4px 12px 6px; border-top:1px solid #f0eee6;">
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <span style="font-size:9px; color:#87867f; font-weight:700; letter-spacing:0.5px;">BG</span>
+                  <span style="font-size:10px; color:#87867f;">Shell: npm run build</span>
+                  <span style="font-size:9px; color:#87867f80;">12s</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Input -->
+          <div style="padding:8px 24px 16px; flex-shrink:0;">
+            <div style="background:#faf9f5; border:1px solid #f0eee6; border-radius:14px; padding:6px; display:flex; align-items:center; gap:6px;">
+              <span style="color:#87867f; font-size:16px; padding:4px;">📎</span>
+              <span style="flex:1; font-size:12px; color:#87867f; padding:4px;">Message Invoice Processor...</span>
+              <div style="width:28px; height:28px; background:#141413; border-radius:8px; display:flex; align-items:center; justify-content:center; opacity:0.5;">
+                <span style="color:white; font-size:10px;">➤</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:24px;">
+  <h3>需要讨论的问题</h3>
+  <div class="options">
+    <div class="option" data-choice="q1" onclick="toggleSelect(this)">
+      <div class="letter">1</div>
+      <div class="content">
+        <h3>后台活动放在哪？</h3>
+        <p>展开态底部有一行 BG 区域展示后台任务。或者：后台任务不在这里展示，只在 Task Bar 收起态中当没有 Plan Task 时显示？</p>
+      </div>
+    </div>
+    <div class="option" data-choice="q2" onclick="toggleSelect(this)">
+      <div class="letter">2</div>
+      <div class="content">
+        <h3>全部完成后 Task Bar 自动消失吗？</h3>
+        <p>选项 A：全部完成后保持展示 "All done ✓"，用户可手动收起。选项 B：3秒后自动淡出消失。</p>
+      </div>
+    </div>
+    <div class="option" data-choice="q3" onclick="toggleSelect(this)">
+      <div class="letter">3</div>
+      <div class="content">
+        <h3>点击任务要不要跳转到聊天中对应位置？</h3>
+        <p>点击展开后的某个任务 → 聊天区自动滚动到对应 tool_use 消息处？还是只做展开/折叠详情？</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  @keyframes blink {
+    0%, 50% { opacity: 1; }
+    51%, 100% { opacity: 0; }
+  }
+</style>

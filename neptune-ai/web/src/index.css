@@ -63,11 +63,20 @@ body {
     background: transparent;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb {
-    background-color: var(--color-surface-container-highest);
+    background-color: transparent;
     border-radius: 20px;
+    transition: background-color 0.3s;
 }
 .custom-scrollbar:hover::-webkit-scrollbar-thumb {
     background-color: #cfc4bd;
+}
+/* Firefox */
+.custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+}
+.custom-scrollbar:hover {
+    scrollbar-color: #cfc4bd transparent;
 }
 
 button {

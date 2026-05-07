@@ -1,4 +1,6 @@
 import type { MessageBlock } from '../../types/chat';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 interface ArtifactPanelProps {
   block: Extract<MessageBlock, { type: 'artifact' }> | null;
@@ -120,13 +122,12 @@ function CodeArtifact({ content, title }: { content: string; title: string }) {
 }
 
 function DocumentArtifact({ content, title }: { content: string; title: string }) {
-  const paragraphs = content.split('\n\n');
   return (
     <div>
       <h1 className="font-serif text-[30px] font-medium text-charcoal mb-6">{title}</h1>
-      {paragraphs.map((p, i) => (
-        <p key={i} className="text-[15px] text-charcoal/80 mb-6 leading-relaxed max-w-3xl">{p}</p>
-      ))}
+      <div className="prose prose-neutral max-w-none prose-headings:text-charcoal prose-headings:font-semibold prose-p:text-[15px] prose-p:text-charcoal/80 prose-p:leading-relaxed prose-p:my-4 prose-ul:my-3 prose-ol:my-3 prose-li:my-1 prose-strong:text-charcoal prose-code:text-charcoal prose-code:bg-surface-container-highest prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-[13px] prose-code:before:content-none prose-code:after:content-none prose-pre:bg-charcoal prose-pre:text-[#e8e6dc] prose-pre:rounded-xl prose-pre:my-4 prose-table:text-[13px] prose-th:text-left prose-th:py-2.5 prose-th:px-4 prose-th:border-b prose-th:border-border-cream prose-th:font-semibold prose-td:py-2.5 prose-td:px-4 prose-td:border-b prose-td:border-border-cream/50 prose-hr:border-border-cream">
+        <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+      </div>
     </div>
   );
 }

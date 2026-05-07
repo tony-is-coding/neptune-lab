@@ -92,7 +92,7 @@ export const sessions = pgTable('sessions', {
   tenantId: uuid('tenant_id').notNull().references(() => tenants.id),
   userId: uuid('user_id').notNull().references(() => users.id),
   templateId: uuid('template_id').references(() => agentTemplates.id),
-  status: text('status').notNull().default('active'), // 'created' | 'running' | 'paused' | 'terminated' | 'error'
+  status: text('status').notNull().default('created'), // 'created' | 'running' | 'idle' | 'completed' | 'error'
   title: text('title'),
   summary: text('summary'),
   workspace: text('workspace').notNull(), // 租户隔离的工作目录
@@ -132,7 +132,8 @@ export const documents = pgTable('documents', {
   templateId: uuid('template_id').notNull().references(() => agentTemplates.id),
   tenantId: uuid('tenant_id').notNull().references(() => tenants.id),
   name: text('name').notNull(),
-  type: text('type').notNull(), // 'PDF', 'CSV', 'Markdown', 'JSON'
+  type: text('type').notNull(), // MIME type（如 application/pdf, text/markdown）
+  category: text('category').notNull().default('document'), // 'memory' | 'knowledge' | 'document'
   size: integer('size').notNull().default(0),
   path: text('path').notNull(), // 文件系统路径
   uploadedAt: timestamp('uploaded_at').defaultNow(),

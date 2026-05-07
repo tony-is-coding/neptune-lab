@@ -1,0 +1,3 @@
+{"type":"server-started","port":61925,"host":"0.0.0.0","url_host":"0.0.0.0","url":"http://0.0.0.0:61925","screen_dir":"/Users/terrence_tan/startups/neptune-lab/neptune-ai/web/.superpowers/brainstorm/24626-1777910398"}
+{"type":"screen-added","file":"/Users/terrence_tan/startups/neptune-lab/neptune-ai/web/.superpowers/brainstorm/24626-1777910398/task-bar.html"}
+{"type":"server-stopped","reason":"idle timeout"}

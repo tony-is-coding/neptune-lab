@@ -135,26 +135,37 @@ export async function threadRoutes(fastify: FastifyInstance) {
       // 先验证 thread 存在且属于当前租户
       const existing = await threadManager.get(threadId);
       if (!existing) {
-        return reply.status(404).send({
-          error: 'NOT_FOUND',
-          message: 'Thread 不存在',
-        });
+        if (!reply.sent) {
+          return reply.status(404).send({
+            error: 'NOT_FOUND',
+            message: 'Thread 不存在',
+          });
+        }
+        return;
       }
       if (existing.tenantId !== user.tenantId || existing.templateId !== agentId) {
-        return reply.status(404).send({
-          error: 'NOT_FOUND',
-          message: 'Thread 不存在',
-        });
+        if (!reply.sent) {
+          return reply.status(404).send({
+            error: 'NOT_FOUND',
+            message: 'Thread 不存在',
+          });
+        }
+        return;
       }
 
       const thread = await threadManager.update(threadId, { title, status });
-      reply.send(thread);
+      if (!reply.sent) {
+        reply.send(thread);
+      }
     } catch (error) {
-      request.log.error(error);
-      reply.status(500).send({
-        error: 'INTERNAL_ERROR',
-        message: '更新 Thread 失败',
-      });
+      // 检查响应是否已经发送（包括在 preHandler 中）
+      if (!reply.sent && !reply.raw.writableEnded) {
+        request.log.error(error);
+        reply.status(500).send({
+          error: 'INTERNAL_ERROR',
+          message: '更新 Thread 失败',
+        });
+      }
     }
   });
 
@@ -173,33 +184,47 @@ export async function threadRoutes(fastify: FastifyInstance) {
       // 先验证 thread 存在且属于当前租户
       const existing = await threadManager.get(threadId);
       if (!existing) {
-        return reply.status(404).send({
-          error: 'NOT_FOUND',
-          message: 'Thread 不存在',
-        });
+        if (!reply.sent) {
+          return reply.status(404).send({
+            error: 'NOT_FOUND',
+            message: 'Thread 不存在',
+          });
+        }
+        return;
       }
       if (existing.tenantId !== user.tenantId || existing.templateId !== agentId) {
-        return reply.status(404).send({
-          error: 'NOT_FOUND',
-          message: 'Thread 不存在',
-        });
+        if (!reply.sent) {
+          return reply.status(404).send({
+            error: 'NOT_FOUND',
+            message: 'Thread 不存在',
+          });
+        }
+        return;
       }
 
       const success = await threadManager.delete(threadId);
       if (!success) {
-        return reply.status(404).send({
-          error: 'NOT_FOUND',
-          message: 'Thread 不存在',
-        });
+        if (!reply.sent) {
+          return reply.status(404).send({
+            error: 'NOT_FOUND',
+            message: 'Thread 不存在',
+          });
+        }
+        return;
       }
 
-      reply.status(204).send();
+      if (!reply.sent) {
+        reply.status(204).send();
+      }
     } catch (error) {
-      request.log.error(error);
-      reply.status(500).send({
-        error: 'INTERNAL_ERROR',
-        message: '删除 Thread 失败',
-      });
+      // 检查响应是否已经发送（包括在 preHandler 中）
+      if (!reply.sent && !reply.raw.writableEnded) {
+        request.log.error(error);
+        reply.status(500).send({
+          error: 'INTERNAL_ERROR',
+          message: '删除 Thread 失败',
+        });
+      }
     }
   });
 
@@ -245,12 +270,13 @@ export async function threadRoutes(fastify: FastifyInstance) {
         message: 'Thread 正在执行中',
       });
     }
-    if (thread.status === 'completed' || thread.status === 'error') {
+    if (thread.status === 'completed') {
       return reply.status(400).send({
         error: 'BAD_REQUEST',
-        message: `Thread 已结束 (${thread.status})`,
+        message: 'Thread 已结束 (completed)',
       });
     }
+    // error 状态允许重试（engine 可能因 server 重启丢失）
 
     // 设置 SSE 响应头
     reply.raw.writeHead(200, {
@@ -262,6 +288,7 @@ export async function threadRoutes(fastify: FastifyInstance) {
 
     // 连接确认
     reply.raw.write(`event: connected\ndata: ${JSON.stringify({ threadId, timestamp: Date.now() })}\n\n`);
+// Note: X-Accel-Buffering: no + Cache-Control: no-cache ensures real-time delivery
 
     // 创建 AbortController 用于取消操作
     const abortController = new AbortController();
@@ -276,24 +303,61 @@ export async function threadRoutes(fastify: FastifyInstance) {
     try {
       const stream = threadManager.dispatch(threadId, content);
 
+      // 用于过滤重复的 assistant 事件
+      // SDK 启用 includePartialMessages 后，会同时发送 stream_event（增量）和 assistant（完整）
+      // 我们只需要 stream_event 的增量，assistant 的完整文本跳过
+      let hasReceivedStreamDelta = false;
+
       for await (const sdkEvent of stream) {
         if (abortController.signal.aborted) {
           break;
         }
+
+        // 检查是否为 Plan 事件（已经是 SSE 格式）
+        const eventType = (sdkEvent as any).type;
+        if (eventType === 'plan_created' || eventType === 'plan_step' || eventType === 'plan_done') {
+          // Plan 事件直接发送
+          reply.raw.write(`event: message\ndata: ${JSON.stringify(sdkEvent)}\n\n`);
+      // Note: X-Accel-Buffering: no + Cache-Control: no-cache ensures real-time delivery
+          continue;
+        }
+
+        // 处理 stream_event：标记已收到增量
+        if (eventType === 'stream_event') {
+          hasReceivedStreamDelta = true;
+        }
+
+        // 处理 assistant 事件：如果已收到过 stream_event，跳过文本内容（避免重复）
+        if (eventType === 'assistant' && hasReceivedStreamDelta) {
+          // 检查是否有文本内容
+          const content = (sdkEvent as any).content;
+          const message = (sdkEvent as any).message;
+          const hasText = typeof content === 'string' || (message?.content && Array.isArray(message.content));
+          if (hasText) {
+            // 重置状态，为下一个文本块做准备
+            hasReceivedStreamDelta = false;
+            continue; // 跳过这个 assistant 事件
+          }
+        }
+
         // 将 SDK 事件映射为前端格式
         const sseEvents = mapSSEEvent(sdkEvent as any);
+
         for (const event of sseEvents) {
           reply.raw.write(`event: message\ndata: ${JSON.stringify(event)}\n\n`);
+      // Note: X-Accel-Buffering: no + Cache-Control: no-cache ensures real-time delivery
         }
       }
 
       if (!abortController.signal.aborted) {
         const usage = threadManager.getLastUsage();
         reply.raw.write(`event: done\ndata: ${JSON.stringify({ usage: usage || {} })}\n\n`);
+    // Note: X-Accel-Buffering: no + Cache-Control: no-cache ensures real-time delivery
       }
     } catch (error) {
       if (!abortController.signal.aborted) {
         reply.raw.write(`event: error\ndata: ${JSON.stringify({ error: 'QUERY_ERROR', message: String(error) })}\n\n`);
+    // Note: X-Accel-Buffering: no + Cache-Control: no-cache ensures real-time delivery
       }
     }
 

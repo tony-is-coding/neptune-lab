@@ -52,20 +52,58 @@ export interface AgentTemplate {
   updatedAt: string
 }
 
+// Agent Thread 聚合摘要信息（来自后端 listWithThreadSummary）
+export interface AgentThreadSummary {
+  totalThreads: number
+  latestStatus: 'running' | 'idle' | 'completed' | 'error' | null
+  latestThreadTitle: string | null
+  lastActiveAt: string | null
+}
+
+// Agent 带 Thread 摘要扩展（用于 listAgents include=thread_summary）
+export interface AgentWithSummary extends AgentTemplate {
+  threadSummary?: AgentThreadSummary | null
+}
+
 // === Thread Types ===
+
+/**
+ * 后端 Thread 状态：created/running/paused/terminated/error
+ * 前端显示映射：
+ * - idle ← created, paused, terminated（用户可以交互的）
+ * - running ← running（Agent 正在工作）
+ * - error ← error
+ */
+export type ThreadStatus = 'idle' | 'running' | 'completed' | 'error';
 
 export interface Thread {
   id: string
   tenantId: string
   userId: string
   templateId: string
-  status: 'running' | 'idle' | 'completed' | 'error'
+  status: ThreadStatus
   title: string | null
   summary: string | null
   workspace: string
   lastActiveAt: string | null
   createdAt: string
   updatedAt: string
+}
+
+/**
+ * 判断 Thread 是否属于 Current 区域（用户可以交互的）
+ * Current: idle 状态（created, paused, terminated 映射为 idle）
+ */
+export function isCurrentThread(thread: Thread): boolean {
+  return thread.status === 'idle';
+}
+
+/**
+ * 判断 Thread 是否属于 Backend 区域（Agent 正在工作）
+ * Backend: running 状态
+ */
+export function isBackendThread(thread: Thread): boolean {
+  return thread.status === 'running';
 }
 
 // === Chat Types ===

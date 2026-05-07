@@ -42,6 +42,7 @@ export async function sessionRoutes(fastify: FastifyInstance) {
 
     // 连接确认
     reply.raw.write(`event: connected\ndata: ${JSON.stringify({ agentId, timestamp: Date.now() })}\n\n`);
+// Note: X-Accel-Buffering: no + Cache-Control: no-cache ensures real-time delivery
 
     // 创建 AbortController 用于取消操作
     const abortController = new AbortController();
@@ -62,15 +63,50 @@ export async function sessionRoutes(fastify: FastifyInstance) {
         content,
       );
 
+      // 用于过滤重复的 assistant 事件
+      // SDK 启用 includePartialMessages 后，会同时发送 stream_event（增量）和 assistant（完整）
+      // 我们只需要 stream_event 的增量，assistant 的完整文本跳过
+      let hasReceivedStreamDelta = false;
+
       for await (const sdkEvent of stream) {
         // 检查是否已取消
         if (abortController.signal.aborted) {
           break;
         }
+
+        // 检查是否为 Plan 事件（已经是 SSE 格式）
+        const eventType = (sdkEvent as any).type;
+        if (eventType === 'plan_created' || eventType === 'plan_step' || eventType === 'plan_done') {
+          // Plan 事件直接发送
+          reply.raw.write(`event: message\ndata: ${JSON.stringify(sdkEvent)}\n\n`);
+      // Note: X-Accel-Buffering: no + Cache-Control: no-cache ensures real-time delivery
+          continue;
+        }
+
+        // 处理 stream_event：标记已收到增量
+        if (eventType === 'stream_event') {
+          hasReceivedStreamDelta = true;
+        }
+
+        // 处理 assistant 事件：如果已收到过 stream_event，跳过文本内容（避免重复）
+        if (eventType === 'assistant' && hasReceivedStreamDelta) {
+          // 检查是否有文本内容
+          const content = (sdkEvent as any).content;
+          const message = (sdkEvent as any).message;
+          const hasText = typeof content === 'string' || (message?.content && Array.isArray(message.content));
+          if (hasText) {
+            // 重置状态，为下一个文本块做准备
+            hasReceivedStreamDelta = false;
+            continue; // 跳过这个 assistant 事件
+          }
+        }
+
         // 将 SDK 事件映射为前端格式
         const sseEvents = mapSSEEvent(sdkEvent as any);
+
         for (const event of sseEvents) {
           reply.raw.write(`event: message\ndata: ${JSON.stringify(event)}\n\n`);
+      // Note: X-Accel-Buffering: no + Cache-Control: no-cache ensures real-time delivery
         }
       }
 
@@ -82,11 +118,13 @@ export async function sessionRoutes(fastify: FastifyInstance) {
         } else {
           reply.raw.write(`event: done\ndata: ${JSON.stringify({})}\n\n`);
         }
+    // Note: X-Accel-Buffering: no + Cache-Control: no-cache ensures real-time delivery
       }
     } catch (error) {
       // 只有未被取消时才发送错误
       if (!abortController.signal.aborted) {
         reply.raw.write(`event: error\ndata: ${JSON.stringify({ error: 'QUERY_ERROR', message: String(error) })}\n\n`);
+    // Note: X-Accel-Buffering: no + Cache-Control: no-cache ensures real-time delivery
       }
     }
 

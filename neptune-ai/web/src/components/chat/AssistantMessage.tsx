@@ -10,8 +10,28 @@ interface AssistantMessageProps {
   onOpenArtifact: (block: Extract<MessageBlock, { type: 'artifact' }>) => void;
 }
 
+/**
+ * 三个跳动的点动画 - 用于"思考中..."等待提示
+ * 参考 Claude 风格的简洁跳动动画
+ */
+function ThinkingDots() {
+  return (
+    <span className="flex items-center gap-0.5 ml-0.5">
+      <span className="w-1 h-1 bg-charcoal/40 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+      <span className="w-1 h-1 bg-charcoal/40 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+      <span className="w-1 h-1 bg-charcoal/40 rounded-full animate-bounce"></span>
+    </span>
+  );
+}
+
 export function AssistantMessage({ message, agentIcon, onOpenArtifact }: AssistantMessageProps) {
   const isStreaming = message.status === 'streaming';
+
+  // 检查是否为等待状态：只有单个 thinking block 且正在 streaming
+  const isWaiting = isStreaming &&
+    message.blocks.length === 1 &&
+    message.blocks[0].type === 'thinking' &&
+    message.blocks[0].content === '思考中...';
 
   return (
     <div className="flex gap-3 max-w-[95%]">
@@ -19,17 +39,26 @@ export function AssistantMessage({ message, agentIcon, onOpenArtifact }: Assista
         <span className="material-symbols-outlined text-[16px] text-on-secondary-container">{agentIcon}</span>
       </div>
       <div className="flex-1 flex flex-col gap-3">
-        {message.blocks.map((block, index) => {
-          switch (block.type) {
-            case 'thinking':
-              return (
-                <ThinkingBlock
-                  key={`${message.id}-thinking-${index}`}
-                  content={block.content}
-                  duration={block.duration}
-                  isStreaming={isStreaming && index === message.blocks.length - 1}
-                />
-              );
+        {isWaiting ? (
+          // 等待状态：显示简洁的"思考中..."动画
+          <div className="flex items-center gap-2 py-1">
+            <span className="text-stone text-[14px]">💭</span>
+            <span className="text-[13px] text-charcoal/60 font-medium">思考中...</span>
+            <ThinkingDots />
+          </div>
+        ) : (
+          // 正常状态：渲染所有 blocks
+          message.blocks.map((block, index) => {
+            switch (block.type) {
+              case 'thinking':
+                return (
+                  <ThinkingBlock
+                    key={`${message.id}-thinking-${index}`}
+                    content={block.content}
+                    duration={block.duration}
+                    isStreaming={isStreaming && index === message.blocks.length - 1}
+                  />
+                );
 
             case 'text': {
               // Determine if this text block is the currently streaming one
@@ -76,7 +105,8 @@ export function AssistantMessage({ message, agentIcon, onOpenArtifact }: Assista
             default:
               return null;
           }
-        })}
+          })
+        )}
       </div>
     </div>
   );

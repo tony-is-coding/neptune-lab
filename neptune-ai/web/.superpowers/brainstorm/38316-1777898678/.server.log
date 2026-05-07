@@ -1,0 +1,9 @@
+{"type":"server-started","port":57049,"host":"0.0.0.0","url_host":"0.0.0.0","url":"http://0.0.0.0:57049","screen_dir":"/Users/terrence_tan/startups/neptune-lab/neptune-ai/web/.superpowers/brainstorm/38316-1777898678"}
+{"type":"screen-added","file":"/Users/terrence_tan/startups/neptune-lab/neptune-ai/web/.superpowers/brainstorm/38316-1777898678/overall-design.html"}
+{"source":"user-event","type":"click","text":"T\n      \n        Thinking Block 思考块\n        显示「思考中...」动画 → 完成后「已思考 Xs」，可折叠展开查看完整思考内容","choice":"thinking","id":null,"timestamp":1777899139048}
+{"source":"user-event","type":"click","text":"A\n      \n        Text Block 文本流式输出\n        逐字流式展示，支持 Markdown 渲染（代码块、列表、粗体等），带闪烁光标","choice":"text","id":null,"timestamp":1777899141364}
+{"source":"user-event","type":"click","text":"U\n      \n        Tool Use Block 工具调用\n        可折叠卡片：工具名 + 状态图标（运行中/完成/错误），展开显示输入参数和输出结果","choice":"tool","id":null,"timestamp":1777899142048}
+{"source":"user-event","type":"click","text":"D\n      \n        Artifact Block 文档产出\n        聊天中显示文档卡片（类型标签+标题），点击在右侧面板中打开渲染，支持代码/表格/文档/图片","choice":"artifact","id":null,"timestamp":1777899142831}
+{"source":"user-event","type":"click","text":"T\n      \n        Thinking Block 思考块\n        显示「思考中...」动画 → 完成后「已思考 Xs」，可折叠展开查看完整思考内容","choice":"thinking","id":null,"timestamp":1777899143431}
+{"type":"screen-added","file":"/Users/terrence_tan/startups/neptune-lab/neptune-ai/web/.superpowers/brainstorm/38316-1777898678/overall-design-v2.html"}
+{"type":"server-stopped","reason":"idle timeout"}

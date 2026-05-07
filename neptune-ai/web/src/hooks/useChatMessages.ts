@@ -28,8 +28,6 @@ export function useChatMessages() {
   const loadHistory = useCallback(async (agentId: string, threadId: string) => {
     try {
       const result = await getThreadHistory(agentId, threadId);
-      // API returns raw history items; map them to ChatMessage format
-      // The actual mapping depends on the server response shape
       const history = result.data as Array<{
         id?: string;
         role?: string;
@@ -55,11 +53,6 @@ export function useChatMessages() {
   const sendMessage = useCallback((agentId: string, threadId: string, content: string) => {
     if (isStreaming) return;
 
-    // Abort any existing stream
-    if (abortRef.current) {
-      abortRef.current.abort();
-    }
-
     setIsStreaming(true);
 
     // Add user message
@@ -70,11 +63,11 @@ export function useChatMessages() {
       status: 'complete',
     };
 
-    // Create assistant message with empty blocks
+    const assistantId = genId();
     const assistantMsg: ChatMessage = {
-      id: genId(),
+      id: assistantId,
       role: 'assistant',
-      blocks: [],
+      blocks: [{ type: 'thinking', content: '思考中...' }],
       status: 'streaming',
     };
 
@@ -83,185 +76,97 @@ export function useChatMessages() {
       [threadId]: [...(prev[threadId] || []), userMsg, assistantMsg],
     }));
 
-    // Clear old tasks for this thread when starting new conversation
+    // Clear old tasks
     setPlanTasksByThread(prev => ({ ...prev, [threadId]: [] }));
     setBgTasksByThread(prev => ({ ...prev, [threadId]: [] }));
 
-    // Send via SSE
+    // Helper: update blocks for the assistant message
+    const setBlocks = (updater: MessageBlock[] | ((prev: MessageBlock[]) => MessageBlock[])) => {
+      setMessagesByThread(prev => {
+        const threadMsgs = prev[threadId] || [];
+        const currentBlocks = (threadMsgs.find(m => m.id === assistantId)?.blocks || []) as MessageBlock[];
+        const newBlocks = typeof updater === 'function' ? updater(currentBlocks) : updater;
+        return {
+          ...prev,
+          [threadId]: threadMsgs.map((m) =>
+            m.id === assistantId ? { ...m, blocks: newBlocks } : m
+          ),
+        };
+      });
+    };
+
+    const setStatus = (status: 'streaming' | 'complete') => {
+      setMessagesByThread(prev => {
+        const threadMsgs = prev[threadId] || [];
+        return {
+          ...prev,
+          [threadId]: threadMsgs.map((m) =>
+            m.id === assistantId ? { ...m, status } : m
+          ),
+        };
+      });
+      if (status === 'complete') setIsStreaming(false);
+    };
+
+    // Real SSE call
     const controller = sendThreadMessage(agentId, threadId, content, {
       onEvent: (event) => {
-        setMessagesByThread(prev => {
-          const threadMsgs = prev[threadId] || [];
-          const lastMsg = threadMsgs[threadMsgs.length - 1];
-          if (!lastMsg || lastMsg.role !== 'assistant') return prev;
+        const { type, data } = event;
 
-          const newBlocks = [...lastMsg.blocks];
-
-          switch (event.type) {
-            case 'thinking':
-              newBlocks.push({
-                type: 'thinking',
-                content: (event.data as { content?: string }).content || '',
-                duration: (event.data as { duration?: number }).duration,
-              });
-              break;
-
-            case 'text': {
-              const textData = event.data as { content?: string };
-              const lastBlock = newBlocks[newBlocks.length - 1];
+        if (type === 'text') {
+          // 处理文本事件：支持增量追加实现逐字打印效果
+          const { content: textContent = '', isDelta } = data as { content?: string; isDelta?: boolean };
+          if (isDelta) {
+            // 增量内容：追加到最后一个 text block
+            setBlocks(prev => {
+              const lastBlock = prev[prev.length - 1];
               if (lastBlock?.type === 'text') {
-                newBlocks[newBlocks.length - 1] = {
-                  ...lastBlock,
-                  content: lastBlock.content + (textData.content || ''),
-                };
-              } else {
-                newBlocks.push({ type: 'text', content: textData.content || '' });
+                // 追加到现有 text block
+                return [
+                  ...prev.slice(0, -1),
+                  { ...lastBlock, content: lastBlock.content + textContent }
+                ];
               }
-              break;
-            }
-
-            case 'tool_use':
-              newBlocks.push({
-                type: 'tool_use',
-                id: (event.data as { id?: string }).id || genId(),
-                name: (event.data as { name?: string }).name || '',
-                input: (event.data as { input?: Record<string, unknown> }).input,
-                status: 'running',
-              });
-              break;
-
-            case 'tool_status': {
-              const statusData = event.data as { id?: string; status?: string };
-              const toolIdx = newBlocks.findIndex(
-                (b): b is Extract<MessageBlock, { type: 'tool_use' }> =>
-                  b.type === 'tool_use' && b.id === statusData.id
-              );
-              if (toolIdx >= 0) {
-                newBlocks[toolIdx] = {
-                  ...newBlocks[toolIdx],
-                  status: (statusData.status as 'completed' | 'error') || 'completed',
-                };
-              }
-              break;
-            }
-
-            case 'tool_result':
-              newBlocks.push({
-                type: 'tool_result',
-                toolUseId: (event.data as { toolUseId?: string }).toolUseId || '',
-                output: (event.data as { output?: Record<string, unknown> }).output,
-              });
-              break;
-
-            case 'artifact':
-              newBlocks.push({
-                type: 'artifact',
-                id: (event.data as { id?: string }).id || genId(),
-                title: (event.data as { title?: string }).title || '',
-                fileType: (event.data as { fileType?: string }).fileType || '',
-                content: (event.data as { content?: string }).content || '',
-              });
-              break;
-
-            case 'plan_task':
-              setPlanTasksByThread(prev => ({
-                ...prev,
-                [threadId]: [...(prev[threadId] || []), (event.data as unknown as PlanTask)],
-              }));
-              break;
-
-            case 'plan_task_update': {
-              const updateData = event.data as { id?: string; status?: PlanTask['status']; activeForm?: string };
-              setPlanTasksByThread(prev => {
-                const tasks = prev[threadId] || [];
-                return {
-                  ...prev,
-                  [threadId]: tasks.map(t =>
-                    t.id === updateData.id
-                      ? { ...t, status: updateData.status || t.status, activeForm: updateData.activeForm ?? t.activeForm }
-                      : t
-                  ),
-                };
-              });
-              break;
-            }
-
-            case 'bg_task':
-              setBgTasksByThread(prev => ({
-                ...prev,
-                [threadId]: [...(prev[threadId] || []), (event.data as unknown as BackgroundTask)],
-              }));
-              break;
-
-            case 'bg_task_update': {
-              const bgUpdateData = event.data as { id?: string; status?: BackgroundTask['status']; summary?: string };
-              setBgTasksByThread(prev => {
-                const tasks = prev[threadId] || [];
-                return {
-                  ...prev,
-                  [threadId]: tasks.map(t =>
-                    t.id === bgUpdateData.id
-                      ? {
-                          ...t,
-                          status: bgUpdateData.status || t.status,
-                          summary: bgUpdateData.summary ?? t.summary,
-                          endTime: (bgUpdateData.status === 'completed' || bgUpdateData.status === 'failed' || bgUpdateData.status === 'killed') ? Date.now() : t.endTime,
-                        }
-                      : t
-                  ),
-                };
-              });
-              break;
-            }
+              // 首次到达文本内容：移除 thinking block，创建第一个 text block
+              const filtered = prev.filter(b => b.type !== 'thinking');
+              return [...filtered, { type: 'text', content: textContent }];
+            });
+          } else {
+            // 非增量：移除 thinking block，创建新的 text block
+            setBlocks(prev => {
+              const filtered = prev.filter(b => b.type !== 'thinking');
+              return [...filtered, { type: 'text', content: textContent }];
+            });
           }
-
-          return {
-            ...prev,
-            [threadId]: threadMsgs.map((m, i) =>
-              i === threadMsgs.length - 1 ? { ...m, blocks: newBlocks } : m
-            ),
-          };
-        });
+        } else if (type === 'tool_use') {
+          const { id: toolId, name, input } = data as { id: string; name: string; input: Record<string, unknown> };
+          setBlocks(prev => [...prev, { type: 'tool_use', id: toolId, name, input, status: 'running' }]);
+        } else if (type === 'tool_status') {
+          const { id: toolId, status: toolStatus } = data as { id: string; status: string };
+          setBlocks(prev => prev.map(b =>
+            b.type === 'tool_use' && b.id === toolId
+              ? { ...b, status: (toolStatus === 'completed' ? 'completed' : 'running') as 'running' | 'completed' }
+              : b
+          ));
+        } else if (type === 'tool_result') {
+          const { toolUseId, output } = data as { toolUseId: string; output: unknown };
+          setBlocks(prev => [...prev, { type: 'tool_result', toolUseId, output: output as Record<string, unknown> }]);
+        } else if (type === 'error') {
+          const { message: errorMsg } = data as { message?: string };
+          setBlocks(prev => [...prev, { type: 'text', content: `Error: ${errorMsg || 'Unknown error occurred'}` }]);
+          setStatus('complete');
+        } else if (type === 'thinking') {
+          const thinkingContent = (data as { content?: string }).content || '';
+          setBlocks(prev => [...prev, { type: 'thinking', content: thinkingContent, duration: 0 }]);
+        }
       },
-
       onError: (error) => {
         console.error('SSE error:', error);
-        // Mark the assistant message as complete with error info
-        setMessagesByThread(prev => {
-          const threadMsgs = prev[threadId] || [];
-          const lastMsg = threadMsgs[threadMsgs.length - 1];
-          if (!lastMsg || lastMsg.role !== 'assistant') return prev;
-
-          return {
-            ...prev,
-            [threadId]: threadMsgs.map((m, i) =>
-              i === threadMsgs.length - 1
-                ? {
-                    ...m,
-                    status: 'complete' as const,
-                    blocks: m.blocks.length > 0
-                      ? m.blocks
-                      : [{ type: 'text' as const, content: `Error: ${error.message}` }],
-                  }
-                : m
-            ),
-          };
-        });
-        setIsStreaming(false);
+        setBlocks([{ type: 'text', content: `Connection error: ${error.message}` }]);
+        setStatus('complete');
       },
-
       onDone: () => {
-        // Mark the assistant message as complete
-        setMessagesByThread(prev => {
-          const threadMsgs = prev[threadId] || [];
-          return {
-            ...prev,
-            [threadId]: threadMsgs.map((m, i) =>
-              i === threadMsgs.length - 1 ? { ...m, status: 'complete' as const } : m
-            ),
-          };
-        });
-        setIsStreaming(false);
+        setStatus('complete');
       },
     });
 
@@ -275,7 +180,6 @@ export function useChatMessages() {
     });
   }, []);
 
-  // Abort ongoing stream
   const abortStream = useCallback(() => {
     if (abortRef.current) {
       abortRef.current.abort();

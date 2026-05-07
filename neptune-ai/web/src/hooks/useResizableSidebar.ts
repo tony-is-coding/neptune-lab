@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 
 export function useResizableSidebar(defaultWidth: number, minWidth = 200, maxWidth = 600) {
   const [sidebarWidth, setSidebarWidth] = useState(defaultWidth);

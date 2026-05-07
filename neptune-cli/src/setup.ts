@@ -113,7 +113,7 @@ export async function setup(
   // Teammate snapshot — SIMPLE-only gate (no escape hatch, swarm not used in bare)
   if (!isBareMode() && isAgentSwarmsEnabled()) {
     const { captureTeammateModeSnapshot } = await import(
-      './utils/swarm/backends/teammateModeSnapshot.js'
+      'claude-code-best/utils/swarm/backends/teammateModeSnapshot.js'
     )
     captureTeammateModeSnapshot()
   }

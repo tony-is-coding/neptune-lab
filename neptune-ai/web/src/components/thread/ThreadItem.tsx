@@ -10,11 +10,9 @@ export function ThreadItem({ thread, isActive, onClick }: ThreadItemProps) {
   const StatusDot = () => {
     switch (thread.status) {
       case 'running':
-        return <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse shrink-0 mt-1" />;
+        return <div className="w-2 h-2 rounded-full bg-[#4ade80] animate-pulse shrink-0 mt-1" />;
       case 'idle':
         return <div className="w-2 h-2 rounded-full bg-stone-400 shrink-0 mt-1" />;
-      case 'completed':
-        return <span className="text-green-500 text-[10px] shrink-0 mt-0.5">✓</span>;
       case 'error':
         return <div className="w-2 h-2 rounded-full bg-red-500 shrink-0 mt-1" />;
     }

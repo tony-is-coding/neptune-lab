@@ -19,6 +19,11 @@ export const config = {
     refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
   },
 
+  // Anthropic API 配置
+  anthropic: {
+    apiKey: process.env.ANTHROPIC_API_KEY || '',
+  },
+
   // 服务配置
   server: {
     port: parseInt(process.env.PORT || '3000', 10),

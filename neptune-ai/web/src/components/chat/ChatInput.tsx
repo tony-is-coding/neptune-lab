@@ -1,12 +1,13 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 
 interface ChatInputProps {
   agentName: string;
   onSend: (content: string) => void;
   disabled?: boolean;
+  placeholder?: string;
 }
 
-export function ChatInput({ agentName, onSend, disabled }: ChatInputProps) {
+export function ChatInput({ agentName, onSend, disabled, placeholder }: ChatInputProps) {
   const [inputText, setInputText] = useState('');
 
   const handleSend = () => {
@@ -23,14 +24,14 @@ export function ChatInput({ agentName, onSend, disabled }: ChatInputProps) {
   };
 
   return (
-    <div className="p-6 pt-0 bg-transparent shrink-0 w-full max-w-4xl flex flex-col">
+    <div className="p-6 pt-0 bg-transparent shrink-0 w-full max-w-4xl mx-auto flex flex-col relative z-10">
       <div className="relative flex items-end gap-2 bg-ivory rounded-2xl p-2 border border-border-cream shadow-sm focus-within:ring-1 focus-within:ring-border-cream transition-all w-full">
         <button className="p-2 text-stone hover:text-charcoal hover:bg-surface-container rounded-full transition-colors mb-0.5 shrink-0">
           <span className="material-symbols-outlined text-[20px]">attach_file</span>
         </button>
         <textarea
           className="w-full bg-transparent border-transparent focus:ring-0 resize-none text-sm py-2.5 px-2 max-h-[120px] outline-none text-charcoal placeholder:text-stone/60 custom-scrollbar"
-          placeholder={`Message ${agentName}...`}
+          placeholder={placeholder || `Message ${agentName}...`}
           rows={1}
           style={{ minHeight: '44px' }}
           value={inputText}

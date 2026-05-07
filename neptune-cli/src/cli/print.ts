@@ -7,8 +7,8 @@ import {
   redownloadUserSettings,
 } from 'claude-code-best/services/settingsSync/index.js'
 import { waitForRemoteManagedSettingsToLoad } from 'claude-code-best/services/remoteManagedSettings/index.js'
-import { StructuredIO } from 'structuredIO.js'
-import { RemoteIO } from 'remoteIO.js'
+import { StructuredIO } from './structuredIO.js'
+import { RemoteIO } from './remoteIO.js'
 import {
   type Command,
   formatDescriptionWithSource,
@@ -189,7 +189,7 @@ import {
 import { getLastCacheSafeParams } from 'claude-code-best/utils/forkedAgent.js'
 import { getAccountInformation } from 'claude-code-best/utils/auth.js'
 import { OAuthService } from 'claude-code-best/services/oauth/index.js'
-import { installOAuthTokens } from 'handlers/auth.js'
+import { installOAuthTokens } from './handlers/auth.js'
 import { getAPIProvider } from 'claude-code-best/utils/model/providers.js'
 import type { HookCallbackMatcher } from 'claude-code-best/types/hooks.js'
 import { AwsAuthStatusManager } from 'claude-code-best/utils/awsAuthStatusManager.js'
@@ -360,17 +360,17 @@ import { isExtractModeActive } from 'claude-code-best/memdir/paths.js'
 // Dead code elimination: conditional imports
 /* eslint-disable @typescript-eslint/no-require-imports */
 const coordinatorModeModule = feature('COORDINATOR_MODE')
-  ? (require('../coordinator/coordinatorMode.js') as typeof import('claude-code-best/coordinator/coordinatorMode.js')
+  ? (require('../coordinator/coordinatorMode.js') as typeof import('../coordinator/coordinatorMode.js'))
   : null
 const proactiveModule =
   feature('PROACTIVE') || feature('KAIROS')
-    ? (require('../proactive/index.js') as typeof import('claude-code-best/proactive/index.js')
+    ? (require('../proactive/index.js') as typeof import('../proactive/index.js'))
     : null
 const cronSchedulerModule = require('../utils/cronScheduler.js') as typeof import('claude-code-best/utils/cronScheduler.js')
 const cronJitterConfigModule = require('../utils/cronJitterConfig.js') as typeof import('claude-code-best/utils/cronJitterConfig.js')
 const cronGate = require('@claude-code-best/builtin-tools/tools/ScheduleCronTool/prompt.js') as typeof import('@claude-code-best/builtin-tools/tools/ScheduleCronTool/prompt.js')
 const extractMemoriesModule = feature('EXTRACT_MEMORIES')
-  ? (require('../services/extractMemories/extractMemories.js') as typeof import('claude-code-best/services/extractMemories/extractMemories.js')
+  ? (require('../services/extractMemories/extractMemories.js') as typeof import('../services/extractMemories/extractMemories.js'))
   : null
 /* eslint-enable @typescript-eslint/no-require-imports */
 

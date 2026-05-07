@@ -364,6 +364,8 @@ export async function buildQueryEngineConfig(config: UnifiedConfig, runtime?: CC
     customSystemPrompt,
     verbose: config.verbose ?? false,
     abortController,
+    // 启用部分消息流式输出（用于 SSE 流式打印）
+    includePartialMessages: true,
     // Provider 配置透传：通过 provider.config.model 设置 userSpecifiedModel
     ...(provider?.config?.model ? { userSpecifiedModel: provider.config.model as string } : {}),
     // fallbackModel

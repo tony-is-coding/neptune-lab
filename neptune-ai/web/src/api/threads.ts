@@ -165,14 +165,22 @@ export function sendThreadMessage(
       }
 
       const reader = res.body?.getReader()
-      if (!reader) return
+      if (!reader) {
+        // 没有 body 的情况视为完成
+        callbacks.onDone?.()
+        return
+      }
 
       const decoder = new TextDecoder()
       let buffer = ''
 
       while (true) {
         const { done, value } = await reader.read()
-        if (done) break
+        if (done) {
+          // 流正常结束时调用 onDone
+          callbacks.onDone?.()
+          break
+        }
 
         buffer += decoder.decode(value, { stream: true })
         const lines = buffer.split('\n')

@@ -21,3 +21,35 @@ export function handleUnauthorized(response: Response): void {
     window.location.href = '/login';
   }
 }
+
+/**
+ * 带超时配置的 fetch 工具函数
+ * @param url - 请求 URL
+ * @param options - fetch 请求配置
+ * @param timeout - 超时时间（毫秒），默认 10000ms（10秒）
+ * @returns Promise<Response>
+ * @throws 超时时抛出 'Request timeout' 错误
+ */
+export async function fetchWithTimeout(
+  url: string,
+  options: RequestInit = {},
+  timeout = 10000
+): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+    return response;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new Error('Request timeout');
+    }
+    throw error;
+  }
+}

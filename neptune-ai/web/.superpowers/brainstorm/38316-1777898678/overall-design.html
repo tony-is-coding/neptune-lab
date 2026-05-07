@@ -1,0 +1,224 @@
+<h2>Neptune Agent Chat — 整体设计方案</h2>
+<p class="subtitle">基于 Claude 风格的通用 Agent ChatBot 交互设计，全部使用 Mock 数据模拟</p>
+
+<div class="section">
+  <h3>布局结构：三栏式</h3>
+  <div class="mockup">
+    <div class="mockup-header">Preview: 三栏布局</div>
+    <div class="mockup-body">
+      <div style="display:flex; height:500px; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; font-size:12px; overflow:hidden; border-radius:8px;">
+        <!-- 左侧 Agent 列表 -->
+        <div style="width:200px; background:#faf9f5; border-right:1px solid #e8e6dc; display:flex; flex-direction:column; flex-shrink:0;">
+          <div style="padding:16px; border-bottom:1px solid #e8e6dc;">
+            <div style="font-size:10px; font-weight:700; color:#87867f; letter-spacing:1.5px; text-transform:uppercase; margin-bottom:10px;">Active Agents</div>
+            <div style="background:#e8e6dc; border-radius:6px; padding:6px 10px; color:#87867f; font-size:11px;">Search agents...</div>
+          </div>
+          <div style="flex:1; overflow-y:auto; padding:8px;">
+            <div style="padding:10px; background:#e8e6dc; border-radius:10px; margin-bottom:4px; border:1px solid #f0eee6;">
+              <div style="font-weight:600; color:#141413; font-size:12px;">Invoice Processor</div>
+              <div style="color:#87867f; font-size:10px;">OCR & data extraction</div>
+            </div>
+            <div style="padding:10px; border-radius:10px; margin-bottom:4px;">
+              <div style="font-weight:600; color:#141413; font-size:12px;">Financial Architect</div>
+              <div style="color:#87867f; font-size:10px;">Financial modeling</div>
+            </div>
+            <div style="padding:10px; border-radius:10px; margin-bottom:4px;">
+              <div style="font-weight:600; color:#141413; font-size:12px;">Data Analyst</div>
+              <div style="color:#87867f; font-size:10px;">Data visualization</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 中间 Chat 区域 -->
+        <div style="width:420px; display:flex; flex-direction:column; flex-shrink:0; background:#f5f4ed; border-right:1px solid #e8e6dc;">
+          <!-- Header -->
+          <div style="height:56px; border-bottom:1px solid #e8e6dc; display:flex; align-items:center; padding:0 24px; background:rgba(245,244,237,0.8); backdrop-filter:blur(8px);">
+            <div style="width:32px; height:32px; border-radius:50%; background:#f2e0c8; display:flex; align-items:center; justify-content:center; margin-right:12px;">
+              <span style="font-size:14px;">📄</span>
+            </div>
+            <div>
+              <div style="font-weight:600; font-size:14px; color:#141413;">Invoice Processor</div>
+              <div style="font-size:10px; color:#87867f;">Expert in data extraction and OCR</div>
+            </div>
+          </div>
+
+          <!-- Messages -->
+          <div style="flex:1; overflow-y:auto; padding:20px; display:flex; flex-direction:column; gap:20px;">
+            <!-- User message -->
+            <div style="display:flex; gap:10px; justify-content:flex-end; max-width:85%; align-self:flex-end; flex-direction:row-reverse;">
+              <div style="width:28px; height:28px; border-radius:50%; background:#141413; display:flex; align-items:center; justify-content:center; color:white; font-size:10px; font-weight:700; flex-shrink:0;">U</div>
+              <div style="padding:12px 16px; border-radius:16px 4px 16px 16px; background:#faf9f5; border:1px solid #f0eee6;">
+                <div style="font-size:13px; color:#141413; line-height:1.5;">Process the vendor invoices from Q3 and generate a summary report.</div>
+              </div>
+            </div>
+
+            <!-- Agent response with multiple blocks -->
+            <div style="display:flex; gap:10px; max-width:95%;">
+              <div style="width:28px; height:28px; border-radius:50%; background:#f2e0c8; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:4px;">
+                <span style="font-size:12px;">📄</span>
+              </div>
+              <div style="flex:1; display:flex; flex-direction:column; gap:12px;">
+
+                <!-- Thinking block (collapsed) -->
+                <div style="background:#faf9f5; border:1px solid #f0eee6; border-radius:10px; padding:10px 14px; cursor:pointer;">
+                  <div style="display:flex; align-items:center; gap:8px;">
+                    <span style="color:#c96442; font-size:12px;">💡</span>
+                    <span style="font-size:12px; color:#87867f; font-weight:500;">Thought for 3s</span>
+                    <span style="color:#87867f; font-size:10px; margin-left:auto;">▶</span>
+                  </div>
+                </div>
+
+                <!-- Text content (streamed) -->
+                <div style="font-size:13px; color:#141413; line-height:1.6;">
+                  I'll process the Q3 vendor invoices for you. Let me first locate the invoice files and extract the relevant data.
+                </div>
+
+                <!-- Tool use card (completed) -->
+                <div style="border:1px solid #f0eee6; border-radius:10px; overflow:hidden;">
+                  <div style="padding:10px 14px; background:#faf9f5; display:flex; align-items:center; gap:8px; cursor:pointer;">
+                    <div style="width:20px; height:20px; border-radius:6px; background:#10b981; display:flex; align-items:center; justify-content:center;">
+                      <span style="color:white; font-size:10px;">✓</span>
+                    </div>
+                    <span style="font-size:12px; font-weight:600; color:#141413;">search_files</span>
+                    <span style="font-size:11px; color:#87867f;">— Found 12 invoice files</span>
+                    <span style="color:#87867f; font-size:10px; margin-left:auto;">▼</span>
+                  </div>
+                </div>
+
+                <!-- Tool use card (running) -->
+                <div style="border:1px solid #f0eee6; border-radius:10px; overflow:hidden;">
+                  <div style="padding:10px 14px; background:#faf9f5; display:flex; align-items:center; gap:8px;">
+                    <div style="width:20px; height:20px; border-radius:6px; background:#f59e0b; display:flex; align-items:center; justify-content:center;">
+                      <span style="color:white; font-size:8px;">●●●</span>
+                    </div>
+                    <span style="font-size:12px; font-weight:600; color:#141413;">extract_data</span>
+                    <span style="font-size:11px; color:#87867f;">— Extracting invoice data...</span>
+                    <div style="margin-left:auto; width:60px; height:4px; background:#e8e6dc; border-radius:2px; overflow:hidden;">
+                      <div style="width:65%; height:100%; background:#f59e0b; border-radius:2px;"></div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Streaming text (cursor blinking) -->
+                <div style="font-size:13px; color:#141413; line-height:1.6;">
+                  Based on the extracted data, I've identified 12 vendor invoices totaling $847,320. The largest expenses are from<span style="display:inline-block; width:2px; height:14px; background:#141413; margin-left:1px; animation:blink 1s infinite; vertical-align:text-bottom;"></span>
+                </div>
+
+              </div>
+            </div>
+          </div>
+
+          <!-- Input area -->
+          <div style="padding:16px; border-top:1px solid #e8e6dc;">
+            <div style="background:#faf9f5; border:1px solid #f0eee6; border-radius:16px; padding:8px; display:flex; align-items:flex-end; gap:8px;">
+              <button style="padding:6px; color:#87867f; background:none; border:none; cursor:pointer;">📎</button>
+              <div style="flex:1; font-size:13px; color:#87867f; padding:6px 4px;">Message Invoice Processor...</div>
+              <button style="width:32px; height:32px; background:#141413; color:white; border:none; border-radius:10px; cursor:pointer; font-size:12px; opacity:0.5;">➤</button>
+            </div>
+            <div style="text-align:center; margin-top:6px; font-size:9px; color:#87867f70;">Content generated by AI, please verify</div>
+          </div>
+        </div>
+
+        <!-- 右侧 Artifact 面板 -->
+        <div style="flex:1; display:flex; flex-direction:column; background:#faf9f5; margin:16px 16px 16px 0; border-radius:16px; border:1px solid #f0eee6; overflow:hidden;">
+          <div style="height:48px; border-bottom:1px solid #f0eee6; display:flex; align-items:center; justify-content:between; padding:0 20px; background:#faf9f5;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="color:#87867f;">📊</span>
+              <span style="font-size:14px; font-weight:600; color:#141413;">Q3 Invoice Summary</span>
+            </div>
+            <div style="margin-left:auto; display:flex; gap:8px;">
+              <span style="font-size:11px; padding:4px 10px; background:#e8e6dc; border-radius:12px; color:#141413; font-weight:500;">.xlsx</span>
+              <button style="font-size:12px; color:#87867f; background:none; border:none; cursor:pointer;">✕</button>
+            </div>
+          </div>
+          <div style="flex:1; padding:24px; overflow-y:auto;">
+            <div style="font-size:18px; font-weight:600; color:#141413; font-family:Georgia,serif; margin-bottom:16px;">Q3 Vendor Invoice Report</div>
+            <div style="font-size:13px; color:#87867f; margin-bottom:20px;">Auto-generated summary from 12 invoices</div>
+
+            <!-- KPI Cards -->
+            <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:20px;">
+              <div style="background:white; padding:16px; border-radius:10px; border:1px solid #f0eee6;">
+                <div style="font-size:9px; font-weight:700; color:#87867f; letter-spacing:1px; text-transform:uppercase;">Total Amount</div>
+                <div style="font-size:22px; font-weight:600; color:#141413; font-family:Georgia,serif; margin-top:4px;">$847K</div>
+                <div style="font-size:11px; color:#10b981; font-weight:600; margin-top:4px;">↑ 12.4%</div>
+              </div>
+              <div style="background:white; padding:16px; border-radius:10px; border:1px solid #f0eee6;">
+                <div style="font-size:9px; font-weight:700; color:#87867f; letter-spacing:1px; text-transform:uppercase;">Vendors</div>
+                <div style="font-size:22px; font-weight:600; color:#141413; font-family:Georgia,serif; margin-top:4px;">12</div>
+                <div style="font-size:11px; color:#10b981; font-weight:600; margin-top:4px;">↑ 3 new</div>
+              </div>
+              <div style="background:white; padding:16px; border-radius:10px; border:1px solid #f0eee6;">
+                <div style="font-size:9px; font-weight:700; color:#87867f; letter-spacing:1px; text-transform:uppercase;">Avg Payment</div>
+                <div style="font-size:22px; font-weight:600; color:#141413; font-family:Georgia,serif; margin-top:4px;">14 days</div>
+                <div style="font-size:11px; color:#b53333; font-weight:600; margin-top:4px;">↑ Monitor</div>
+              </div>
+            </div>
+
+            <!-- Mini table -->
+            <div style="background:white; border-radius:10px; border:1px solid #f0eee6; overflow:hidden;">
+              <div style="padding:10px 14px; background:#faf9f5; border-bottom:1px solid #f0eee6; font-size:11px; font-weight:700; color:#87867f; letter-spacing:0.5px;">TOP VENDORS BY AMOUNT</div>
+              <table style="width:100%; font-size:12px; border-collapse:collapse;">
+                <tr style="border-bottom:1px solid #f0eee6;">
+                  <td style="padding:8px 14px; font-weight:600; color:#141413;">Acme Corp</td>
+                  <td style="padding:8px 14px; color:#87867f;">3 invoices</td>
+                  <td style="padding:8px 14px; text-align:right; font-weight:600; color:#141413;">$234,500</td>
+                </tr>
+                <tr style="border-bottom:1px solid #f0eee6;">
+                  <td style="padding:8px 14px; font-weight:600; color:#141413;">TechSupply Inc</td>
+                  <td style="padding:8px 14px; color:#87867f;">2 invoices</td>
+                  <td style="padding:8px 14px; text-align:right; font-weight:600; color:#141413;">$189,200</td>
+                </tr>
+                <tr>
+                  <td style="padding:8px 14px; font-weight:600; color:#141413;">GlobalParts Ltd</td>
+                  <td style="padding:8px 14px; color:#87867f;">4 invoices</td>
+                  <td style="padding:8px 14px; text-align:right; font-weight:600; color:#141413;">$156,800</td>
+                </tr>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:32px;">
+  <h3>消息块（Block）类型一览</h3>
+  <div class="options">
+    <div class="option" data-choice="thinking" onclick="toggleSelect(this)">
+      <div class="letter" style="background:#fef3c7; color:#92400e;">T</div>
+      <div class="content">
+        <h3>Thinking Block 思考块</h3>
+        <p>显示「思考中...」动画 → 完成后「已思考 Xs」，可折叠展开查看完整思考内容</p>
+      </div>
+    </div>
+    <div class="option" data-choice="text" onclick="toggleSelect(this)">
+      <div class="letter" style="background:#dbeafe; color:#1e40af;">A</div>
+      <div class="content">
+        <h3>Text Block 文本流式输出</h3>
+        <p>逐字流式展示，支持 Markdown 渲染（代码块、列表、粗体等），带闪烁光标</p>
+      </div>
+    </div>
+    <div class="option" data-choice="tool" onclick="toggleSelect(this)">
+      <div class="letter" style="background:#d1fae5; color:#065f46;">U</div>
+      <div class="content">
+        <h3>Tool Use Block 工具调用</h3>
+        <p>可折叠卡片：工具名 + 状态图标（运行中/完成/错误），展开显示输入参数和输出结果</p>
+      </div>
+    </div>
+    <div class="option" data-choice="artifact" onclick="toggleSelect(this)">
+      <div class="letter" style="background:#fce7f3; color:#9d174d;">D</div>
+      <div class="content">
+        <h3>Artifact Block 文档产出</h3>
+        <p>聊天中显示文档卡片（类型标签+标题），点击在右侧面板中打开渲染，支持代码/表格/文档/图片</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  @keyframes blink {
+    0%, 50% { opacity: 1; }
+    51%, 100% { opacity: 0; }
+  }
+</style>

@@ -10,10 +10,11 @@
 
 import { randomUUID } from 'crypto';
 import { existsSync, mkdirSync } from 'fs';
+import { resolve } from 'path';
 import { db } from '../db/index.js';
 import { agentTemplates, sessions as sessionsTable } from '../db/schema.js';
 import { eq, and, desc, sql } from 'drizzle-orm';
-import { EnginePool, type DestroyableEngine } from './engine-pool.js';
+import { EnginePool, type DestroyableEngine, type EngineEntry } from './engine-pool.js';
 
 /**
  * Thread 类型 — 基于 sessions 表
@@ -341,9 +342,7 @@ export class ThreadManager {
     if (thread.status === 'running') {
       throw new Error(`Thread 正在执行中: ${threadId}`);
     }
-    if (thread.status === 'completed' || thread.status === 'error') {
-      throw new Error(`Thread 已结束: ${thread.status}`);
-    }
+    // error 状态允许重试（engine 可能因 server 重启丢失）
 
     // 如果没有 engineFactory，无法执行 dispatch（测试环境下可能没有）
     if (!this.engineFactory) {
@@ -374,10 +373,11 @@ export class ThreadManager {
       }
 
       // 从 pool 获取或创建 Engine
-      let engine = this.pool.get(threadId);
+      const entry = this.pool.get(threadId);
+      let engine: DestroyableEngine;
       let sdkSessionId: string;
 
-      if (!engine) {
+      if (!entry) {
         // 检查池是否已满，需要淘汰
         if (this.pool.isAtCapacity()) {
           const evictableId = this.pool.getEvictable();
@@ -390,7 +390,7 @@ export class ThreadManager {
 
         // 创建新 Engine
         const mcpServerUrls = (template.mcpServers as Array<{ name: string; url: string }> || []).map(s => s.url);
-        const result = await this.engineFactory.createAndLoad({
+        const result = await this.engineFactory!.createAndLoad({
           systemPrompt: template.systemPrompt,
           memoryRoot: `${this.dataRoot}/tenants/${thread.tenantId}/agents/${agentId}`,
           workspace: thread.workspace,
@@ -401,17 +401,14 @@ export class ThreadManager {
 
         engine = result.engine;
         sdkSessionId = result.sdkSessionId;
-        this.pool.register(threadId, engine);
+        this.pool.register(threadId, engine, sdkSessionId);
       } else {
-        // 已有 engine，需要获取 sdkSessionId
-        // 这里简化处理：假定 engine 创建时已加载 session
-        sdkSessionId = threadId;
+        // 已有 engine，使用存储的 sdkSessionId
+        engine = entry.engine;
+        sdkSessionId = entry.sdkSessionId;
       }
 
       // 执行 query（通过 engine 的通用接口）
-      // 由于 DestroyableEngine 没有 query 方法，我们需要扩展接口
-      // 实际上在 dispatch 中，我们通过 engineFactory 返回的 engine 需要有 query 能力
-      // 这里用一个简化的方式：让 factory 返回的 engine 同时具备 query 能力
       const queryable = engine as any;
       if (typeof queryable.query !== 'function') {
         throw new Error('Engine 不支持 query 操作');
@@ -424,7 +421,18 @@ export class ThreadManager {
         });
       }
 
+      // 创建 PlanManager（每次 dispatch 新建）
+      const { PlanManager } = await import('./plan/PlanManager.js');
+      const planManager = new PlanManager(threadId);
+
       for await (const event of queryable.query(sdkSessionId, content)) {
+        // 通过 PlanManager 处理 Plan 相关事件
+        const planEvents = planManager.processSDKEvent(event as Record<string, unknown>);
+        for (const planEvent of planEvents) {
+          yield planEvent;
+        }
+
+        // 原有事件继续 yield
         yield event;
       }
 
@@ -495,6 +503,15 @@ export class ThreadManager {
   async getWorkspace(threadId: string): Promise<string | null> {
     const thread = await this.get(threadId);
     return thread?.workspace ?? null;
+  }
+
+  /**
+   * 获取 pool 中的 Engine entry（测试专用）
+   *
+   * 仅用于测试验证 pool 内部状态，生产环境不应依赖此方法。
+   */
+  getPoolEntry(threadId: string): { engine: DestroyableEngine; sdkSessionId: string } | undefined {
+    return this.pool.get(threadId);
   }
 
   /**
@@ -574,13 +591,33 @@ export class ThreadManager {
 /**
  * 单例实例（延迟初始化）
  * dataRoot 可通过 DATA_ROOT 环境变量覆盖（测试环境使用）
+ * engineFactory 仅在 ANTHROPIC_API_KEY 存在时注入（测试环境不需要）
  */
 let _threadManager: ThreadManager | null = null;
 
 export function getThreadManager(): ThreadManager {
   if (!_threadManager) {
+    // 仅在 ANTHROPIC_API_KEY 存在时注入 EngineFactory
+    // 测试环境不需要真实 Engine，dispatch() 会因缺少 factory 而抛错
+    let engineFactory: EngineFactory | undefined;
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    if (apiKey) {
+      // 动态 import 避免测试环境加载 claude-code-best/engine 模块
+      try {
+        const { ClaudeCodeEngineFactory } = require('./engine-factory.js') as typeof import('./engine-factory.js');
+        engineFactory = new ClaudeCodeEngineFactory({
+          apiKey,
+          baseURL: process.env.ANTHROPIC_BASE_URL,
+          defaultModel: process.env.ANTHROPIC_MODEL,
+        });
+      } catch {
+        console.warn('EngineFactory 加载失败，dispatch 功能不可用');
+      }
+    }
+
     _threadManager = new ThreadManager({
-      dataRoot: process.env.DATA_ROOT || DEFAULT_DATA_ROOT,
+      dataRoot: resolve(process.env.DATA_ROOT || DEFAULT_DATA_ROOT),
+      engineFactory,
     });
   }
   return _threadManager;

@@ -131,9 +131,9 @@ import { isWorktreeModeEnabled } from "claude-code-best/utils/worktreeModeEnable
 const getTeammateUtils = () =>
 	require("./utils/teammate.js") as typeof import("./utils/teammate.js");
 const getTeammatePromptAddendum = () =>
-	require("./utils/swarm/teammatePromptAddendum.js") as typeof import("./utils/swarm/teammatePromptAddendum.js");
+	require("claude-code-best/utils/swarm/teammatePromptAddendum.js") as typeof import("claude-code-best/utils/swarm/teammatePromptAddendum.js");
 const getTeammateModeSnapshot = () =>
-	require("./utils/swarm/backends/teammateModeSnapshot.js") as typeof import("./utils/swarm/backends/teammateModeSnapshot.js");
+	require("claude-code-best/utils/swarm/backends/teammateModeSnapshot.js") as typeof import("claude-code-best/utils/swarm/backends/teammateModeSnapshot.js");
 /* eslint-enable @typescript-eslint/no-require-imports */
 // Dead code elimination: conditional import for COORDINATOR_MODE
 /* eslint-disable @typescript-eslint/no-require-imports */

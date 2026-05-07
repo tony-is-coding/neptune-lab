@@ -19,7 +19,7 @@ export function TaskBar({ planTasks }: TaskBarProps) {
     || planTasks[planTasks.length - 1];
 
   return (
-    <div className="px-6 pb-1.5 shrink-0 w-full max-w-4xl flex flex-col">
+    <div className="px-6 pb-1.5 shrink-0 w-full max-w-4xl mx-auto flex flex-col">
       <div className="bg-ivory border border-border-cream rounded-[10px] overflow-hidden">
         {!isExpanded ? (
           /* === Collapsed: single line === */
