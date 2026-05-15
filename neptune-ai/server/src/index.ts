@@ -1,3 +1,15 @@
+// ===== 平台级环境变量（必须在所有 import 之前设置） =====
+// 禁用 SDK 读取任何 CLAUDE.md 文件 — Neptune 是独立 SaaS 平台，不依赖本地项目
+process.env.CLAUDE_CODE_DISABLE_CLAUDE_MDS = '1';
+// 覆盖 SDK 内部使用的 Anthropic 环境变量 — 强制走 Neptune 配置的 LLM Provider
+// SDK 的 callModel (queryModelWithStreaming) 直接读取这些 env vars
+if (process.env.NEPTUNE_LLM_API_KEY) {
+  process.env.ANTHROPIC_API_KEY = process.env.NEPTUNE_LLM_API_KEY;
+}
+if (process.env.NEPTUNE_LLM_BASE_URL) {
+  process.env.ANTHROPIC_BASE_URL = process.env.NEPTUNE_LLM_BASE_URL;
+}
+
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import bcrypt from 'bcrypt';
@@ -14,6 +26,16 @@ import { threadRoutes } from './routes/threads';
 import { billingRoutes } from './routes/billing';
 import { skillRoutes } from './routes/skills';
 import { authMiddleware } from './middleware/auth';
+import { initLogger, createLogger } from './utils/logger';
+import { initObservability, shutdownObservability } from './services/observability';
+
+// 初始化全局日志
+initLogger(config.log.level as any);
+
+// 初始化可观测性（Langfuse）
+initObservability();
+
+const log = createLogger('server');
 
 
 /**
@@ -21,9 +43,24 @@ import { authMiddleware } from './middleware/auth';
  */
 async function createApp() {
   const app = Fastify({
-    logger: {
-      level: config.log.level,
-    },
+    logger: false, // 禁用 Fastify 内置 pino，统一使用 LogUtil
+  });
+
+  // HTTP 请求/响应日志 hook
+  app.addHook('onRequest', (request, reply, done) => {
+    (request as any)._startTime = performance.now();
+    done();
+  });
+
+  app.addHook('onResponse', (request, reply, done) => {
+    const durationMs = Math.round(performance.now() - ((request as any)._startTime || 0));
+    const statusCode = reply.statusCode;
+    const level = statusCode >= 400 ? 'warn' : 'info';
+    log[level](`${request.method} ${request.url} ${statusCode}`, {
+      durationMs,
+      remoteAddress: request.ip,
+    });
+    done();
   });
 
   // 注册 CORS 插件
@@ -118,9 +155,9 @@ async function ensureDefaultAdmin() {
       role: 'admin',
     });
 
-    console.log('👤 默认管理员已创建 — 邮箱: admin@neptune.ai  密码: admin');
+    log.info('Default admin created — email: admin@neptune.ai');
   } catch (error) {
-    console.warn('默认管理员创建跳过:', (error as Error).message);
+    log.debug('Default admin creation skipped', { reason: (error as Error).message });
   }
 }
 
@@ -139,11 +176,12 @@ async function start() {
       host: config.server.host,
     });
 
-    console.log(`🚀 Neptune-AI 服务器启动成功`);
-    console.log(`📍 地址: http://${config.server.host}:${config.server.port}`);
-    console.log(`🏥 健康检查: http://${config.server.host}:${config.server.port}/health`);
+    log.info('Neptune-AI server started', {
+      host: config.server.host,
+      port: config.server.port,
+    });
   } catch (error) {
-    console.error('❌ 服务器启动失败:', error);
+    log.error('Server start failed', { detail: (error as Error).message });
     process.exit(1);
   }
 }
@@ -151,6 +189,16 @@ async function start() {
 // 如果直接运行此文件，则启动服务器
 if (import.meta.main) {
   start();
+
+  // 优雅关闭
+  process.on('SIGTERM', async () => {
+    await shutdownObservability();
+    process.exit(0);
+  });
+  process.on('SIGINT', async () => {
+    await shutdownObservability();
+    process.exit(0);
+  });
 }
 
 export { createApp };

@@ -1,5 +1,8 @@
 import type { FastifyInstance } from 'fastify';
 import { costAggregator } from '../services/cost.js';
+import { createLogger } from '../utils/logger';
+
+const log = createLogger('routes:billing');
 
 /**
  * 计费路由
@@ -38,7 +41,7 @@ export async function billingRoutes(fastify: FastifyInstance) {
         realtime: quotaCounter,
       };
     } catch (error) {
-      request.log.error({ error }, '获取租户账单失败');
+      log.error('Request failed', { detail: (error as Error).message });
       return reply.status(500).send({ error: 'INTERNAL_ERROR', message: '获取账单失败' });
     }
   });

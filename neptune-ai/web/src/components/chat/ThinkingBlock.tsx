@@ -6,41 +6,43 @@ interface ThinkingBlockProps {
   isStreaming?: boolean;
 }
 
+/**
+ * ThinkingBlock — 思考过程展示
+ *
+ * 设计参考：Claude 风格
+ * - 流式中：显示 "思考中..." 文字 + 实时内容
+ * - 完成后：折叠为 "思考完成 >"，点击展开查看内容
+ * - 遵循 DESIGN.md 暖色系设计规范
+ */
 export function ThinkingBlock({ content, duration, isStreaming }: ThinkingBlockProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
+  const showContent = isStreaming || isExpanded;
+
   return (
-    <div
-      className="bg-ivory border border-border-cream rounded-[10px] px-3.5 py-2.5 cursor-pointer hover:bg-surface-container transition-colors"
-      onClick={() => setIsExpanded(!isExpanded)}
-    >
-      <div className="flex items-center gap-2">
-        {isStreaming ? (
-          <span className="text-stone text-[12px]">💭</span>
-        ) : (
-          <span className="text-stone/50 text-[12px]">✅</span>
-        )}
-        {isStreaming ? (
-          <div className="flex items-center gap-1">
-            <span className="text-[12px] text-charcoal/60 font-medium">思考中</span>
-            <span className="flex gap-0.5">
-              <span className="w-1 h-1 bg-charcoal/40 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-              <span className="w-1 h-1 bg-charcoal/40 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-              <span className="w-1 h-1 bg-charcoal/40 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-            </span>
-          </div>
-        ) : (
-          <span className="text-[12px] text-charcoal font-medium">
-            思考了 {duration ? `${duration}秒` : '片刻'}
+    <div className="my-0.5">
+      {/* Header toggle */}
+      <div
+        className="inline-flex items-center gap-1 cursor-pointer select-none group"
+        onClick={() => !isStreaming && setIsExpanded(!isExpanded)}
+      >
+        <span className="text-[13px] text-stone font-medium group-hover:text-charcoal transition-colors">
+          {isStreaming ? '思考中...' : `思考完成${duration ? ` (${duration}s)` : ''}`}
+        </span>
+        {!isStreaming && (
+          <span className={`text-stone text-[11px] transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`}>
+            ›
           </span>
         )}
-        {!isStreaming && (
-          <span className={`text-stone/50 text-[10px] ml-auto transition-transform ${isExpanded ? 'rotate-90' : ''}`}>▶</span>
-        )}
       </div>
-      {isExpanded && !isStreaming && (
-        <div className="mt-2 pt-2 border-t border-border-cream/50 text-[12px] text-stone leading-relaxed">
+
+      {/* Thinking content */}
+      {showContent && content && (
+        <div className="mt-2 text-[13px] text-stone/80 leading-[1.6] whitespace-pre-wrap max-h-[300px] overflow-y-auto">
           {content}
+          {isStreaming && (
+            <span className="inline-block w-[1.5px] h-[13px] bg-stone/50 ml-0.5 animate-pulse align-middle" />
+          )}
         </div>
       )}
     </div>

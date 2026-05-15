@@ -22,8 +22,15 @@ export const TEST_CONFIG = {
  *
  * 注意：此函数创建的 app 不会自动监听端口，
  * 测试代码需要使用 app.inject() 方法发送请求
+ *
+ * 重要：在创建 app 前重置 ThreadManager 单例，
+ * 确保测试设置的 DATA_ROOT 环境变量生效
  */
 export async function createTestApp(): Promise<FastifyInstance> {
+  // 重置 ThreadManager 单例，确保使用新的 DATA_ROOT
+  const { resetThreadManager } = await import('../src/services/thread-manager');
+  resetThreadManager();
+
   const app = await createApp();
   return app;
 }

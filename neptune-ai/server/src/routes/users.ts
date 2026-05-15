@@ -2,6 +2,9 @@ import type { FastifyInstance } from 'fastify';
 import bcrypt from 'bcrypt';
 import { userService } from '../services/user';
 import { roleMiddleware } from '../middleware/auth';
+import { createLogger } from '../utils/logger';
+
+const log = createLogger('routes:users');
 
 /**
  * 用户管理路由
@@ -51,7 +54,7 @@ export async function userRoutes(fastify: FastifyInstance) {
 
       reply.status(201).send(user);
     } catch (error) {
-      request.log.error(error);
+      log.error('Request failed', { detail: (error as Error).message });
       reply.status(500).send({
         error: 'INTERNAL_ERROR',
         message: '创建用户失败',
@@ -82,7 +85,7 @@ export async function userRoutes(fastify: FastifyInstance) {
       const { passwordHash, ...userWithoutPassword } = user;
       reply.send(userWithoutPassword);
     } catch (error) {
-      request.log.error(error);
+      log.error('Request failed', { detail: (error as Error).message });
       reply.status(500).send({
         error: 'INTERNAL_ERROR',
         message: '获取用户失败',
@@ -123,7 +126,7 @@ export async function userRoutes(fastify: FastifyInstance) {
         },
       });
     } catch (error) {
-      request.log.error(error);
+      log.error('Request failed', { detail: (error as Error).message });
       reply.status(500).send({
         error: 'INTERNAL_ERROR',
         message: '获取用户列表失败',
@@ -176,7 +179,7 @@ export async function userRoutes(fastify: FastifyInstance) {
       const { passwordHash: _, ...userWithoutPassword } = user;
       reply.send(userWithoutPassword);
     } catch (error) {
-      request.log.error(error);
+      log.error('Request failed', { detail: (error as Error).message });
       reply.status(500).send({
         error: 'INTERNAL_ERROR',
         message: '更新用户失败',
@@ -205,7 +208,7 @@ export async function userRoutes(fastify: FastifyInstance) {
 
       reply.status(204).send();
     } catch (error) {
-      request.log.error(error);
+      log.error('Request failed', { detail: (error as Error).message });
       reply.status(500).send({
         error: 'INTERNAL_ERROR',
         message: '删除用户失败',

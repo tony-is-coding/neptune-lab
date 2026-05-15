@@ -6,6 +6,9 @@ import { eq, and } from 'drizzle-orm';
 import { mkdir, writeFile, unlink } from 'fs/promises';
 import { existsSync } from 'fs';
 import path from 'path';
+import { createLogger } from '../utils/logger';
+
+const log = createLogger('routes:agents');
 
 /**
  * Agent 模板管理路由
@@ -75,7 +78,7 @@ export async function agentRoutes(fastify: FastifyInstance) {
 
       reply.status(201).send(template);
     } catch (error) {
-      request.log.error(error);
+      log.error('Request failed', { detail: (error as Error).message });
       reply.status(500).send({
         error: 'INTERNAL_ERROR',
         message: '创建 Agent 模板失败',
@@ -104,7 +107,7 @@ export async function agentRoutes(fastify: FastifyInstance) {
 
       reply.send(template);
     } catch (error) {
-      request.log.error(error);
+      log.error('Request failed', { detail: (error as Error).message });
       reply.status(500).send({
         error: 'INTERNAL_ERROR',
         message: '获取 Agent 模板失败',
@@ -164,7 +167,7 @@ export async function agentRoutes(fastify: FastifyInstance) {
         },
       });
     } catch (error) {
-      request.log.error(error);
+      log.error('Request failed', { detail: (error as Error).message });
       reply.status(500).send({
         error: 'INTERNAL_ERROR',
         message: '获取 Agent 模板列表失败',
@@ -233,7 +236,7 @@ export async function agentRoutes(fastify: FastifyInstance) {
 
       reply.send(template);
     } catch (error) {
-      request.log.error(error);
+      log.error('Request failed', { detail: (error as Error).message });
       reply.status(500).send({
         error: 'INTERNAL_ERROR',
         message: '更新 Agent 模板失败',
@@ -262,7 +265,7 @@ export async function agentRoutes(fastify: FastifyInstance) {
 
       reply.send(template);
     } catch (error) {
-      request.log.error(error);
+      log.error('Request failed', { detail: (error as Error).message });
       reply.status(500).send({
         error: 'INTERNAL_ERROR',
         message: '激活 Agent 模板失败',
@@ -291,7 +294,7 @@ export async function agentRoutes(fastify: FastifyInstance) {
 
       reply.send(template);
     } catch (error) {
-      request.log.error(error);
+      log.error('Request failed', { detail: (error as Error).message });
       reply.status(500).send({
         error: 'INTERNAL_ERROR',
         message: '停用 Agent 模板失败',
@@ -320,7 +323,7 @@ export async function agentRoutes(fastify: FastifyInstance) {
 
       reply.status(204).send();
     } catch (error) {
-      request.log.error(error);
+      log.error('Request failed', { detail: (error as Error).message });
       reply.status(500).send({
         error: 'INTERNAL_ERROR',
         message: '删除 Agent 模板失败',
@@ -351,7 +354,7 @@ export async function agentRoutes(fastify: FastifyInstance) {
 
       reply.send(stats);
     } catch (error) {
-      request.log.error(error);
+      log.error('Request failed', { detail: (error as Error).message });
       reply.status(500).send({
         error: 'INTERNAL_ERROR',
         message: '获取统计数据失败',
@@ -389,7 +392,7 @@ export async function agentRoutes(fastify: FastifyInstance) {
       );
       reply.send({ data: docs });
     } catch (error) {
-      request.log.error(error);
+      log.error('Request failed', { detail: (error as Error).message });
       reply.status(500).send({
         error: 'INTERNAL_ERROR',
         message: '获取文档列表失败',
@@ -498,7 +501,7 @@ export async function agentRoutes(fastify: FastifyInstance) {
 
       reply.status(201).send(doc);
     } catch (error) {
-      request.log.error(error);
+      log.error('Request failed', { detail: (error as Error).message });
       reply.status(500).send({
         error: 'INTERNAL_ERROR',
         message: '上传文档失败',
@@ -537,7 +540,7 @@ export async function agentRoutes(fastify: FastifyInstance) {
 
       reply.status(204).send();
     } catch (error) {
-      request.log.error(error);
+      log.error('Request failed', { detail: (error as Error).message });
       reply.status(500).send({
         error: 'INTERNAL_ERROR',
         message: '删除文档失败',

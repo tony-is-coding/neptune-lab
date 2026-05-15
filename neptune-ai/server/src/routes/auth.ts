@@ -3,6 +3,9 @@ import { authService } from '../services/auth';
 import { db, users, tenants } from '../db';
 import { eq } from 'drizzle-orm';
 import bcrypt from 'bcrypt';
+import { createLogger } from '../utils/logger';
+
+const log = createLogger('routes:auth');
 
 /**
  * 认证相关路由
@@ -77,7 +80,7 @@ export async function authRoutes(fastify: FastifyInstance) {
         ...tokens,
       });
     } catch (error) {
-      request.log.error(error);
+      log.error('Request failed', { detail: (error as Error).message });
       reply.status(500).send({
         error: 'INTERNAL_ERROR',
         message: '登录失败',
@@ -192,7 +195,7 @@ export async function authRoutes(fastify: FastifyInstance) {
         ...tokens,
       });
     } catch (error) {
-      request.log.error(error);
+      log.error('Request failed', { detail: (error as Error).message });
       reply.status(500).send({
         error: 'INTERNAL_ERROR',
         message: '注册失败',
@@ -283,7 +286,7 @@ export async function authRoutes(fastify: FastifyInstance) {
         tenantId: userInfo.tenantId,
       });
     } catch (error) {
-      request.log.error(error);
+      log.error('Request failed', { detail: (error as Error).message });
       reply.status(500).send({
         error: 'INTERNAL_ERROR',
         message: '获取用户信息失败',

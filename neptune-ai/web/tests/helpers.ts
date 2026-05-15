@@ -21,13 +21,13 @@ export function attachDiagnostics(page: Page): Diagnostics {
   });
 
   page.on('request', (req) => {
-    if (req.url().includes(':3000') || req.url().includes(':1420/api')) {
+    if (req.url().includes(':3000') || req.url().includes(':1420/api') || req.url().includes(':3004/api')) {
       diag.requests.push(`>> ${req.method()} ${req.url()}`);
     }
   });
 
   page.on('response', (res) => {
-    if (res.url().includes(':3000') || res.url().includes(':1420/api')) {
+    if (res.url().includes(':3000') || res.url().includes(':1420/api') || res.url().includes(':3004/api')) {
       diag.requests.push(`<< ${res.status()} ${res.url()}`);
     }
   });
@@ -97,24 +97,37 @@ export async function loginViaApi(page: Page): Promise<void> {
     },
   });
 
-  if (response.ok()) {
-    const data = await response.json();
-    const token = data.accessToken || data.token;
-    const user = data.user;
+  if (!response.ok()) {
+    const body = await response.text();
+    throw new Error(`Login API failed: ${response.status()} - ${body}`);
+  }
 
-    // 设置 localStorage
-    await page.goto(DEV_URL);
-    await page.evaluate(({ token, user }) => {
-      localStorage.setItem('neptune-auth', JSON.stringify({
-        state: {
-          token: token,
-          user: user,
-          isAuthenticated: true,
-        },
-        version: 0,
-      }));
-    }, { token, user });
-  } else {
-    throw new Error('Login failed');
+  const data = await response.json();
+  const token = data.accessToken || data.token;
+  const user = data.user;
+
+  if (!token) {
+    throw new Error(`Login succeeded but no token in response: ${JSON.stringify(Object.keys(data))}`);
+  }
+
+  // 导航到 Playwright baseURL (localhost:3004) 确保 localStorage 在正确的 origin 下设置
+  await page.goto('/login');
+
+  // 设置 localStorage
+  await page.evaluate(({ token, user }) => {
+    localStorage.setItem('neptune-auth', JSON.stringify({
+      state: {
+        token: token,
+        user: user,
+        isAuthenticated: true,
+      },
+      version: 0,
+    }));
+  }, { token, user });
+
+  // 验证设置成功
+  const stored = await page.evaluate(() => localStorage.getItem('neptune-auth'));
+  if (!stored) {
+    throw new Error('Failed to set auth in localStorage');
   }
 }

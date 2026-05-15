@@ -9,12 +9,19 @@
  */
 
 import { randomUUID } from 'crypto';
-import { existsSync, mkdirSync } from 'fs';
+import { existsSync, mkdirSync, readFileSync } from 'fs';
 import { resolve } from 'path';
 import { db } from '../db/index.js';
-import { agentTemplates, sessions as sessionsTable } from '../db/schema.js';
+import { agentTemplates, sessions as sessionsTable, skills, documents as documentsTable, agentSkills } from '../db/schema.js';
 import { eq, and, desc, sql } from 'drizzle-orm';
-import { EnginePool, type DestroyableEngine, type EngineEntry } from './engine-pool.js';
+import { EnginePool, type DestroyableEngine } from './engine-pool.js';
+import { assembleSystemPrompt, type AgentTemplate as PromptAssemblerTemplate, type Skill, type Document } from './prompt-assembler.js';
+import { createLogger } from '../utils/logger.js';
+import { getTracingProvider } from './observability/index.js';
+import { LangfuseTracingProvider } from './observability/langfuse-tracing-provider.js';
+import { TracingEventProcessor } from './observability/tracing-event-processor.js';
+
+const log = createLogger('thread-manager');
 
 /**
  * Thread 类型 — 基于 sessions 表
@@ -124,7 +131,7 @@ export class ThreadManager {
     title?: string;
   }): Promise<Thread> {
     const threadId = randomUUID();
-    const workspace = `${this.dataRoot}/tenants/${params.tenantId}/agents/${params.agentId}/users/${params.userId}/threads/${threadId}/`;
+    const workspace = `${this.dataRoot}/tenants/${params.tenantId}/agents/${params.agentId}/threads/${threadId}/`;
 
     // 创建 workspace 目录
     if (!existsSync(workspace)) {
@@ -338,6 +345,9 @@ export class ThreadManager {
       throw new Error(`Thread 不存在: ${threadId}`);
     }
 
+    const agentId = thread.templateId;
+    const ctx = { threadId, tenantId: thread.tenantId, agentId };
+
     // 验证状态
     if (thread.status === 'running') {
       throw new Error(`Thread 正在执行中: ${threadId}`);
@@ -355,9 +365,14 @@ export class ThreadManager {
       summary: content.substring(0, 100),
     });
 
+    const startTime = performance.now();
+    log.info('Query start', { ...ctx, contentLength: content.length });
+
+    // Tracing processor 在 try 内创建，但需要在 catch 中访问
+    let tracingProcessor: TracingEventProcessor | null = null;
+
     try {
       // 获取 Agent 模板
-      const agentId = thread.templateId;
       if (!agentId) {
         throw new Error('Thread 没有关联的 Agent 模板');
       }
@@ -382,16 +397,26 @@ export class ThreadManager {
         if (this.pool.isAtCapacity()) {
           const evictableId = this.pool.getEvictable();
           if (evictableId) {
+            log.info('Engine evicted', {
+              ...ctx,
+              evictedThreadId: evictableId,
+              poolSize: this.pool.getActiveCount(),
+            });
             await this.pool.release(evictableId);
             // 被淘汰的 thread 状态改为 idle
             await this.update(evictableId, { status: 'idle' }).catch(() => {});
           }
         }
 
+        log.info('Engine cache miss, creating new engine', ctx);
+
         // 创建新 Engine
+        // Phase 2: 使用 PromptAssembler 组装 systemPrompt
+        const assembledSystemPrompt = await this.assembleSystemPromptForAgent(template, agentId, thread.tenantId);
+
         const mcpServerUrls = (template.mcpServers as Array<{ name: string; url: string }> || []).map(s => s.url);
         const result = await this.engineFactory!.createAndLoad({
-          systemPrompt: template.systemPrompt,
+          systemPrompt: assembledSystemPrompt,
           memoryRoot: `${this.dataRoot}/tenants/${thread.tenantId}/agents/${agentId}`,
           workspace: thread.workspace,
           tools: (template.tools as string[]) || [],
@@ -403,6 +428,7 @@ export class ThreadManager {
         sdkSessionId = result.sdkSessionId;
         this.pool.register(threadId, engine, sdkSessionId);
       } else {
+        log.debug('Engine cache hit', ctx);
         // 已有 engine，使用存储的 sdkSessionId
         engine = entry.engine;
         sdkSessionId = entry.sdkSessionId;
@@ -418,6 +444,7 @@ export class ThreadManager {
       if (typeof queryable.on === 'function') {
         queryable.on('query:complete', (payload: unknown) => {
           this.lastUsage = payload as QueryUsageResult;
+          log.debug('query:complete received', { payload });
         });
       }
 
@@ -425,7 +452,26 @@ export class ThreadManager {
       const { PlanManager } = await import('./plan/PlanManager.js');
       const planManager = new PlanManager(threadId);
 
+      // 创建 Tracing 处理器（独立模块，自动管理 turn 状态机）
+      const provider = getTracingProvider();
+      if (provider instanceof LangfuseTracingProvider) {
+        const modelConfig = template.modelConfig as { model?: string } | null;
+        const configuredModel = modelConfig?.model || process.env.NEPTUNE_LLM_MODEL || 'unknown';
+        tracingProcessor = new TracingEventProcessor({
+          provider,
+          model: configuredModel,
+          threadId,
+          userId: thread.userId,
+          tenantId: thread.tenantId,
+          agentId: agentId!,
+          userInput: content,
+        });
+      }
+
       for await (const event of queryable.query(sdkSessionId, content)) {
+        // Tracing：一行调用，自动记录 generation/tool/thinking
+        tracingProcessor?.process(event);
+
         // 通过 PlanManager 处理 Plan 相关事件
         const planEvents = planManager.processSDKEvent(event as Record<string, unknown>);
         for (const planEvent of planEvents) {
@@ -440,7 +486,28 @@ export class ThreadManager {
       await this.update(threadId, {
         status: 'idle',
       });
+
+      const durationMs = Math.round(performance.now() - startTime);
+      const usage = this.lastUsage;
+      log.info('Query complete', {
+        ...ctx,
+        durationMs,
+        ...(usage?.modelUsage
+          ? {
+              model: Object.keys(usage.modelUsage)[0],
+              inputTokens: Object.values(usage.modelUsage)[0]?.inputTokens,
+              outputTokens: Object.values(usage.modelUsage)[0]?.outputTokens,
+            }
+          : {}),
+      });
+
+      // 结束 Langfuse trace
+      tracingProcessor?.end(usage ? { modelUsage: usage.modelUsage } : undefined, durationMs);
     } catch (error) {
+      const durationMs = Math.round(performance.now() - startTime);
+      log.error('Query failed', { ...ctx, durationMs, detail: (error as Error).message });
+      // 结束 Langfuse trace
+      tracingProcessor?.endWithError();
       // 出错时更新状态为 error
       await this.update(threadId, { status: 'error' }).catch(() => {});
       throw error;
@@ -569,6 +636,143 @@ export class ThreadManager {
   // ===== 内部方法 =====
 
   /**
+   * 查询 Agent 关联的 Skills
+   *
+   * @param agentId Agent 模板 ID
+   * @returns Skills 列表
+   */
+  private async fetchAgentSkills(agentId: string): Promise<Skill[]> {
+    // 通过 agent_skills 关联表查询
+    const agentSkillRelations = await db
+      .select({
+        skillId: agentSkills.skillId,
+      })
+      .from(agentSkills)
+      .where(eq(agentSkills.agentId, agentId));
+
+    if (agentSkillRelations.length === 0) {
+      return [];
+    }
+
+    const skillIds = agentSkillRelations.map(r => r.skillId);
+
+    // 查询 skills 表
+    const skillsResult = await db
+      .select({
+        id: skills.id,
+        name: skills.name,
+        content: skills.content,
+      })
+      .from(skills)
+      .where(sql`${skills.id} = ANY(${skillIds})`)
+      .eq(skills.status, 'active');
+
+    return skillsResult.map(s => ({
+      name: s.name,
+      content: s.content || undefined,
+    }));
+  }
+
+  /**
+   * 查询 Agent 关联的 Documents
+   *
+   * @param agentId Agent 模板 ID
+   * @returns Documents 列表（包含内容）
+   */
+  private async fetchAgentDocuments(agentId: string): Promise<Document[]> {
+    const docsResult = await db
+      .select({
+        id: documentsTable.id,
+        name: documentsTable.name,
+        type: documentsTable.type,
+        path: documentsTable.path,
+      })
+      .from(documentsTable)
+      .where(eq(documentsTable.templateId, agentId));
+
+    // 读取文档内容
+    const documents: Document[] = [];
+    for (const doc of docsResult) {
+      try {
+        const content = readFileSync(doc.path, 'utf-8');
+        documents.push({
+          id: doc.id,
+          name: doc.name,
+          type: doc.type,
+          content,
+        });
+      } catch (error) {
+        // 文件不存在或读取失败，跳过
+        log.warn('Document read failed', { path: doc.path, detail: (error as Error).message });
+      }
+    }
+
+    return documents;
+  }
+
+  /**
+   * 组装 System Prompt（Phase 2 集成）
+   *
+   * 使用 PromptAssembler 将 Agent 模板的各个模块组装成完整的 System Prompt
+   *
+   * @param template Agent 模板
+   * @param agentId Agent ID
+   * @returns 组装后的 System Prompt
+   */
+  private async assembleSystemPromptForAgent(
+    template: any,
+    agentId: string,
+    tenantId: string,
+  ): Promise<string> {
+    // 查询 skills 和 documents
+    const [fetchedSkills, fetchedDocuments] = await Promise.all([
+      this.fetchAgentSkills(agentId),
+      this.fetchAgentDocuments(agentId),
+    ]);
+
+    // 读取 agent.md 行为指令
+    const agentInstructions = this.loadAgentInstructions(tenantId, agentId);
+
+    // 转换为 PromptAssembler 需要的格式
+    const assemblerTemplate: PromptAssemblerTemplate = {
+      systemPrompt: template.systemPrompt,
+      promptConfig: template.promptConfig,
+      tools: template.tools as string[] | undefined,
+      mcpServers: template.mcpServers as Array<{ name: string; url: string }> | undefined,
+    };
+
+    // 调用 PromptAssembler
+    return assembleSystemPrompt({
+      template: assemblerTemplate,
+      skills: fetchedSkills,
+      documents: fetchedDocuments,
+      agentInstructions,
+    });
+  }
+
+  /**
+   * 读取 Agent 行为指令文件（agent.md）
+   *
+   * 路径: {dataRoot}/tenants/{tenantId}/agents/{agentId}/agent.md
+   * 文件不存在时返回空字符串（优雅降级）
+   */
+  private loadAgentInstructions(tenantId: string, agentId: string): string {
+    const filePath = resolve(this.dataRoot, 'tenants', tenantId, 'agents', agentId, 'agent.md');
+    if (!existsSync(filePath)) return '';
+
+    try {
+      const content = readFileSync(filePath, 'utf-8');
+      const maxChars = 20000; // ~5000 tokens
+      if (content.length > maxChars) {
+        return content.slice(0, maxChars) + '\n\n... [instructions truncated]';
+      }
+      return content;
+    } catch {
+      return '';
+    }
+  }
+
+  /**
    * 映射数据库行到 Thread 类型
    */
   private mapToThread(row: any): Thread {
@@ -591,27 +795,27 @@ export class ThreadManager {
 /**
  * 单例实例（延迟初始化）
  * dataRoot 可通过 DATA_ROOT 环境变量覆盖（测试环境使用）
- * engineFactory 仅在 ANTHROPIC_API_KEY 存在时注入（测试环境不需要）
+ * engineFactory 仅在 NEPTUNE_LLM_API_KEY 存在时注入（测试环境不需要）
  */
 let _threadManager: ThreadManager | null = null;
 
 export function getThreadManager(): ThreadManager {
   if (!_threadManager) {
-    // 仅在 ANTHROPIC_API_KEY 存在时注入 EngineFactory
+    // 仅在 NEPTUNE_LLM_API_KEY 存在时注入 EngineFactory
     // 测试环境不需要真实 Engine，dispatch() 会因缺少 factory 而抛错
     let engineFactory: EngineFactory | undefined;
-    const apiKey = process.env.ANTHROPIC_API_KEY;
+    const apiKey = process.env.NEPTUNE_LLM_API_KEY;
     if (apiKey) {
       // 动态 import 避免测试环境加载 claude-code-best/engine 模块
       try {
         const { ClaudeCodeEngineFactory } = require('./engine-factory.js') as typeof import('./engine-factory.js');
         engineFactory = new ClaudeCodeEngineFactory({
           apiKey,
-          baseURL: process.env.ANTHROPIC_BASE_URL,
-          defaultModel: process.env.ANTHROPIC_MODEL,
+          baseURL: process.env.NEPTUNE_LLM_BASE_URL,
+          defaultModel: process.env.NEPTUNE_LLM_MODEL,
         });
       } catch {
-        console.warn('EngineFactory 加载失败，dispatch 功能不可用');
+        log.warn('EngineFactory load failed, dispatch unavailable');
       }
     }
 

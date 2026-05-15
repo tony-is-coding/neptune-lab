@@ -55,6 +55,23 @@ export interface SSEToolStatusEvent {
   status: string;
 }
 
+export interface SSEThinkingEvent {
+  type: 'thinking';
+  content: string;
+  isDelta?: boolean;
+}
+
+export interface SSEAskUserEvent {
+  type: 'ask_user';
+  id: string;
+  questions: Array<{
+    question: string;
+    header?: string;
+    options: Array<{ label: string; description?: string }>;
+    multiSelect?: boolean;
+  }>;
+}
+
 export interface SSEErrorEvent {
   type: 'error';
   message: string;
@@ -102,9 +119,11 @@ export type SSEPlanEvent =
 
 export type SSEEvent =
   | SSETextEvent
+  | SSEThinkingEvent
   | SSEToolUseEvent
   | SSEToolResultEvent
   | SSEToolStatusEvent
+  | SSEAskUserEvent
   | SSEErrorEvent
   | SSEDoneEvent
   | SSEPlanEvent;
@@ -170,7 +189,7 @@ export function mapSSEEvent(sdkEvent: Record<string, unknown>): SSEEvent[] {
       // 处理 SDK 流式增量事件
       const event = sdkEvent.event as Record<string, unknown> | undefined;
       if (event?.type === 'content_block_delta') {
-        const delta = event.delta as { type: string; text?: string } | undefined;
+        const delta = event.delta as { type: string; text?: string; thinking?: string; partial_json?: string } | undefined;
         if (delta?.type === 'text_delta' && delta.text) {
           return [{
             type: 'text',
@@ -178,6 +197,29 @@ export function mapSSEEvent(sdkEvent: Record<string, unknown>): SSEEvent[] {
             isDelta: true,
           }];
         }
+        if (delta?.type === 'thinking_delta' && delta.thinking) {
+          return [{
+            type: 'thinking',
+            content: delta.thinking,
+            isDelta: true,
+          }];
+        }
+        if (delta?.type === 'input_json_delta' && delta.partial_json) {
+          // Tool input streaming — ignore (wait for top-level tool_use event)
+          return [];
+        }
+      }
+      // content_block_start with thinking type
+      if (event?.type === 'content_block_start') {
+        const contentBlock = event.content_block as { type: string; thinking?: string; id?: string; name?: string } | undefined;
+        if (contentBlock?.type === 'thinking') {
+          return [{
+            type: 'thinking',
+            content: contentBlock.thinking || '',
+          }];
+        }
+        // tool_use 的 content_block_start 不在这里处理
+        // 等待顶层 tool_use 事件（携带正确的 tool_use_id）
       }
       return [];
     }
@@ -191,13 +233,54 @@ export function mapSSEEvent(sdkEvent: Record<string, unknown>): SSEEvent[] {
     }
 
     case 'tool_use': {
-      return [{
+      const toolName = String(sdkEvent.name || '');
+      const toolId = String(sdkEvent.id || '');
+      const input = (sdkEvent.input as Record<string, unknown>) || {};
+
+      // AskUserQuestion 特殊处理 — 转为 ask_user 事件
+      if (toolName === 'AskUserQuestion') {
+        const questions = (input.questions as Array<Record<string, unknown>>) || [];
+        return [{
+          type: 'ask_user',
+          id: toolId,
+          questions: questions.map(q => ({
+            question: String(q.question || ''),
+            header: q.header ? String(q.header) : undefined,
+            options: ((q.options as Array<Record<string, unknown>>) || []).map(o => ({
+              label: String(o.label || ''),
+              description: o.description ? String(o.description) : undefined,
+            })),
+            multiSelect: Boolean(q.multiSelect),
+          })),
+        }];
+      }
+
+      const events: SSEEvent[] = [{
         type: 'tool_use',
-        id: String(sdkEvent.id || ''),
-        name: String(sdkEvent.name || ''),
-        input: (sdkEvent.input as Record<string, unknown>) || {},
+        id: toolId,
+        name: toolName,
+        input,
         status: 'running',
       }];
+
+      // Write 工具写入文档时，额外生成 artifact 事件
+      if (toolName === 'Write' && input.file_path && input.content) {
+        const filePath = String(input.file_path);
+        const ext = filePath.substring(filePath.lastIndexOf('.')).toLowerCase();
+        const docExtensions = ['.md', '.html', '.htm', '.txt', '.json', '.csv', '.xml', '.yaml', '.yml'];
+        if (docExtensions.includes(ext)) {
+          const fileName = filePath.split('/').pop() || filePath;
+          events.push({
+            type: 'artifact' as any,
+            id: `artifact-${toolId}`,
+            title: fileName,
+            fileType: ext,
+            content: String(input.content),
+          } as any);
+        }
+      }
+
+      return events;
     }
 
     case 'tool_result': {

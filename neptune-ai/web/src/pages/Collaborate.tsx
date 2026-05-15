@@ -4,6 +4,7 @@ import { useResizableSidebar } from '../hooks/useResizableSidebar';
 import { useChatMessages } from '../hooks/useChatMessages';
 import { useThreads } from '../hooks/useThreads';
 import { listAgentsWithSummary } from '../api/agents';
+import { replyToQuestion } from '../api/threads';
 import { UserMessage } from '../components/chat/UserMessage';
 import { AssistantMessage } from '../components/chat/AssistantMessage';
 import { ChatInput } from '../components/chat/ChatInput';
@@ -46,7 +47,7 @@ export function Collaborate() {
   } = useThreads(agentId || '');
 
   // Chat
-  const { getMessages, getPlanTasks, sendMessage, loadHistory, isStreaming } = useChatMessages();
+  const { getMessages, getPlanTasks, sendMessage, loadHistory, isStreaming, updateBlock } = useChatMessages();
   const messages = getMessages(activeThreadId || '');
   const planTasks = getPlanTasks(activeThreadId || '');
 
@@ -173,6 +174,20 @@ export function Collaborate() {
     setActiveArtifact(block);
     setRightPanel('canvas');
   };
+
+  const handleAnswerQuestion = useCallback(
+    async (id: string, answers: Record<string, string>) => {
+      if (!agentId || !activeThreadId) return;
+      try {
+        await replyToQuestion(agentId, activeThreadId, id, answers);
+        // Mark the question as answered in the UI
+        updateBlock(activeThreadId, id, { answered: true, answers } as any);
+      } catch (err) {
+        console.error('Failed to reply to question:', err);
+      }
+    },
+    [agentId, activeThreadId, updateBlock]
+  );
 
   const handleSend = useCallback(
     (content: string) => {
@@ -511,6 +526,7 @@ export function Collaborate() {
                             message={message}
                             agentIcon={activeAgent?.icon || 'smart_toy'}
                             onOpenArtifact={handleOpenArtifact}
+                            onAnswerQuestion={handleAnswerQuestion}
                           />
                         )
                       )}

@@ -48,6 +48,11 @@ function ArtifactContent({ block }: { block: Extract<MessageBlock, { type: 'arti
     return <TableArtifact content={block.content} title={block.title} />;
   }
 
+  // HTML rendering — use iframe
+  if (['.html', '.htm'].includes(fileType)) {
+    return <HtmlArtifact content={block.content} title={block.title} />;
+  }
+
   // Code rendering
   if (['.py', '.ts', '.js', '.tsx', '.jsx', '.json', '.sql'].includes(fileType)) {
     return <CodeArtifact content={block.content} title={block.title} />;
@@ -55,6 +60,22 @@ function ArtifactContent({ block }: { block: Extract<MessageBlock, { type: 'arti
 
   // Document / markdown rendering
   return <DocumentArtifact content={block.content} title={block.title} />;
+}
+
+function HtmlArtifact({ content, title }: { content: string; title: string }) {
+  return (
+    <div className="h-full flex flex-col">
+      <h1 className="font-serif text-[24px] font-medium text-charcoal mb-4">{title}</h1>
+      <div className="flex-1 rounded-xl border border-border-cream overflow-hidden bg-white">
+        <iframe
+          srcDoc={content}
+          title={title}
+          className="w-full h-full min-h-[600px] border-0"
+          sandbox="allow-scripts allow-same-origin"
+        />
+      </div>
+    </div>
+  );
 }
 
 function TableArtifact({ content, title }: { content: string; title: string }) {

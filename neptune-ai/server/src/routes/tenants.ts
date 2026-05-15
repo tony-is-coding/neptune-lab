@@ -1,6 +1,9 @@
 import type { FastifyInstance } from 'fastify';
 import { tenantService } from '../services/tenant';
 import { roleMiddleware } from '../middleware/auth';
+import { createLogger } from '../utils/logger';
+
+const log = createLogger('routes:tenants');
 
 /**
  * 租户管理路由
@@ -35,7 +38,7 @@ export async function tenantRoutes(fastify: FastifyInstance) {
 
       reply.status(201).send(tenant);
     } catch (error) {
-      request.log.error(error);
+      log.error('Request failed', { detail: (error as Error).message });
       reply.status(500).send({
         error: 'INTERNAL_ERROR',
         message: '创建租户失败',
@@ -64,7 +67,7 @@ export async function tenantRoutes(fastify: FastifyInstance) {
 
       reply.send(tenant);
     } catch (error) {
-      request.log.error(error);
+      log.error('Request failed', { detail: (error as Error).message });
       reply.status(500).send({
         error: 'INTERNAL_ERROR',
         message: '获取租户失败',
@@ -99,7 +102,7 @@ export async function tenantRoutes(fastify: FastifyInstance) {
         },
       });
     } catch (error) {
-      request.log.error(error);
+      log.error('Request failed', { detail: (error as Error).message });
       reply.status(500).send({
         error: 'INTERNAL_ERROR',
         message: '获取租户列表失败',
@@ -137,7 +140,7 @@ export async function tenantRoutes(fastify: FastifyInstance) {
 
       reply.send(tenant);
     } catch (error) {
-      request.log.error(error);
+      log.error('Request failed', { detail: (error as Error).message });
       reply.status(500).send({
         error: 'INTERNAL_ERROR',
         message: '更新租户失败',
@@ -166,7 +169,7 @@ export async function tenantRoutes(fastify: FastifyInstance) {
 
       reply.status(204).send();
     } catch (error) {
-      request.log.error(error);
+      log.error('Request failed', { detail: (error as Error).message });
       reply.status(500).send({
         error: 'INTERNAL_ERROR',
         message: '删除租户失败',

@@ -19,9 +19,11 @@ export const config = {
     refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
   },
 
-  // Anthropic API 配置
-  anthropic: {
-    apiKey: process.env.ANTHROPIC_API_KEY || '',
+  // LLM API 配置（支持 Anthropic/GLM 等兼容 API）
+  llm: {
+    apiKey: process.env.NEPTUNE_LLM_API_KEY || '',
+    baseURL: process.env.NEPTUNE_LLM_BASE_URL || '',
+    model: process.env.NEPTUNE_LLM_MODEL || '',
   },
 
   // 服务配置

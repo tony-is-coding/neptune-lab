@@ -7,6 +7,9 @@
 import type { FastifyInstance } from 'fastify';
 import { skillService } from '../services/skill';
 import { roleMiddleware } from '../middleware/auth';
+import { createLogger } from '../utils/logger';
+
+const log = createLogger('routes:skills');
 
 /**
  * Skills 路由
@@ -59,7 +62,7 @@ export async function skillRoutes(fastify: FastifyInstance) {
 
       reply.status(201).send(skill);
     } catch (error) {
-      request.log.error(error);
+      log.error('Request failed', { detail: (error as Error).message });
       reply.status(500).send({
         error: 'INTERNAL_ERROR',
         message: '创建 Skill 失败',
@@ -97,7 +100,7 @@ export async function skillRoutes(fastify: FastifyInstance) {
 
       reply.send(skill);
     } catch (error) {
-      request.log.error(error);
+      log.error('Request failed', { detail: (error as Error).message });
       reply.status(500).send({
         error: 'INTERNAL_ERROR',
         message: '获取 Skill 失败',
@@ -129,7 +132,7 @@ export async function skillRoutes(fastify: FastifyInstance) {
 
       reply.send(result);
     } catch (error) {
-      request.log.error(error);
+      log.error('Request failed', { detail: (error as Error).message });
       reply.status(500).send({
         error: 'INTERNAL_ERROR',
         message: '获取 Skills 列表失败',
@@ -193,7 +196,7 @@ export async function skillRoutes(fastify: FastifyInstance) {
 
       reply.send(skill);
     } catch (error) {
-      request.log.error(error);
+      log.error('Request failed', { detail: (error as Error).message });
       reply.status(500).send({
         error: 'INTERNAL_ERROR',
         message: '更新 Skill 失败',
@@ -232,7 +235,7 @@ export async function skillRoutes(fastify: FastifyInstance) {
 
       reply.status(204).send();
     } catch (error) {
-      request.log.error(error);
+      log.error('Request failed', { detail: (error as Error).message });
       reply.status(500).send({
         error: 'INTERNAL_ERROR',
         message: '删除 Skill 失败',
@@ -264,7 +267,7 @@ export async function skillRoutes(fastify: FastifyInstance) {
 
       reply.status(201).send(result);
     } catch (error) {
-      request.log.error(error);
+      log.error('Request failed', { detail: (error as Error).message });
       reply.status(500).send({
         error: 'INTERNAL_ERROR',
         message: '分配 Skill 失败',
@@ -303,7 +306,7 @@ export async function skillRoutes(fastify: FastifyInstance) {
 
       reply.status(204).send();
     } catch (error) {
-      request.log.error(error);
+      log.error('Request failed', { detail: (error as Error).message });
       reply.status(500).send({
         error: 'INTERNAL_ERROR',
         message: '移除 Skill 失败',
@@ -340,7 +343,7 @@ export async function skillRoutes(fastify: FastifyInstance) {
         },
       });
     } catch (error) {
-      request.log.error(error);
+      log.error('Request failed', { detail: (error as Error).message });
       reply.status(500).send({
         error: 'INTERNAL_ERROR',
         message: '获取 Agent 列表失败',

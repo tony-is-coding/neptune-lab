@@ -4,6 +4,10 @@ import { join } from 'path';
 import { threadManager } from '../services/thread-manager';
 import { mapSSEEvent } from '../services/sse-event-mapper';
 import { transformHistory } from '../services/history-transformer';
+import { createLogger } from '../utils/logger';
+import { resolveTranscriptPath, resolveTranscriptPaths } from '../utils/transcript-resolver';
+
+const log = createLogger('routes:sessions');
 
 /**
  * Agent Chat 路由（旧接口兼容）
@@ -164,37 +168,43 @@ export async function sessionRoutes(fastify: FastifyInstance) {
       const workspace = thread.workspace;
 
       // 2. 读取 transcript.jsonl
-      const transcriptPath = join(workspace, 'transcript.jsonl');
+      const transcriptPaths = resolveTranscriptPaths(workspace);
       let messages: Array<Record<string, unknown>> = [];
 
       try {
-        const transcriptContent = readFileSync(transcriptPath, 'utf-8');
-        const lines = transcriptContent.trim().split('\n');
+        if (transcriptPaths.length === 0) {
+          throw new Error('No transcript file found');
+        }
+        for (const filePath of transcriptPaths) {
+          const transcriptContent = readFileSync(filePath, 'utf-8');
+          const lines = transcriptContent.trim().split('\n');
 
-        // 解析每一行为 JSON 对象
-        messages = lines
-          .filter(line => line.trim().length > 0)
-          .map(line => {
-            try {
-              return JSON.parse(line) as Record<string, unknown>;
-            } catch {
-              return null;
-            }
-          })
-          .filter((msg): msg is Record<string, unknown> => msg !== null);
+          const parsed = lines
+            .filter(line => line.trim().length > 0)
+            .map(line => {
+              try {
+                return JSON.parse(line) as Record<string, unknown>;
+              } catch {
+                return null;
+              }
+            })
+            .filter((msg): msg is Record<string, unknown> => msg !== null);
 
-        // 应用 limit
-        const limitNum = limit ? parseInt(limit) : 50;
-        if (messages.length > limitNum) {
-          messages = messages.slice(-limitNum); // 返回最近的消息
+          messages.push(...parsed);
         }
       } catch (error) {
         // 文件不存在或读取失败，返回空列表
-        console.warn('读取 transcript.jsonl 失败:', error);
+        log.warn('Transcript read failed', { detail: (error as Error).message });
       }
 
       // 转换为前端结构化格式（blocks）
-      const transformed = transformHistory(messages);
+      let transformed = transformHistory(messages);
+
+      // limit 作用在转换后的消息上
+      const limitNum = limit ? parseInt(limit) : 50;
+      if (transformed.length > limitNum) {
+        transformed = transformed.slice(-limitNum);
+      }
 
       reply.send({
         data: transformed,

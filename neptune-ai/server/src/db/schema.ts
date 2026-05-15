@@ -53,6 +53,41 @@ export const agentTemplates = pgTable('agent_templates', {
   description: text('description'),
   icon: text('icon').default('smart_toy'),
   systemPrompt: text('system_prompt').notNull(),
+  /**
+   * Prompt Config — 模块化 System Prompt 配置（Phase 2）
+   *
+   * 如果存在，使用模块化组装；否则回退到 system_prompt
+   *
+   * 结构：
+   * - identity: Agent 身份描述（岗位名称、职责、能力边界）
+   * - inlineSkills: 内联技能定义（可选，优先于 skills 表关联）
+   * - knowledgeConfig: 知识库配置（可选）
+   * - toolInstructions: 工具约束覆盖（可选，默认自动生成）
+   * - disableGuard: 是否禁用平台 Guard（仅管理员可操作，默认 false）
+   */
+  promptConfig: jsonb('prompt_config').$type<{
+    // Block 2: Agent 身份（必填）
+    identity: string;
+
+    // Block 3: 内联技能定义（可选，优先于 skills 表关联）
+    inlineSkills?: Array<{
+      name: string;
+      content: string;
+    }>;
+
+    // Block 4: 知识库配置（可选）
+    knowledgeConfig?: {
+      maxDocuments: number;       // 最多注入多少文档
+      maxTokensPerDoc: number;    // 每文档最大 token
+      summaryMode: 'full' | 'summary' | 'keywords';  // 注入模式
+    };
+
+    // Block 5: 工具约束覆盖（可选，默认自动生成）
+    toolInstructions?: string;
+
+    // 是否禁用平台 Guard（仅管理员可操作，默认 false）
+    disableGuard?: boolean;
+  }>(),
   modelConfig: jsonb('model_config').$type<{
     provider: string;
     model: string;

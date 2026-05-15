@@ -125,6 +125,25 @@ export async function getThreadHistory(
   return res.json()
 }
 
+/** 回复 AskUserQuestion（用户选择答案后调用） */
+export async function replyToQuestion(
+  agentId: string,
+  threadId: string,
+  toolUseId: string,
+  answers: Record<string, string>,
+): Promise<void> {
+  const res = await fetch(
+    `${API_BASE}/agents/${agentId}/threads/${threadId}/reply`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+      body: JSON.stringify({ toolUseId, answers }),
+    },
+  )
+  if (res.status === 401) { handleUnauthorized(res); throw new Error('Unauthorized'); }
+  if (!res.ok) throw new Error(`replyToQuestion failed: ${res.status}`)
+}
+
 // === Thread Chat (SSE) ===
 
 /** SSE 事件回调 */

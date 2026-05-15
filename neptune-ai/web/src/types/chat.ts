@@ -114,6 +114,14 @@ export type MessageBlock =
   | { type: 'tool_use'; id: string; name: string; input?: Record<string, unknown>; status: 'running' | 'completed' | 'error' }
   | { type: 'tool_result'; toolUseId: string; output?: Record<string, unknown>; isError?: boolean }
   | { type: 'artifact'; id: string; title: string; fileType: string; content: string }
+  | { type: 'ask_user'; id: string; questions: AskUserQuestion[]; answered?: boolean; answers?: Record<string, string> }
+
+export interface AskUserQuestion {
+  question: string
+  header?: string
+  options: Array<{ label: string; description?: string }>
+  multiSelect?: boolean
+}
 
 export interface ChatMessage {
   id: string

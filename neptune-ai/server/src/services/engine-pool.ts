@@ -9,6 +9,10 @@
  * - 存储并返回 sdkSessionId（Engine 内部会话 ID）
  */
 
+import { createLogger } from '../utils/logger.js';
+
+const log = createLogger('engine-pool');
+
 export interface EnginePoolConfig {
   maxConcurrent: number;
 }
@@ -48,6 +52,7 @@ export class EnginePool {
   register(threadId: string, engine: DestroyableEngine, sdkSessionId: string): void {
     this.entries.set(threadId, { engine, sdkSessionId });
     this.touch(threadId);
+    log.debug('Engine registered', { threadId, poolSize: this.entries.size });
   }
 
   /**
@@ -79,10 +84,11 @@ export class EnginePool {
       try {
         await entry.engine.destroy();
       } catch (error) {
-        console.warn(`Engine 销毁失败 (thread=${threadId}):`, error);
+        log.warn('Engine destroy failed during release', { threadId, detail: (error as Error).message });
       }
       this.entries.delete(threadId);
       this.lastActivity.delete(threadId);
+      log.info('Engine released', { threadId, poolSize: this.entries.size });
     }
   }
 

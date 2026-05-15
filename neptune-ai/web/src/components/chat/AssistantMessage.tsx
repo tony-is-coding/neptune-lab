@@ -3,11 +3,13 @@ import { ThinkingBlock } from './ThinkingBlock';
 import { TextBlock } from './TextBlock';
 import { ToolUseBlock } from './ToolUseBlock';
 import { ArtifactBlock } from './ArtifactBlock';
+import { QuestionBlock } from './QuestionBlock';
 
 interface AssistantMessageProps {
   message: ChatMessage;
   agentIcon: string;
   onOpenArtifact: (block: Extract<MessageBlock, { type: 'artifact' }>) => void;
+  onAnswerQuestion?: (id: string, answers: Record<string, string>) => void;
 }
 
 /**
@@ -24,7 +26,7 @@ function ThinkingDots() {
   );
 }
 
-export function AssistantMessage({ message, agentIcon, onOpenArtifact }: AssistantMessageProps) {
+export function AssistantMessage({ message, agentIcon, onOpenArtifact, onAnswerQuestion }: AssistantMessageProps) {
   const isStreaming = message.status === 'streaming';
 
   // 检查是否为等待状态：只有单个 thinking block 且正在 streaming
@@ -33,12 +35,12 @@ export function AssistantMessage({ message, agentIcon, onOpenArtifact }: Assista
     message.blocks[0].type === 'thinking' &&
     message.blocks[0].content === '思考中...';
 
+  // 将连续的 tool_use blocks 分组
+  const groupedBlocks = groupConsecutiveTools(message.blocks);
+
   return (
-    <div className="flex gap-3 max-w-[95%]">
-      <div className="w-8 h-8 rounded-full bg-secondary-container flex items-center justify-center shrink-0 mt-1">
-        <span className="material-symbols-outlined text-[16px] text-on-secondary-container">{agentIcon}</span>
-      </div>
-      <div className="flex-1 flex flex-col gap-3">
+    <div className="max-w-[95%]">
+      <div className="flex flex-col gap-0.5">
         {isWaiting ? (
           // 等待状态：显示简洁的"思考中..."动画
           <div className="flex items-center gap-2 py-1">
@@ -47,8 +49,36 @@ export function AssistantMessage({ message, agentIcon, onOpenArtifact }: Assista
             <ThinkingDots />
           </div>
         ) : (
-          // 正常状态：渲染所有 blocks
-          message.blocks.map((block, index) => {
+          // 正常状态：渲染分组后的 blocks
+          groupedBlocks.map((group, groupIndex) => {
+            if (group.type === 'tool_group') {
+              // 连续工具调用合并为一个容器
+              return (
+                <div
+                  key={`${message.id}-toolgroup-${groupIndex}`}
+                  className="border border-border-cream rounded-[10px] overflow-hidden my-0.5 divide-y divide-border-cream"
+                >
+                  {group.blocks.map((block) => {
+                    const toolResult = message.blocks.find(
+                      (b): b is Extract<MessageBlock, { type: 'tool_result' }> =>
+                        b.type === 'tool_result' && b.toolUseId === block.id
+                    );
+                    return (
+                      <ToolUseBlock
+                        key={`${message.id}-tool-${block.id}`}
+                        block={block}
+                        toolResult={toolResult}
+                        grouped
+                      />
+                    );
+                  })}
+                </div>
+              );
+            }
+
+            const block = group.block;
+            const index = group.originalIndex;
+
             switch (block.type) {
               case 'thinking':
                 return (
@@ -60,54 +90,77 @@ export function AssistantMessage({ message, agentIcon, onOpenArtifact }: Assista
                   />
                 );
 
-            case 'text': {
-              // Determine if this text block is the currently streaming one
-              const isLastTextBlock = message.blocks.slice(index + 1).every(b => b.type !== 'text');
-              const isActivelyStreaming = isStreaming && isLastTextBlock &&
-                index === message.blocks.length - 1;
-              return (
-                <TextBlock
-                  key={`${message.id}-text-${index}`}
-                  content={block.content}
-                  isStreaming={isActivelyStreaming}
-                />
-              );
+              case 'text': {
+                const isLastTextBlock = message.blocks.slice(index + 1).every(b => b.type !== 'text');
+                const isActivelyStreaming = isStreaming && isLastTextBlock &&
+                  index === message.blocks.length - 1;
+                return (
+                  <TextBlock
+                    key={`${message.id}-text-${index}`}
+                    content={block.content}
+                    isStreaming={isActivelyStreaming}
+                  />
+                );
+              }
+
+              case 'tool_result':
+                return null;
+
+              case 'artifact':
+                return (
+                  <ArtifactBlock
+                    key={`${message.id}-artifact-${block.id}`}
+                    block={block}
+                    onOpen={() => onOpenArtifact(block)}
+                  />
+                );
+
+              case 'ask_user':
+                return (
+                  <QuestionBlock
+                    key={`${message.id}-ask-${block.id}`}
+                    block={block}
+                    onAnswer={onAnswerQuestion || (() => {})}
+                  />
+                );
+
+              default:
+                return null;
             }
-
-            case 'tool_use': {
-              // Find matching tool_result
-              const toolResult = message.blocks.find(
-                (b): b is Extract<MessageBlock, { type: 'tool_result' }> =>
-                  b.type === 'tool_result' && b.toolUseId === block.id
-              );
-              return (
-                <ToolUseBlock
-                  key={`${message.id}-tool-${block.id}`}
-                  block={block}
-                  toolResult={toolResult}
-                />
-              );
-            }
-
-            case 'tool_result':
-              // Rendered inside ToolUseBlock, skip standalone rendering
-              return null;
-
-            case 'artifact':
-              return (
-                <ArtifactBlock
-                  key={`${message.id}-artifact-${block.id}`}
-                  block={block}
-                  onOpen={() => onOpenArtifact(block)}
-                />
-              );
-
-            default:
-              return null;
-          }
           })
         )}
       </div>
     </div>
   );
+}
+
+type GroupedBlock =
+  | { type: 'tool_group'; blocks: Extract<MessageBlock, { type: 'tool_use' }>[] }
+  | { type: 'single'; block: MessageBlock; originalIndex: number };
+
+/** 将连续的 tool_use blocks 合并为一组 */
+function groupConsecutiveTools(blocks: MessageBlock[]): GroupedBlock[] {
+  const result: GroupedBlock[] = [];
+  let currentToolGroup: Extract<MessageBlock, { type: 'tool_use' }>[] = [];
+
+  for (let i = 0; i < blocks.length; i++) {
+    const block = blocks[i];
+    if (block.type === 'tool_use') {
+      currentToolGroup.push(block);
+    } else {
+      if (currentToolGroup.length > 0) {
+        result.push({ type: 'tool_group', blocks: [...currentToolGroup] });
+        currentToolGroup = [];
+      }
+      if (block.type !== 'tool_result') {
+        result.push({ type: 'single', block, originalIndex: i });
+      }
+    }
+  }
+
+  if (currentToolGroup.length > 0) {
+    result.push({ type: 'tool_group', blocks: currentToolGroup });
+  }
+
+  return result;
 }

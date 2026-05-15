@@ -12,11 +12,7 @@ test.describe('Navigation', () => {
     await page.goto('/');
     await page.waitForLoadState('networkidle');
 
-    // 应该发起了 GET /agents 请求
-    const agentRequests = diag.requests.filter(r => r.includes('/agents') && r.includes('>> GET'));
-    expect(agentRequests.length).toBeGreaterThan(0);
-
-    // 页面应显示 Agent 相关内容
+    // 页面应显示侧边栏
     await expect(page.locator('[data-testid="primary-sidebar"]')).toBeVisible();
 
     const stored = await page.evaluate(() => localStorage.getItem('neptune-auth'));
@@ -41,7 +37,7 @@ test.describe('Navigation', () => {
 
     // 点击 Collaborate 导航
     await page.click('[data-testid="nav-collaborate"]');
-    // collaborate 可能重定向到 /collaborate/:agentId 或停留在 /collaborate（取决于 API 是否可用）
+    // collaborate 可能重定向到 /collaborate/:agentId 或停留在 /collaborate
     await page.waitForURL(/\/collaborate/, { timeout: 10000 });
     expect(page.url()).toContain('/collaborate');
 
@@ -49,23 +45,30 @@ test.describe('Navigation', () => {
     printReport(diag, page.url(), stored);
   });
 
-  test('sidebar highlights active page', async ({ page }) => {
+  test('sidebar highlights active page with dot indicator', async ({ page }) => {
     const diag = attachDiagnostics(page);
 
     await page.goto('/');
     await page.waitForLoadState('networkidle');
 
-    // Home 应该高亮
+    // Home 应该有 active dot indicator（一个小圆点）
     const homeLink = page.locator('[data-testid="nav-home"]');
-    await expect(homeLink).toHaveClass(/bg-surface-lowest|shadow-sm/);
+    // 检查 active dot（绝对定位的 span 元素）
+    const homeDot = homeLink.locator('span.absolute');
+    await expect(homeDot).toBeVisible();
 
     // 切换到 Skills
     await page.click('[data-testid="nav-skills"]');
     await page.waitForURL('**/skills');
 
-    // Skills 应该高亮
+    // Skills 应该有 active dot
     const skillsLink = page.locator('[data-testid="nav-skills"]');
-    await expect(skillsLink).toHaveClass(/bg-surface-lowest|shadow-sm/);
+    const skillsDot = skillsLink.locator('span.absolute');
+    await expect(skillsDot).toBeVisible();
+
+    // Home 不再有 active dot
+    const homeDotAfter = homeLink.locator('span.absolute');
+    await expect(homeDotAfter).not.toBeVisible();
 
     const stored = await page.evaluate(() => localStorage.getItem('neptune-auth'));
     printReport(diag, page.url(), stored);

@@ -21,6 +21,9 @@ import type {
   TaskUpdateInput,
   StepStatus,
 } from './types';
+import { createLogger } from '../../utils/logger.js';
+
+const log = createLogger('plan-manager');
 
 /**
  * PlanManager 配置
@@ -71,7 +74,7 @@ export class PlanManager {
       return [];
     } catch (error) {
       // Plan 处理失败不影响主流程，记录错误但不抛出
-      console.error('[PlanManager] 处理事件失败:', error);
+      log.error({ err: error }, 'Event processing failed');
       return [];
     }
   }
@@ -114,14 +117,14 @@ export class PlanManager {
     } else {
       plan = this.plans.get(this.currentPlanId!)!;
       if (!plan) {
-        console.error('[PlanManager] 当前 Plan 不存在');
+        log.error('Current plan not found');
         return events;
       }
     }
 
     // 检查步骤数限制
     if (plan.steps.length >= this.maxSteps) {
-      console.warn(`[PlanManager] Plan ${plan.id} 已达到最大步骤数 ${this.maxSteps}`);
+      log.warn({ planId: plan.id, maxSteps: this.maxSteps }, 'Plan reached max steps');
       return events;
     }
 
@@ -146,20 +149,20 @@ export class PlanManager {
     // 通过 taskId (stepId) 查找对应的 Plan
     const planId = this.stepIdToPlanId.get(input.taskId);
     if (!planId) {
-      console.warn(`[PlanManager] 找不到步骤 ${input.taskId} 对应的 Plan`);
+      log.warn({ stepId: input.taskId }, 'Step not found for plan');
       return [];
     }
 
     const plan = this.plans.get(planId);
     if (!plan) {
-      console.warn(`[PlanManager] Plan ${planId} 不存在`);
+      log.warn({ planId }, 'Plan not found');
       return [];
     }
 
     // 更新步骤状态
     const step = plan.steps.find(s => s.id === input.taskId);
     if (!step) {
-      console.warn(`[PlanManager] 步骤 ${input.taskId} 不存在`);
+      log.warn({ stepId: input.taskId }, 'Step not found');
       return [];
     }
 

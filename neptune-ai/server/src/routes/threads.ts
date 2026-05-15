@@ -18,6 +18,10 @@ import { threadManager } from '../services/thread-manager';
 import { mapSSEEvent } from '../services/sse-event-mapper';
 import { transformHistory } from '../services/history-transformer';
 import { roleMiddleware } from '../middleware/auth';
+import { createLogger } from '../utils/logger';
+import { resolveTranscriptPath, resolveTranscriptPaths } from '../utils/transcript-resolver';
+
+const log = createLogger('routes:threads');
 
 export async function threadRoutes(fastify: FastifyInstance) {
   // ===== 1. 创建 Thread =====
@@ -39,7 +43,7 @@ export async function threadRoutes(fastify: FastifyInstance) {
 
       reply.status(201).send(thread);
     } catch (error) {
-      request.log.error(error);
+      log.error('Request failed', { detail: (error as Error).message });
       reply.status(500).send({
         error: 'INTERNAL_ERROR',
         message: '创建 Thread 失败',
@@ -69,7 +73,7 @@ export async function threadRoutes(fastify: FastifyInstance) {
 
       reply.send(result);
     } catch (error) {
-      request.log.error(error);
+      log.error('Request failed', { detail: (error as Error).message });
       reply.status(500).send({
         error: 'INTERNAL_ERROR',
         message: '获取 Thread 列表失败',
@@ -108,7 +112,7 @@ export async function threadRoutes(fastify: FastifyInstance) {
 
       reply.send(thread);
     } catch (error) {
-      request.log.error(error);
+      log.error('Request failed', { detail: (error as Error).message });
       reply.status(500).send({
         error: 'INTERNAL_ERROR',
         message: '获取 Thread 详情失败',
@@ -135,37 +139,26 @@ export async function threadRoutes(fastify: FastifyInstance) {
       // 先验证 thread 存在且属于当前租户
       const existing = await threadManager.get(threadId);
       if (!existing) {
-        if (!reply.sent) {
-          return reply.status(404).send({
-            error: 'NOT_FOUND',
-            message: 'Thread 不存在',
-          });
-        }
-        return;
+        return reply.status(404).send({
+          error: 'NOT_FOUND',
+          message: 'Thread 不存在',
+        });
       }
       if (existing.tenantId !== user.tenantId || existing.templateId !== agentId) {
-        if (!reply.sent) {
-          return reply.status(404).send({
-            error: 'NOT_FOUND',
-            message: 'Thread 不存在',
-          });
-        }
-        return;
+        return reply.status(404).send({
+          error: 'NOT_FOUND',
+          message: 'Thread 不存在',
+        });
       }
 
       const thread = await threadManager.update(threadId, { title, status });
-      if (!reply.sent) {
-        reply.send(thread);
-      }
+      reply.send(thread);
     } catch (error) {
-      // 检查响应是否已经发送（包括在 preHandler 中）
-      if (!reply.sent && !reply.raw.writableEnded) {
-        request.log.error(error);
-        reply.status(500).send({
-          error: 'INTERNAL_ERROR',
-          message: '更新 Thread 失败',
-        });
-      }
+      log.error('Request failed', { detail: (error as Error).message });
+      reply.status(500).send({
+        error: 'INTERNAL_ERROR',
+        message: '更新 Thread 失败',
+      });
     }
   });
 
@@ -184,47 +177,33 @@ export async function threadRoutes(fastify: FastifyInstance) {
       // 先验证 thread 存在且属于当前租户
       const existing = await threadManager.get(threadId);
       if (!existing) {
-        if (!reply.sent) {
-          return reply.status(404).send({
-            error: 'NOT_FOUND',
-            message: 'Thread 不存在',
-          });
-        }
-        return;
+        return reply.status(404).send({
+          error: 'NOT_FOUND',
+          message: 'Thread 不存在',
+        });
       }
       if (existing.tenantId !== user.tenantId || existing.templateId !== agentId) {
-        if (!reply.sent) {
-          return reply.status(404).send({
-            error: 'NOT_FOUND',
-            message: 'Thread 不存在',
-          });
-        }
-        return;
+        return reply.status(404).send({
+          error: 'NOT_FOUND',
+          message: 'Thread 不存在',
+        });
       }
 
       const success = await threadManager.delete(threadId);
       if (!success) {
-        if (!reply.sent) {
-          return reply.status(404).send({
-            error: 'NOT_FOUND',
-            message: 'Thread 不存在',
-          });
-        }
-        return;
-      }
-
-      if (!reply.sent) {
-        reply.status(204).send();
-      }
-    } catch (error) {
-      // 检查响应是否已经发送（包括在 preHandler 中）
-      if (!reply.sent && !reply.raw.writableEnded) {
-        request.log.error(error);
-        reply.status(500).send({
-          error: 'INTERNAL_ERROR',
-          message: '删除 Thread 失败',
+        return reply.status(404).send({
+          error: 'NOT_FOUND',
+          message: 'Thread 不存在',
         });
       }
+
+      reply.status(204).send();
+    } catch (error) {
+      log.error('Request failed', { detail: (error as Error).message });
+      reply.status(500).send({
+        error: 'INTERNAL_ERROR',
+        message: '删除 Thread 失败',
+      });
     }
   });
 
@@ -328,16 +307,45 @@ export async function threadRoutes(fastify: FastifyInstance) {
         }
 
         // 处理 assistant 事件：如果已收到过 stream_event，跳过文本内容（避免重复）
+        // 但仍然提取 tool_use 的完整 input（流式中 tool_use 的 input 可能为空）
         if (eventType === 'assistant' && hasReceivedStreamDelta) {
-          // 检查是否有文本内容
-          const content = (sdkEvent as any).content;
           const message = (sdkEvent as any).message;
-          const hasText = typeof content === 'string' || (message?.content && Array.isArray(message.content));
-          if (hasText) {
-            // 重置状态，为下一个文本块做准备
-            hasReceivedStreamDelta = false;
-            continue; // 跳过这个 assistant 事件
+          if (message?.content && Array.isArray(message.content)) {
+            // 提取 tool_use blocks 的完整 input，发送更新事件
+            for (const block of message.content) {
+              if (block.type === 'tool_use' && block.id && block.input) {
+                const toolName = String(block.name || '');
+                // 发送 tool_use 更新（前端会用 id 匹配并更新 input）
+                reply.raw.write(`event: message\ndata: ${JSON.stringify({
+                  type: 'tool_use',
+                  id: String(block.id),
+                  name: toolName,
+                  input: block.input,
+                  status: 'running',
+                })}\n\n`);
+
+                // 如果是 Write 工具写入文档，发送 artifact 事件
+                if (toolName === 'Write' && block.input.file_path && block.input.content) {
+                  const filePath = String(block.input.file_path);
+                  const ext = filePath.substring(filePath.lastIndexOf('.')).toLowerCase();
+                  const docExtensions = ['.md', '.html', '.htm', '.txt', '.json', '.csv', '.xml', '.yaml', '.yml'];
+                  if (docExtensions.includes(ext)) {
+                    const fileName = filePath.split('/').pop() || filePath;
+                    reply.raw.write(`event: message\ndata: ${JSON.stringify({
+                      type: 'artifact',
+                      id: `artifact-${block.id}`,
+                      title: fileName,
+                      fileType: ext,
+                      content: String(block.input.content),
+                    })}\n\n`);
+                  }
+                }
+              }
+            }
           }
+          // 重置状态，为下一个文本块做准备
+          hasReceivedStreamDelta = false;
+          continue; // 跳过 assistant 的文本内容（已通过 stream_event 发送）
         }
 
         // 将 SDK 事件映射为前端格式
@@ -364,7 +372,49 @@ export async function threadRoutes(fastify: FastifyInstance) {
     reply.raw.end();
   });
 
-  // ===== 7. 获取 Thread 历史 =====
+  // ===== 7. 回复 AskUserQuestion =====
+  fastify.post('/:agentId/threads/:threadId/reply', {
+    preHandler: [fastify.authenticate],
+  }, async (request, reply) => {
+    if (!request.user || reply.sent) return;
+    const { agentId, threadId } = request.params as {
+      agentId: string;
+      threadId: string;
+    };
+    const { toolUseId, answers } = request.body as {
+      toolUseId: string;
+      answers: Record<string, string>;
+    };
+    const user = request.user;
+
+    if (!toolUseId || !answers) {
+      return reply.status(400).send({
+        error: 'MISSING_PARAMS',
+        message: '缺少 toolUseId 或 answers 参数',
+      });
+    }
+
+    // 验证 Thread 归属
+    const thread = await threadManager.get(threadId);
+    if (!thread || thread.tenantId !== user.tenantId || thread.templateId !== agentId) {
+      return reply.status(404).send({
+        error: 'NOT_FOUND',
+        message: 'Thread 不存在',
+      });
+    }
+
+    // TODO: 将 answers 作为 tool_result 注入 Engine
+    // 当前 Engine SDK 的 tool_result 注入机制需要进一步对接
+    // 暂时返回 202 表示已接收
+    log.info('AskUserQuestion reply received', { threadId, toolUseId, answers });
+
+    return reply.status(202).send({
+      status: 'accepted',
+      toolUseId,
+    });
+  });
+
+  // ===== 8. 获取 Thread 历史 =====
   fastify.get('/:agentId/threads/:threadId/history', {
     preHandler: [fastify.authenticate],
   }, async (request, reply) => {
@@ -392,35 +442,46 @@ export async function threadRoutes(fastify: FastifyInstance) {
       }
 
       const workspace = thread.workspace;
-      const transcriptPath = join(workspace, 'transcript.jsonl');
+      const transcriptPaths = resolveTranscriptPaths(workspace);
       let messages: Array<Record<string, unknown>> = [];
 
       try {
-        const transcriptContent = readFileSync(transcriptPath, 'utf-8');
-        const lines = transcriptContent.trim().split('\n');
-
-        messages = lines
-          .filter(line => line.trim().length > 0)
-          .map(line => {
-            try {
-              return JSON.parse(line) as Record<string, unknown>;
-            } catch {
-              return null;
-            }
-          })
-          .filter((msg): msg is Record<string, unknown> => msg !== null);
-
-        const limitNum = limit ? parseInt(limit) : 50;
-        if (messages.length > limitNum) {
-          messages = messages.slice(-limitNum);
+        if (transcriptPaths.length === 0) {
+          throw new Error('No transcript file found');
         }
+        // 合并所有 transcript 文件（按时间升序）
+        for (const filePath of transcriptPaths) {
+          const transcriptContent = readFileSync(filePath, 'utf-8');
+          const lines = transcriptContent.trim().split('\n');
+
+          const parsed = lines
+            .filter(line => line.trim().length > 0)
+            .map(line => {
+              try {
+                return JSON.parse(line) as Record<string, unknown>;
+              } catch {
+                return null;
+              }
+            })
+            .filter((msg): msg is Record<string, unknown> => msg !== null);
+
+          messages.push(...parsed);
+        }
+
+        // 注意：不在原始行上做 limit，在转换后的消息上做
       } catch (error) {
         // 文件不存在或读取失败，返回空列表
-        console.warn('读取 transcript.jsonl 失败:', error);
+        log.warn('Transcript read failed', { threadId, detail: (error as Error).message });
       }
 
       // 转换为前端结构化格式（blocks）
-      const transformed = transformHistory(messages);
+      let transformed = transformHistory(messages);
+
+      // limit 作用在转换后的消息上
+      const limitNum = limit ? parseInt(limit) : 50;
+      if (transformed.length > limitNum) {
+        transformed = transformed.slice(-limitNum);
+      }
 
       reply.send({
         data: transformed,
@@ -432,7 +493,7 @@ export async function threadRoutes(fastify: FastifyInstance) {
         },
       });
     } catch (error) {
-      request.log.error(error);
+      log.error('Request failed', { detail: (error as Error).message });
       reply.status(500).send({
         error: 'INTERNAL_ERROR',
         message: '获取历史记录失败',

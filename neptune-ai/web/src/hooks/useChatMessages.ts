@@ -119,28 +119,48 @@ export function useChatMessages() {
           if (isDelta) {
             // 增量内容：追加到最后一个 text block
             setBlocks(prev => {
-              const lastBlock = prev[prev.length - 1];
+              // 先将所有 running 的 tool_use 标记为 completed（新 turn 开始意味着工具已完成）
+              const updated = prev.map(b =>
+                b.type === 'tool_use' && b.status === 'running' ? { ...b, status: 'completed' as const } : b
+              );
+              const lastBlock = updated[updated.length - 1];
               if (lastBlock?.type === 'text') {
-                // 追加到现有 text block
                 return [
-                  ...prev.slice(0, -1),
+                  ...updated.slice(0, -1),
                   { ...lastBlock, content: lastBlock.content + textContent }
                 ];
               }
-              // 首次到达文本内容：移除 thinking block，创建第一个 text block
-              const filtered = prev.filter(b => b.type !== 'thinking');
+              // 首次到达文本内容：保留 thinking block，创建新 text block
+              const filtered = updated.filter(b => !(b.type === 'thinking' && b.content === '思考中...'));
               return [...filtered, { type: 'text', content: textContent }];
             });
           } else {
-            // 非增量：移除 thinking block，创建新的 text block
+            // 非增量：移除占位 thinking，创建新的 text block
             setBlocks(prev => {
-              const filtered = prev.filter(b => b.type !== 'thinking');
+              const updated = prev.map(b =>
+                b.type === 'tool_use' && b.status === 'running' ? { ...b, status: 'completed' as const } : b
+              );
+              const filtered = updated.filter(b => !(b.type === 'thinking' && b.content === '思考中...'));
               return [...filtered, { type: 'text', content: textContent }];
             });
           }
         } else if (type === 'tool_use') {
           const { id: toolId, name, input } = data as { id: string; name: string; input: Record<string, unknown> };
-          setBlocks(prev => [...prev, { type: 'tool_use', id: toolId, name, input, status: 'running' }]);
+          setBlocks(prev => {
+            // 如果已存在同 id 的 tool_use，更新其 input（流式中 input 可能延迟到达）
+            const existing = prev.find(b => b.type === 'tool_use' && b.id === toolId);
+            if (existing) {
+              return prev.map(b =>
+                b.type === 'tool_use' && b.id === toolId
+                  ? { ...b, input, name: name || (b as any).name }
+                  : b
+              );
+            }
+            return [...prev, { type: 'tool_use', id: toolId, name, input, status: 'running' as const }];
+          });
+        } else if (type === 'artifact') {
+          const { id: artId, title, fileType, content: artContent } = data as { id: string; title: string; fileType: string; content: string };
+          setBlocks(prev => [...prev, { type: 'artifact', id: artId, title, fileType, content: artContent }]);
         } else if (type === 'tool_status') {
           const { id: toolId, status: toolStatus } = data as { id: string; status: string };
           setBlocks(prev => prev.map(b =>
@@ -156,8 +176,59 @@ export function useChatMessages() {
           setBlocks(prev => [...prev, { type: 'text', content: `Error: ${errorMsg || 'Unknown error occurred'}` }]);
           setStatus('complete');
         } else if (type === 'thinking') {
-          const thinkingContent = (data as { content?: string }).content || '';
-          setBlocks(prev => [...prev, { type: 'thinking', content: thinkingContent, duration: 0 }]);
+          const { content: thinkingContent = '', isDelta } = data as { content?: string; isDelta?: boolean };
+          if (isDelta) {
+            // 增量思考：追加到最后一个 thinking block
+            setBlocks(prev => {
+              // 新 thinking 到达 → 之前的 tool_use 已完成
+              const updated = prev.map(b =>
+                b.type === 'tool_use' && b.status === 'running' ? { ...b, status: 'completed' as const } : b
+              );
+              const lastBlock = updated[updated.length - 1];
+              if (lastBlock?.type === 'thinking') {
+                // 如果是占位 block，替换内容而非追加
+                if (lastBlock.content === '思考中...') {
+                  return [
+                    ...updated.slice(0, -1),
+                    { ...lastBlock, content: thinkingContent }
+                  ];
+                }
+                return [
+                  ...updated.slice(0, -1),
+                  { ...lastBlock, content: lastBlock.content + thinkingContent }
+                ];
+              }
+              // 没有现有 thinking block，创建新的
+              return [...updated, { type: 'thinking', content: thinkingContent, duration: 0 }];
+            });
+          } else {
+            // 非增量 thinking（content_block_start）：
+            setBlocks(prev => {
+              const updated = prev.map(b =>
+                b.type === 'tool_use' && b.status === 'running' ? { ...b, status: 'completed' as const } : b
+              );
+              const lastBlock = updated[updated.length - 1];
+              if (lastBlock?.type === 'thinking') {
+                // 占位 block → 替换
+                if (lastBlock.content === '思考中...') {
+                  return [
+                    ...updated.slice(0, -1),
+                    { type: 'thinking', content: thinkingContent, duration: 0 }
+                  ];
+                }
+                // 已有真实 thinking block，合并（多轮思考）
+                const separator = lastBlock.content && thinkingContent ? '\n\n' : '';
+                return [
+                  ...updated.slice(0, -1),
+                  { ...lastBlock, content: lastBlock.content + separator + thinkingContent }
+                ];
+              }
+              return [...updated, { type: 'thinking', content: thinkingContent, duration: 0 }];
+            });
+          }
+        } else if (type === 'ask_user') {
+          const { id: askId, questions } = data as { id: string; questions: Array<{ question: string; header?: string; options: Array<{ label: string; description?: string }>; multiSelect?: boolean }> };
+          setBlocks(prev => [...prev, { type: 'ask_user', id: askId, questions, answered: false }]);
         }
       },
       onError: (error) => {
@@ -166,6 +237,10 @@ export function useChatMessages() {
         setStatus('complete');
       },
       onDone: () => {
+        // 流结束时，将所有 running 的 tool_use 标记为 completed
+        setBlocks(prev => prev.map(b =>
+          b.type === 'tool_use' && b.status === 'running' ? { ...b, status: 'completed' as const } : b
+        ));
         setStatus('complete');
       },
     });
@@ -188,5 +263,20 @@ export function useChatMessages() {
     setIsStreaming(false);
   }, []);
 
-  return { getMessages, getPlanTasks, getBackgroundTasks, sendMessage, addInitialMessages, loadHistory, isStreaming, abortStream };
+  /** Update a specific block in the current streaming message (e.g. mark ask_user as answered) */
+  const updateBlock = useCallback((threadId: string, blockId: string, patch: Partial<MessageBlock>) => {
+    setMessagesByThread(prev => {
+      const msgs = prev[threadId];
+      if (!msgs) return prev;
+      const updated = msgs.map(msg => ({
+        ...msg,
+        blocks: msg.blocks.map(b =>
+          ('id' in b && (b as any).id === blockId) ? { ...b, ...patch } as MessageBlock : b
+        ),
+      }));
+      return { ...prev, [threadId]: updated };
+    });
+  }, []);
+
+  return { getMessages, getPlanTasks, getBackgroundTasks, sendMessage, addInitialMessages, loadHistory, isStreaming, abortStream, updateBlock };
 }

@@ -29,6 +29,13 @@
       "when": 1778072757356,
       "tag": "0003_left_nomad",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1778161102636,
+      "tag": "0004_broken_hitman",
+      "breakpoints": true
     }
   ]
 }
