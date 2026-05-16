@@ -3,30 +3,30 @@
  */
 
 export function esc(str) {
-  if (!str) return "";
-  const div = document.createElement("div");
-  div.textContent = String(str);
-  return div.innerHTML;
+	if (!str) return "";
+	const div = document.createElement("div");
+	div.textContent = String(str);
+	return div.innerHTML;
 }
 
 export function formatTime(ts) {
-  if (!ts) return "";
-  return new Date(ts * 1000).toLocaleString();
+	if (!ts) return "";
+	return new Date(ts * 1000).toLocaleString();
 }
 
 export function statusClass(status) {
-  const map = {
-    active: "active",
-    running: "running",
-    idle: "idle",
-    inactive: "inactive",
-    requires_action: "requires_action",
-    archived: "archived",
-    error: "error",
-  };
-  return map[status] || "default";
+	const map = {
+		active: "active",
+		running: "running",
+		idle: "idle",
+		inactive: "inactive",
+		requires_action: "requires_action",
+		archived: "archived",
+		error: "error",
+	};
+	return map[status] || "default";
 }
 
 export function isClosedSessionStatus(status) {
-  return status === "archived" || status === "inactive";
+	return status === "archived" || status === "inactive";
 }

@@ -57,114 +57,114 @@ let badgeEl = null;
  * @param {{ message?: { content?: unknown } }} payload
  */
 export function processAssistantEvent(payload) {
-  if (!payload || !payload.message) return;
+	if (!payload || !payload.message) return;
 
-  const content = payload.message.content;
-  if (!Array.isArray(content)) return;
+	const content = payload.message.content;
+	if (!Array.isArray(content)) return;
 
-  let changed = false;
+	let changed = false;
 
-  for (const block of content) {
-    if (!block || typeof block !== "object" || block.type !== "tool_use") continue;
+	for (const block of content) {
+		if (!block || typeof block !== "object" || block.type !== "tool_use") continue;
 
-    const name = block.name;
-    const input = block.input || {};
+		const name = block.name;
+		const input = block.input || {};
 
-    if (name === "TaskCreate") {
-      handleTaskCreate(input);
-      changed = true;
-    } else if (name === "TaskUpdate") {
-      handleTaskUpdate(input);
-      changed = true;
-    } else if (name === "TodoWrite") {
-      handleTodoWrite(input);
-      changed = true;
-    }
-  }
+		if (name === "TaskCreate") {
+			handleTaskCreate(input);
+			changed = true;
+		} else if (name === "TaskUpdate") {
+			handleTaskUpdate(input);
+			changed = true;
+		} else if (name === "TodoWrite") {
+			handleTodoWrite(input);
+			changed = true;
+		}
+	}
 
-  if (changed) {
-    renderPanel();
-    updateBadge();
-  }
+	if (changed) {
+		renderPanel();
+		updateBadge();
+	}
 }
 
 /**
  * @param {{ subject?: string, description?: string, activeForm?: string, metadata?: object }} input
  */
 function handleTaskCreate(input) {
-  // TaskCreate creates a task; the tool itself generates the ID server-side.
-  // We extract from the tool output (tool_result) if available, or use a
-  // synthetic ID. The actual ID comes from the tool result event.
-  // Since we only see tool_use (not tool_result here), we create with a
-  // temporary key based on subject and let TaskUpdate resolve it.
-  const subject = input.subject || "Untitled task";
-  const description = input.description || "";
-  const activeForm = input.activeForm;
+	// TaskCreate creates a task; the tool itself generates the ID server-side.
+	// We extract from the tool output (tool_result) if available, or use a
+	// synthetic ID. The actual ID comes from the tool result event.
+	// Since we only see tool_use (not tool_result here), we create with a
+	// temporary key based on subject and let TaskUpdate resolve it.
+	const subject = input.subject || "Untitled task";
+	const description = input.description || "";
+	const activeForm = input.activeForm;
 
-  // Check if there's an id in the input (some versions include it)
-  const id = input.taskId || input.id || `task_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+	// Check if there's an id in the input (some versions include it)
+	const id = input.taskId || input.id || `task_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
-  tasks.set(id, {
-    id,
-    subject,
-    description,
-    activeForm,
-    status: "pending",
-    owner: undefined,
-    blocks: [],
-    blockedBy: [],
-  });
+	tasks.set(id, {
+		id,
+		subject,
+		description,
+		activeForm,
+		status: "pending",
+		owner: undefined,
+		blocks: [],
+		blockedBy: [],
+	});
 }
 
 /**
  * @param {{ taskId?: string, status?: string, subject?: string, description?: string, activeForm?: string, owner?: string, addBlocks?: string[], addBlockedBy?: string[], metadata?: object }} input
  */
 function handleTaskUpdate(input) {
-  const id = input.taskId;
-  if (!id) return;
+	const id = input.taskId;
+	if (!id) return;
 
-  const existing = tasks.get(id);
-  if (!existing) {
-    // Task wasn't tracked yet — create it from the update
-    tasks.set(id, {
-      id,
-      subject: input.subject || "Untitled task",
-      description: input.description || "",
-      activeForm: input.activeForm,
-      status: input.status || "pending",
-      owner: input.owner,
-      blocks: [],
-      blockedBy: [],
-    });
-    return;
-  }
+	const existing = tasks.get(id);
+	if (!existing) {
+		// Task wasn't tracked yet — create it from the update
+		tasks.set(id, {
+			id,
+			subject: input.subject || "Untitled task",
+			description: input.description || "",
+			activeForm: input.activeForm,
+			status: input.status || "pending",
+			owner: input.owner,
+			blocks: [],
+			blockedBy: [],
+		});
+		return;
+	}
 
-  if (input.subject !== undefined) existing.subject = input.subject;
-  if (input.description !== undefined) existing.description = input.description;
-  if (input.activeForm !== undefined) existing.activeForm = input.activeForm;
-  if (input.status !== undefined) existing.status = input.status;
-  if (input.owner !== undefined) existing.owner = input.owner;
-  if (input.addBlocks) {
-    existing.blocks = [...new Set([...existing.blocks, ...input.addBlocks])];
-  }
-  if (input.addBlockedBy) {
-    existing.blockedBy = [...new Set([...existing.blockedBy, ...input.addBlockedBy])];
-  }
-  if (input.status === "deleted") {
-    tasks.delete(id);
-  }
+	if (input.subject !== undefined) existing.subject = input.subject;
+	if (input.description !== undefined) existing.description = input.description;
+	if (input.activeForm !== undefined) existing.activeForm = input.activeForm;
+	if (input.status !== undefined) existing.status = input.status;
+	if (input.owner !== undefined) existing.owner = input.owner;
+	if (input.addBlocks) {
+		existing.blocks = [...new Set([...existing.blocks, ...input.addBlocks])];
+	}
+	if (input.addBlockedBy) {
+		existing.blockedBy = [...new Set([...existing.blockedBy, ...input.addBlockedBy])];
+	}
+	if (input.status === "deleted") {
+		tasks.delete(id);
+	}
 }
 
 /**
  * @param {{ todos?: Array<{ content: string, status: string, activeForm: string }> }} input
  */
 function handleTodoWrite(input) {
-  if (!Array.isArray(input.todos)) return;
-  todos = input.todos.map((t) => ({
-    content: t.content || "",
-    status: t.status || "pending",
-    activeForm: t.activeForm || "",
-  }));
+	if (!Array.isArray(input.todos)) return;
+	todos = input.todos.map((t) => ({
+		content: t.content || "",
+		status: t.status || "pending",
+		activeForm: t.activeForm || "",
+	}));
 }
 
 // ============================================================
@@ -175,17 +175,17 @@ function handleTodoWrite(input) {
  * Reset all state (call when switching sessions).
  */
 export function resetTaskState() {
-  tasks.clear();
-  todos = [];
-  if (panelEl) panelEl.innerHTML = "";
-  updateBadge();
+	tasks.clear();
+	todos = [];
+	if (panelEl) panelEl.innerHTML = "";
+	updateBadge();
 }
 
 /**
  * Get current state for debugging.
  */
 export function getTaskState() {
-  return { tasks: [...tasks.values()], todos };
+	return {tasks: [...tasks.values()], todos};
 }
 
 /**
@@ -193,45 +193,45 @@ export function getTaskState() {
  * @param {HTMLElement} container
  */
 export function initTaskPanel(container) {
-  if (panelEl) return; // already initialized
-  panelEl = container;
-  badgeEl = document.getElementById("task-badge");
-  renderPanel();
+	if (panelEl) return; // already initialized
+	panelEl = container;
+	badgeEl = document.getElementById("task-badge");
+	renderPanel();
 }
 
 /**
  * Toggle panel visibility.
  */
 export function toggleTaskPanel() {
-  panelVisible = !panelVisible;
-  if (panelEl) {
-    panelEl.classList.toggle("hidden", !panelVisible);
-    panelEl.classList.toggle("visible", panelVisible);
-  }
-  // Adjust main content margin
-  const sessionContainer = document.querySelector(".session-container");
-  if (sessionContainer) {
-    sessionContainer.classList.toggle("panel-open", panelVisible);
-  }
-  // Toggle active state on the nav button
-  const toggleBtn = document.getElementById("task-panel-toggle");
-  if (toggleBtn) {
-    toggleBtn.classList.toggle("active", panelVisible);
-  }
+	panelVisible = !panelVisible;
+	if (panelEl) {
+		panelEl.classList.toggle("hidden", !panelVisible);
+		panelEl.classList.toggle("visible", panelVisible);
+	}
+	// Adjust main content margin
+	const sessionContainer = document.querySelector(".session-container");
+	if (sessionContainer) {
+		sessionContainer.classList.toggle("panel-open", panelVisible);
+	}
+	// Toggle active state on the nav button
+	const toggleBtn = document.getElementById("task-panel-toggle");
+	if (toggleBtn) {
+		toggleBtn.classList.toggle("active", panelVisible);
+	}
 }
 
 /**
  * Show the panel.
  */
 export function showTaskPanel() {
-  if (!panelVisible) toggleTaskPanel();
+	if (!panelVisible) toggleTaskPanel();
 }
 
 /**
  * Hide the panel.
  */
 export function hideTaskPanel() {
-  if (panelVisible) toggleTaskPanel();
+	if (panelVisible) toggleTaskPanel();
 }
 
 // ============================================================
@@ -239,46 +239,46 @@ export function hideTaskPanel() {
 // ============================================================
 
 function esc(str) {
-  if (!str) return "";
-  const d = document.createElement("div");
-  d.textContent = String(str);
-  return d.innerHTML;
+	if (!str) return "";
+	const d = document.createElement("div");
+	d.textContent = String(str);
+	return d.innerHTML;
 }
 
 function renderPanel() {
-  if (!panelEl) return;
+	if (!panelEl) return;
 
-  const allTasks = [...tasks.values()];
-  const hasTasks = allTasks.length > 0;
-  const hasTodos = todos.length > 0;
+	const allTasks = [...tasks.values()];
+	const hasTasks = allTasks.length > 0;
+	const hasTodos = todos.length > 0;
 
-  if (!hasTasks && !hasTodos) {
-    panelEl.innerHTML = `<div class="tp-empty">No tasks or todos yet</div>`;
-    return;
-  }
+	if (!hasTasks && !hasTodos) {
+		panelEl.innerHTML = `<div class="tp-empty">No tasks or todos yet</div>`;
+		return;
+	}
 
-  const parts = [];
+	const parts = [];
 
-  // Progress summary
-  const totalItems = allTasks.length + todos.length;
-  const completedTasks = allTasks.filter((t) => t.status === "completed").length;
-  const completedTodos = todos.filter((t) => t.status === "completed").length;
-  const completedTotal = completedTasks + completedTodos;
-  const pct = totalItems > 0 ? Math.round((completedTotal / totalItems) * 100) : 0;
+	// Progress summary
+	const totalItems = allTasks.length + todos.length;
+	const completedTasks = allTasks.filter((t) => t.status === "completed").length;
+	const completedTodos = todos.filter((t) => t.status === "completed").length;
+	const completedTotal = completedTasks + completedTodos;
+	const pct = totalItems > 0 ? Math.round((completedTotal / totalItems) * 100) : 0;
 
-  parts.push(`
+	parts.push(`
     <div class="tp-progress">
       <div class="tp-progress-bar" style="width:${pct}%"></div>
       <span class="tp-progress-label">${completedTotal}/${totalItems} completed</span>
     </div>
   `);
 
-  // V2 Tasks section
-  if (hasTasks) {
-    const inProgress = allTasks.filter((t) => t.status === "in_progress").length;
-    const pending = allTasks.filter((t) => t.status === "pending").length;
-    const completed = allTasks.filter((t) => t.status === "completed").length;
-    parts.push(`
+	// V2 Tasks section
+	if (hasTasks) {
+		const inProgress = allTasks.filter((t) => t.status === "in_progress").length;
+		const pending = allTasks.filter((t) => t.status === "pending").length;
+		const completed = allTasks.filter((t) => t.status === "completed").length;
+		parts.push(`
       <div class="tp-section">
         <div class="tp-section-header">
           <span class="tp-section-title">Tasks</span>
@@ -293,14 +293,14 @@ function renderPanel() {
         </div>
       </div>
     `);
-  }
+	}
 
-  // V1 Todos section
-  if (hasTodos) {
-    const inProgress = todos.filter((t) => t.status === "in_progress").length;
-    const pending = todos.filter((t) => t.status === "pending").length;
-    const completed = todos.filter((t) => t.status === "completed").length;
-    parts.push(`
+	// V1 Todos section
+	if (hasTodos) {
+		const inProgress = todos.filter((t) => t.status === "in_progress").length;
+		const pending = todos.filter((t) => t.status === "pending").length;
+		const completed = todos.filter((t) => t.status === "completed").length;
+		parts.push(`
       <div class="tp-section">
         <div class="tp-section-header">
           <span class="tp-section-title">Todos</span>
@@ -315,9 +315,9 @@ function renderPanel() {
         </div>
       </div>
     `);
-  }
+	}
 
-  panelEl.innerHTML = `
+	panelEl.innerHTML = `
     <div class="tp-header">
       <span class="tp-title">Tasks & Todos</span>
       <button class="tp-close-btn" onclick="window.__toggleTaskPanel()">&times;</button>
@@ -330,17 +330,17 @@ function renderPanel() {
  * @param {TaskItem} task
  */
 function renderTaskItem(task) {
-  const icon = statusIcon(task.status);
-  const isBlocked = task.blockedBy.length > 0 && task.status !== "completed";
-  const cls = [
-    "tp-item",
-    `tp-status-${task.status}`,
-    isBlocked ? "tp-blocked" : "",
-  ]
-    .filter(Boolean)
-    .join(" ");
+	const icon = statusIcon(task.status);
+	const isBlocked = task.blockedBy.length > 0 && task.status !== "completed";
+	const cls = [
+		"tp-item",
+		`tp-status-${task.status}`,
+		isBlocked ? "tp-blocked" : "",
+	]
+		.filter(Boolean)
+		.join(" ");
 
-  return `
+	return `
     <div class="${cls}">
       <span class="tp-item-icon ${icon.cls}">${icon.char}</span>
       <div class="tp-item-content">
@@ -357,10 +357,10 @@ function renderTaskItem(task) {
  * @param {TodoItem} todo
  */
 function renderTodoItem(todo) {
-  const icon = statusIcon(todo.status);
-  const cls = ["tp-item", `tp-status-${todo.status}`].join(" ");
+	const icon = statusIcon(todo.status);
+	const cls = ["tp-item", `tp-status-${todo.status}`].join(" ");
 
-  return `
+	return `
     <div class="${cls}">
       <span class="tp-item-icon ${icon.cls}">${icon.char}</span>
       <div class="tp-item-content">
@@ -376,25 +376,25 @@ function renderTodoItem(todo) {
  * @returns {{ char: string, cls: string }}
  */
 function statusIcon(status) {
-  switch (status) {
-    case "completed":
-      return { char: "\u2713", cls: "tp-icon-done" };
-    case "in_progress":
-      return { char: "\u25CF", cls: "tp-icon-active" };
-    case "deleted":
-      return { char: "\u2717", cls: "tp-icon-deleted" };
-    default:
-      return { char: "\u25CB", cls: "tp-icon-pending" };
-  }
+	switch (status) {
+		case "completed":
+			return {char: "\u2713", cls: "tp-icon-done"};
+		case "in_progress":
+			return {char: "\u25CF", cls: "tp-icon-active"};
+		case "deleted":
+			return {char: "\u2717", cls: "tp-icon-deleted"};
+		default:
+			return {char: "\u25CB", cls: "tp-icon-pending"};
+	}
 }
 
 function updateBadge() {
-  if (!badgeEl) return;
-  const total = tasks.size + todos.length;
-  if (total > 0) {
-    badgeEl.textContent = String(total);
-    badgeEl.classList.remove("hidden");
-  } else {
-    badgeEl.classList.add("hidden");
-  }
+	if (!badgeEl) return;
+	const total = tasks.size + todos.length;
+	if (total > 0) {
+		badgeEl.textContent = String(total);
+		badgeEl.classList.remove("hidden");
+	} else {
+		badgeEl.classList.add("hidden");
+	}
 }

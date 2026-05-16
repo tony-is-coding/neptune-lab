@@ -226,6 +226,10 @@ export interface AgentEngineConfig {
 		enableAnalytics?: boolean
 		/** 每个 session 最大消息数（默认 10000），超过时截断最早的消息 */
 		maxMessagesPerSession?: number
+		/** 单次 query 最大 LLM turn 数（防止无限循环，默认无限制） */
+		maxTurns?: number
+		/** 单次 query 最大 USD 预算 */
+		maxBudgetUsd?: number
 	}
 	/** 记忆存储根目录，用于用户级记忆隔离 */
 	memoryRoot?: string
@@ -684,6 +688,8 @@ export class AgentEngine {
 					initialMessages,
 					permissions: this.config.extensions?.permissions,
 					provider: effectiveProvider,
+					maxTurns: this.config.options?.maxTurns,
+					maxBudgetUsd: this.config.options?.maxBudgetUsd,
 				}
 				const queryEngineConfig = await buildQueryEngineConfigFromOptions(bridgeOptions, this.ccRuntime)
 				const queryEngine = this.ccRuntime.createQueryEngine(queryEngineConfig)

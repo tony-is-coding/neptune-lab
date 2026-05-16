@@ -9,6 +9,9 @@
     "allowSyntheticDefaultImports": true,
     "resolveJsonModule": true,
     "jsx": "react-jsx",
-    "types": ["bun", "@types/node"]
+    "types": [
+      "bun",
+      "@types/node"
+    ]
   }
 }

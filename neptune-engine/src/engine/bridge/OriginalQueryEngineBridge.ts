@@ -75,6 +75,10 @@ export interface BridgeOptions {
 		type?: string
 		config?: Record<string, unknown>
 	}
+	/** 单次 query 最大 LLM turn 数 */
+	maxTurns?: number
+	/** 单次 query 最大 USD 预算 */
+	maxBudgetUsd?: number
 }
 
 // ============================================================
@@ -383,6 +387,9 @@ export async function buildQueryEngineConfig(config: UnifiedConfig, runtime?: CC
 		abortController,
 		// 启用部分消息流式输出（用于 SSE 流式打印）
 		includePartialMessages: true,
+		// Loop 安全护栏
+		...(config.maxTurns ? {maxTurns: config.maxTurns} : {}),
+		...(config.maxBudgetUsd ? {maxBudgetUsd: config.maxBudgetUsd} : {}),
 		// Provider 配置透传：通过 provider.config.model 设置 userSpecifiedModel
 		...(provider?.config?.model ? {userSpecifiedModel: provider.config.model as string} : {}),
 		// fallbackModel
@@ -414,6 +421,8 @@ export async function buildQueryEngineConfigFromOptions(options: BridgeOptions, 
 			config: options.provider.config,
 		} : undefined,
 		verbose: false,
+		maxTurns: options.maxTurns,
+		maxBudgetUsd: options.maxBudgetUsd,
 	}
 
 	const queryEngineConfig = await buildQueryEngineConfig(unifiedConfig, runtime)

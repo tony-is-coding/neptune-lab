@@ -225,6 +225,10 @@ export interface UnifiedConfig {
 	workspaceRoot?: string
 	/** 每个 session 最大消息数（默认 10000） */
 	maxMessagesPerSession?: number
+	/** 单次 query 最大 LLM turn 数（防止无限循环） */
+	maxTurns?: number
+	/** 单次 query 最大 USD 预算 */
+	maxBudgetUsd?: number
 
 	// ============================================================
 	// Provider 配置

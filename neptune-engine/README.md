@@ -54,27 +54,29 @@ neptune-engine/
 ## 阅读路径
 
 **我是 SDK 使用者（接入方）：**
+
 1. 本文件 → 了解项目是什么
 2. `docs/guides/getting-started.md` → 接入教程
 3. `src/engine/index.ts` → 公共 API 导出清单
 
 **我是框架开发者（贡献者）：**
+
 1. 本文件 → 了解项目是什么
 2. `src/engine/README.md` → 模块地图 + 核心流程
 3. `docs/feature-design/` → 具体模块的设计决策
 
 ## 核心能力
 
-| 能力 | 说明 |
-|------|------|
-| Session 管理 | 创建/暂停/恢复/销毁，支持持久化存储外化 |
-| 流式查询 | `engine.query()` 返回 AsyncGenerator，逐事件推送 |
-| 多 Provider | Anthropic/OpenAI/Gemini/Grok/Bedrock/Vertex/Foundry |
-| 权限委托 | PermissionDelegate 注入，支持 RBAC/Audit/ReadOnly/自定义 |
-| 工具扩展 | ToolExtension 接口，自定义工具即插即用 |
-| 存储外化 | ISessionStore / ISessionContentStore / IMemoryStore 可注入实现 |
-| 事件系统 | EventBus 发布/订阅 + Hook 拦截 |
-| 可观测性 | ITracingProvider + IMetricsProvider 可注入 |
+| 能力         | 说明                                                        |
+|------------|-----------------------------------------------------------|
+| Session 管理 | 创建/暂停/恢复/销毁，支持持久化存储外化                                     |
+| 流式查询       | `engine.query()` 返回 AsyncGenerator，逐事件推送                  |
+| 多 Provider | Anthropic/OpenAI/Gemini/Grok/Bedrock/Vertex/Foundry       |
+| 权限委托       | PermissionDelegate 注入，支持 RBAC/Audit/ReadOnly/自定义          |
+| 工具扩展       | ToolExtension 接口，自定义工具即插即用                                |
+| 存储外化       | ISessionStore / ISessionContentStore / IMemoryStore 可注入实现 |
+| 事件系统       | EventBus 发布/订阅 + Hook 拦截                                  |
+| 可观测性       | ITracingProvider + IMetricsProvider 可注入                   |
 
 ## 设计原则
 

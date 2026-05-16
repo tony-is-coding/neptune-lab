@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-import { $ } from 'bun'
+import {$} from 'bun'
 
 const result = await $`du -sm dist/sdk/engine/`
 console.log('stdout:', result.stdout)

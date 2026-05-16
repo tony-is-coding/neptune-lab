@@ -10,7 +10,9 @@
   "excludeProtected": false,
   "excludeInternal": true,
   "hideGenerator": true,
-  "sort": ["source-order"],
+  "sort": [
+    "source-order"
+  ],
   "kindSortOrder": [
     "Document",
     "Project",

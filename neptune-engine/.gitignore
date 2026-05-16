@@ -1,6 +1,0 @@
-dist/sdk/
-
-# TypeScript 编译产物（声明文件由 tsc 生成，散落在源码目录中）
-# src/types/ 下的手写 .d.ts 已被 git 跟踪，不受此规则影响
-src/**/*.d.ts
-src/**/*.d.ts.map
