@@ -5,8 +5,10 @@
  */
 
 // Feature flag 兼容
-export { isEnabled, isEnabledSync, createFeatureChecker } from './featureCompat.js'
-export type { FeatureOverride } from './featureCompat.js'
+export {isEnabled, isEnabledSync, createFeatureChecker} from './featureCompat.js'
+export type {FeatureOverride} from './featureCompat.js'
 
 // Analytics 兼容（No-op 实现）- 重定向到 analytics 模块
-export { NoOpAnalyticsSink, noOpAnalyticsSink, attachNoOpAnalytics as initializeNoOpAnalytics } from '../analytics/index.js'
+export {
+	NoOpAnalyticsSink, noOpAnalyticsSink, attachNoOpAnalytics as initializeNoOpAnalytics
+} from '../analytics/index.js'

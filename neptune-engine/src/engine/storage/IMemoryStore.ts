@@ -17,50 +17,50 @@
  * 提供按用户隔离的记忆存储功能。
  */
 export interface IMemoryStore {
-  /**
-   * 保存记忆
-   *
-   * @param userId 用户 ID
-   * @param key 键
-   * @param value 值（必须是 JSON 可序列化的）
-   */
-  save(userId: string, key: string, value: unknown): Promise<void>
+	/**
+	 * 保存记忆
+	 *
+	 * @param userId 用户 ID
+	 * @param key 键
+	 * @param value 值（必须是 JSON 可序列化的）
+	 */
+	save(userId: string, key: string, value: unknown): Promise<void>
 
-  /**
-   * 加载记忆
-   *
-   * @param userId 用户 ID
-   * @param key 键
-   * @returns 值，不存在返回 undefined
-   */
-  load(userId: string, key: string): Promise<unknown | undefined>
+	/**
+	 * 加载记忆
+	 *
+	 * @param userId 用户 ID
+	 * @param key 键
+	 * @returns 值，不存在返回 undefined
+	 */
+	load(userId: string, key: string): Promise<unknown | undefined>
 
-  /**
-   * 删除记忆
-   *
-   * @param userId 用户 ID
-   * @param key 键
-   */
-  delete(userId: string, key: string): Promise<void>
+	/**
+	 * 删除记忆
+	 *
+	 * @param userId 用户 ID
+	 * @param key 键
+	 */
+	delete(userId: string, key: string): Promise<void>
 
-  /**
-   * 列出记忆
-   *
-   * @param userId 用户 ID
-   * @param prefix 可选的前缀过滤
-   * @returns 键值对数组
-   */
-  list(userId: string, prefix?: string): Promise<Array<{ key: string; value: unknown }>>
+	/**
+	 * 列出记忆
+	 *
+	 * @param userId 用户 ID
+	 * @param prefix 可选的前缀过滤
+	 * @returns 键值对数组
+	 */
+	list(userId: string, prefix?: string): Promise<Array<{ key: string; value: unknown }>>
 
-  /**
-   * 清理指定用户的所有记忆
-   *
-   * @param userId 用户 ID
-   */
-  clear(userId: string): Promise<void>
+	/**
+	 * 清理指定用户的所有记忆
+	 *
+	 * @param userId 用户 ID
+	 */
+	clear(userId: string): Promise<void>
 
-  /**
-   * 释放存储资源
-   */
-  dispose(): Promise<void>
+	/**
+	 * 释放存储资源
+	 */
+	dispose(): Promise<void>
 }

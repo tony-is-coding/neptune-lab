@@ -5,4 +5,4 @@
  */
 
 // No-Op Analytics 实现
-export { NoOpAnalyticsSink, noOpAnalyticsSink, attachNoOpAnalytics } from './NoOpAnalytics.js'
+export {NoOpAnalyticsSink, noOpAnalyticsSink, attachNoOpAnalytics} from './NoOpAnalytics.js'

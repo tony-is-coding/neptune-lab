@@ -21,7 +21,7 @@ export type AgentId = string & { readonly __brand: 'AgentId' }
  * Use sparingly - prefer getSessionId() when possible.
  */
 export function asSessionId(id: string): SessionId {
-  return id as SessionId
+	return id as SessionId
 }
 
 /**
@@ -29,7 +29,7 @@ export function asSessionId(id: string): SessionId {
  * Use sparingly - prefer createAgentId() when possible.
  */
 export function asAgentId(id: string): AgentId {
-  return id as AgentId
+	return id as AgentId
 }
 
 const AGENT_ID_PATTERN = /^a(?:.+-)?[0-9a-f]{16}$/
@@ -40,5 +40,5 @@ const AGENT_ID_PATTERN = /^a(?:.+-)?[0-9a-f]{16}$/
  * Returns null if the string doesn't match (e.g. teammate names, team-addressing).
  */
 export function toAgentId(s: string): AgentId | null {
-  return AGENT_ID_PATTERN.test(s) ? (s as AgentId) : null
+	return AGENT_ID_PATTERN.test(s) ? (s as AgentId) : null
 }

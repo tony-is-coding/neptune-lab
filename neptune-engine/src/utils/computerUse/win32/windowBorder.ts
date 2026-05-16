@@ -11,17 +11,17 @@
  * No overlays, no polling, no separate processes, no z-order issues.
  */
 
-import { validateHwnd, ps } from './shared.js'
+import {validateHwnd, ps} from './shared.js'
 
 /**
  * Set green border on bound window via DWM.
  */
 export function markBound(hwnd: string): boolean {
-  hwnd = validateHwnd(hwnd)
-  // DWMWA_BORDER_COLOR = 34, COLORREF = 0x00BBGGRR
-  // Green: R=0, G=200, B=0 → 0x0000C800
-  const hr = ps(
-    `Add-Type @'
+	hwnd = validateHwnd(hwnd)
+	// DWMWA_BORDER_COLOR = 34, COLORREF = 0x00BBGGRR
+	// Green: R=0, G=200, B=0 → 0x0000C800
+	const hr = ps(
+		`Add-Type @'
 using System;
 using System.Runtime.InteropServices;
 public class CuDwm {
@@ -31,18 +31,18 @@ public class CuDwm {
 '@
 $color = [uint32]0x0000C800
 [CuDwm]::DwmSetWindowAttribute([IntPtr]::new([long]${hwnd}), 34, [ref]$color, 4)`,
-  )
-  return hr === '0'
+	)
+	return hr === '0'
 }
 
 /**
  * Remove border, restore default.
  */
 export function unmarkBound(hwnd: string): boolean {
-  hwnd = validateHwnd(hwnd)
-  // DWMWA_COLOR_DEFAULT = 0xFFFFFFFF
-  const hr = ps(
-    `Add-Type @'
+	hwnd = validateHwnd(hwnd)
+	// DWMWA_COLOR_DEFAULT = 0xFFFFFFFF
+	const hr = ps(
+		`Add-Type @'
 using System;
 using System.Runtime.InteropServices;
 public class CuDwm {
@@ -52,8 +52,8 @@ public class CuDwm {
 '@
 $color = [uint32]0xFFFFFFFF
 [CuDwm]::DwmSetWindowAttribute([IntPtr]::new([long]${hwnd}), 34, [ref]$color, 4)`,
-  )
-  return hr === '0'
+	)
+	return hr === '0'
 }
 
 /**
@@ -61,6 +61,6 @@ $color = [uint32]0xFFFFFFFF
  * With DWM approach, no processes to kill.
  */
 export function cleanupAllBorders(): void {
-  // DWM border color is a window attribute — it resets automatically
-  // when the process exits or the window closes. No cleanup needed.
+	// DWM border color is a window attribute — it resets automatically
+	// when the process exits or the window closes. No cleanup needed.
 }

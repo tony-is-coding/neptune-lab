@@ -7,23 +7,23 @@
 
 // 重新导出命令类型
 export type {
-  Command,
-  CommandBase,
-  PromptCommand,
-  LocalCommandModule,
-  LocalJSXCommandModule,
-  LocalCommandCall,
-  LocalJSXCommandCall,
-  LocalCommandResult,
-  LocalJSXCommandContext,
-  LocalJSXCommandOnDone,
-  ResumeEntrypoint,
-  CommandResultDisplay,
-  CommandAvailability,
+	Command,
+	CommandBase,
+	PromptCommand,
+	LocalCommandModule,
+	LocalJSXCommandModule,
+	LocalCommandCall,
+	LocalJSXCommandCall,
+	LocalCommandResult,
+	LocalJSXCommandContext,
+	LocalJSXCommandOnDone,
+	ResumeEntrypoint,
+	CommandResultDisplay,
+	CommandAvailability,
 } from '../../types/command.js'
 
 // 重新导出辅助函数
 export {
-  getCommandName,
-  isCommandEnabled,
+	getCommandName,
+	isCommandEnabled,
 } from '../../types/command.js'

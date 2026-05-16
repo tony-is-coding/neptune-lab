@@ -7,14 +7,14 @@
  * 3. createFeatureChecker 创建的 checker 正常工作
  */
 
-import { describe, test, expect, beforeEach } from 'bun:test'
-import { isEnabledSync, createFeatureChecker, type FeatureOverride } from '../featureCompat'
+import {describe, test, expect, beforeEach} from 'bun:test'
+import {isEnabledSync, createFeatureChecker, type FeatureOverride} from '../featureCompat'
 
 describe('featureCompat', () => {
 	describe('isEnabledSync', () => {
 		test('在非 Bun 环境下（模拟）应返回 false', () => {
 			// 注意：此测试在 Bun 环境运行，但我们可以通过 overrides 覆盖
-			const result = isEnabledSync('NONEXISTENT_FLAG', { NONEXISTENT_FLAG: false })
+			const result = isEnabledSync('NONEXISTENT_FLAG', {NONEXISTENT_FLAG: false})
 			expect(result).toBe(false)
 		})
 
@@ -69,7 +69,7 @@ describe('featureCompat', () => {
 
 			expect(checker.check('TEST_FLAG')).toBe(true)
 
-			checker.update({ TEST_FLAG: false })
+			checker.update({TEST_FLAG: false})
 
 			expect(checker.check('TEST_FLAG')).toBe(false)
 		})
@@ -80,7 +80,7 @@ describe('featureCompat', () => {
 			}
 			const checker = createFeatureChecker(overrides)
 
-			checker.update({ FLAG_2: false })
+			checker.update({FLAG_2: false})
 
 			expect(checker.check('FLAG_1')).toBe(true)
 			expect(checker.check('FLAG_2')).toBe(false)

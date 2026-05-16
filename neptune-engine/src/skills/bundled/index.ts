@@ -1,19 +1,19 @@
-import { feature } from 'bun:bundle'
-import { shouldAutoEnableClaudeInChrome } from 'src/utils/claudeInChrome/setup.js'
-import { registerBatchSkill } from './batch.js'
-import { registerClaudeInChromeSkill } from './claudeInChrome.js'
-import { registerDebugSkill } from './debug.js'
+import {feature} from 'bun:bundle'
+import {shouldAutoEnableClaudeInChrome} from 'src/utils/claudeInChrome/setup.js'
+import {registerBatchSkill} from './batch.js'
+import {registerClaudeInChromeSkill} from './claudeInChrome.js'
+import {registerDebugSkill} from './debug.js'
 // keybindings skill moved to CLI (neptune-cli/src/keybindings/bundledKeybindings.ts)
-import { registerLoremIpsumSkill } from './loremIpsum.js'
-import { registerRememberSkill } from './remember.js'
-import { registerSimplifySkill } from './simplify.js'
-import { registerSkillifySkill } from './skillify.js'
-import { registerStuckSkill } from './stuck.js'
-import { registerCronDeleteSkill, registerCronListSkill } from './cronManage.js'
-import { registerLoopSkill } from './loop.js'
-import { registerDreamSkill } from './dream.js'
-import { registerUpdateConfigSkill } from './updateConfig.js'
-import { registerVerifySkill } from './verify.js'
+import {registerLoremIpsumSkill} from './loremIpsum.js'
+import {registerRememberSkill} from './remember.js'
+import {registerSimplifySkill} from './simplify.js'
+import {registerSkillifySkill} from './skillify.js'
+import {registerStuckSkill} from './stuck.js'
+import {registerCronDeleteSkill, registerCronListSkill} from './cronManage.js'
+import {registerLoopSkill} from './loop.js'
+import {registerDreamSkill} from './dream.js'
+import {registerUpdateConfigSkill} from './updateConfig.js'
+import {registerVerifySkill} from './verify.js'
 
 /**
  * Initialize all bundled skills.
@@ -25,47 +25,47 @@ import { registerVerifySkill } from './verify.js'
  * 3. Import and call that function here
  */
 export function initBundledSkills(): void {
-  registerUpdateConfigSkill()
-  // registerKeybindingsSkill() — moved to CLI side
-  registerVerifySkill()
-  registerDebugSkill()
-  registerLoremIpsumSkill()
-  registerSkillifySkill()
-  registerRememberSkill()
-  registerSimplifySkill()
-  registerBatchSkill()
-  registerStuckSkill()
-  registerLoopSkill()
-  registerCronListSkill()
-  registerCronDeleteSkill()
-  registerDreamSkill()
-  if (feature('REVIEW_ARTIFACT')) {
-    /* eslint-disable @typescript-eslint/no-require-imports */
-    const { registerHunterSkill } = require('./hunter.js')
-    /* eslint-enable @typescript-eslint/no-require-imports */
-    registerHunterSkill()
-  }
-  if (feature('AGENT_TRIGGERS_REMOTE')) {
-    /* eslint-disable @typescript-eslint/no-require-imports */
-    const {
-      registerScheduleRemoteAgentsSkill,
-    } = require('./scheduleRemoteAgents.js')
-    /* eslint-enable @typescript-eslint/no-require-imports */
-    registerScheduleRemoteAgentsSkill()
-  }
-  if (feature('BUILDING_CLAUDE_APPS')) {
-    /* eslint-disable @typescript-eslint/no-require-imports */
-    const { registerClaudeApiSkill } = require('./claudeApi.js')
-    /* eslint-enable @typescript-eslint/no-require-imports */
-    registerClaudeApiSkill()
-  }
-  if (shouldAutoEnableClaudeInChrome()) {
-    registerClaudeInChromeSkill()
-  }
-  if (feature('RUN_SKILL_GENERATOR')) {
-    /* eslint-disable @typescript-eslint/no-require-imports */
-    const { registerRunSkillGeneratorSkill } = require('./runSkillGenerator.js')
-    /* eslint-enable @typescript-eslint/no-require-imports */
-    registerRunSkillGeneratorSkill()
-  }
+	registerUpdateConfigSkill()
+	// registerKeybindingsSkill() — moved to CLI side
+	registerVerifySkill()
+	registerDebugSkill()
+	registerLoremIpsumSkill()
+	registerSkillifySkill()
+	registerRememberSkill()
+	registerSimplifySkill()
+	registerBatchSkill()
+	registerStuckSkill()
+	registerLoopSkill()
+	registerCronListSkill()
+	registerCronDeleteSkill()
+	registerDreamSkill()
+	if (feature('REVIEW_ARTIFACT')) {
+		/* eslint-disable @typescript-eslint/no-require-imports */
+		const {registerHunterSkill} = require('./hunter.js')
+		/* eslint-enable @typescript-eslint/no-require-imports */
+		registerHunterSkill()
+	}
+	if (feature('AGENT_TRIGGERS_REMOTE')) {
+		/* eslint-disable @typescript-eslint/no-require-imports */
+		const {
+			registerScheduleRemoteAgentsSkill,
+		} = require('./scheduleRemoteAgents.js')
+		/* eslint-enable @typescript-eslint/no-require-imports */
+		registerScheduleRemoteAgentsSkill()
+	}
+	if (feature('BUILDING_CLAUDE_APPS')) {
+		/* eslint-disable @typescript-eslint/no-require-imports */
+		const {registerClaudeApiSkill} = require('./claudeApi.js')
+		/* eslint-enable @typescript-eslint/no-require-imports */
+		registerClaudeApiSkill()
+	}
+	if (shouldAutoEnableClaudeInChrome()) {
+		registerClaudeInChromeSkill()
+	}
+	if (feature('RUN_SKILL_GENERATOR')) {
+		/* eslint-disable @typescript-eslint/no-require-imports */
+		const {registerRunSkillGeneratorSkill} = require('./runSkillGenerator.js')
+		/* eslint-enable @typescript-eslint/no-require-imports */
+		registerRunSkillGeneratorSkill()
+	}
 }

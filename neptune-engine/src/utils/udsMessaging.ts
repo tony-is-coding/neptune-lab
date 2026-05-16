@@ -8,46 +8,46 @@
  * but can be overridden via --messaging-socket-path.
  */
 
-import { createServer, type Server, type Socket } from 'net'
-import { mkdir, unlink } from 'fs/promises'
-import { dirname, join } from 'path'
-import { tmpdir } from 'os'
-import { registerCleanup } from './cleanupRegistry.js'
-import { logForDebugging } from './debug.js'
-import { errorMessage } from './errors.js'
-import { attachNdjsonFramer } from './ndjsonFramer.js'
-import { jsonParse, jsonStringify } from './slowOperations.js'
+import {createServer, type Server, type Socket} from 'net'
+import {mkdir, unlink} from 'fs/promises'
+import {dirname, join} from 'path'
+import {tmpdir} from 'os'
+import {registerCleanup} from './cleanupRegistry.js'
+import {logForDebugging} from './debug.js'
+import {errorMessage} from './errors.js'
+import {attachNdjsonFramer} from './ndjsonFramer.js'
+import {jsonParse, jsonStringify} from './slowOperations.js'
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
 export type UdsMessageType =
-  | 'text'
-  | 'notification'
-  | 'query'
-  | 'response'
-  | 'ping'
-  | 'pong'
+	| 'text'
+	| 'notification'
+	| 'query'
+	| 'response'
+	| 'ping'
+	| 'pong'
 
 export type UdsMessage = {
-  /** Discriminator */
-  type: UdsMessageType
-  /** Payload text / JSON content */
-  data?: string
-  /** Sender socket path (so the receiver can reply) */
-  from?: string
-  /** ISO timestamp */
-  ts?: string
-  /** Optional metadata */
-  meta?: Record<string, unknown>
+	/** Discriminator */
+	type: UdsMessageType
+	/** Payload text / JSON content */
+	data?: string
+	/** Sender socket path (so the receiver can reply) */
+	from?: string
+	/** ISO timestamp */
+	ts?: string
+	/** Optional metadata */
+	meta?: Record<string, unknown>
 }
 
 export type UdsInboxEntry = {
-  id: string
-  message: UdsMessage
-  receivedAt: number
-  status: 'pending' | 'processed'
+	id: string
+	message: UdsMessage
+	receivedAt: number
+	status: 'pending' | 'processed'
 }
 
 // ---------------------------------------------------------------------------
@@ -70,7 +70,7 @@ let nextId = 1
  * survives across config-home changes and avoids polluting ~/.claude.
  */
 export function getDefaultUdsSocketPath(): string {
-  return join(tmpdir(), 'claude-code-socks', `${process.pid}.sock`)
+	return join(tmpdir(), 'claude-code-socks', `${process.pid}.sock`)
 }
 
 /**
@@ -78,7 +78,7 @@ export function getDefaultUdsSocketPath(): string {
  * if the server has not been started.
  */
 export function getUdsMessagingSocketPath(): string | undefined {
-  return socketPath ?? undefined
+	return socketPath ?? undefined
 }
 
 // ---------------------------------------------------------------------------
@@ -90,18 +90,18 @@ export function getUdsMessagingSocketPath(): string | undefined {
  * Used by the print/SDK query loop to kick off processing.
  */
 export function setOnEnqueue(cb: (() => void) | null): void {
-  onEnqueueCb = cb
+	onEnqueueCb = cb
 }
 
 /**
  * Drain all pending inbox messages, marking them processed.
  */
 export function drainInbox(): UdsInboxEntry[] {
-  const pending = inbox.filter(e => e.status === 'pending')
-  for (const entry of pending) {
-    entry.status = 'processed'
-  }
-  return pending
+	const pending = inbox.filter(e => e.status === 'pending')
+	for (const entry of pending) {
+		entry.status = 'processed'
+	}
+	return pending
 }
 
 // ---------------------------------------------------------------------------
@@ -115,124 +115,124 @@ export function drainInbox(): UdsInboxEntry[] {
  * processes (hooks, spawned agents) can discover and connect back.
  */
 export async function startUdsMessaging(
-  path: string,
-  opts?: { isExplicit?: boolean },
+	path: string,
+	opts?: { isExplicit?: boolean },
 ): Promise<void> {
-  if (server) {
-    logForDebugging('[udsMessaging] server already running, skipping start')
-    return
-  }
+	if (server) {
+		logForDebugging('[udsMessaging] server already running, skipping start')
+		return
+	}
 
-  // Ensure parent directory exists
-  await mkdir(dirname(path), { recursive: true })
+	// Ensure parent directory exists
+	await mkdir(dirname(path), {recursive: true})
 
-  // Clean up stale socket file
-  try {
-    await unlink(path)
-  } catch {
-    // ENOENT is fine
-  }
+	// Clean up stale socket file
+	try {
+		await unlink(path)
+	} catch {
+		// ENOENT is fine
+	}
 
-  socketPath = path
+	socketPath = path
 
-  await new Promise<void>((resolve, reject) => {
-    const srv = createServer(socket => {
-      clients.add(socket)
-      logForDebugging(
-        `[udsMessaging] client connected (total: ${clients.size})`,
-      )
+	await new Promise<void>((resolve, reject) => {
+		const srv = createServer(socket => {
+			clients.add(socket)
+			logForDebugging(
+				`[udsMessaging] client connected (total: ${clients.size})`,
+			)
 
-      attachNdjsonFramer<UdsMessage>(
-        socket,
-        msg => {
-          // Handle ping with automatic pong
-          if (msg.type === 'ping') {
-            const pong: UdsMessage = {
-              type: 'pong',
-              from: socketPath ?? undefined,
-              ts: new Date().toISOString(),
-            }
-            if (!socket.destroyed) {
-              socket.write(jsonStringify(pong) + '\n')
-            }
-            return
-          }
+			attachNdjsonFramer<UdsMessage>(
+				socket,
+				msg => {
+					// Handle ping with automatic pong
+					if (msg.type === 'ping') {
+						const pong: UdsMessage = {
+							type: 'pong',
+							from: socketPath ?? undefined,
+							ts: new Date().toISOString(),
+						}
+						if (!socket.destroyed) {
+							socket.write(jsonStringify(pong) + '\n')
+						}
+						return
+					}
 
-          // Enqueue into inbox
-          const entry: UdsInboxEntry = {
-            id: `uds-${nextId++}`,
-            message: msg,
-            receivedAt: Date.now(),
-            status: 'pending',
-          }
-          inbox.push(entry)
-          logForDebugging(
-            `[udsMessaging] enqueued message type=${msg.type} from=${msg.from ?? 'unknown'}`,
-          )
-          onEnqueueCb?.()
-        },
-        text => jsonParse(text) as UdsMessage,
-      )
+					// Enqueue into inbox
+					const entry: UdsInboxEntry = {
+						id: `uds-${nextId++}`,
+						message: msg,
+						receivedAt: Date.now(),
+						status: 'pending',
+					}
+					inbox.push(entry)
+					logForDebugging(
+						`[udsMessaging] enqueued message type=${msg.type} from=${msg.from ?? 'unknown'}`,
+					)
+					onEnqueueCb?.()
+				},
+				text => jsonParse(text) as UdsMessage,
+			)
 
-      socket.on('close', () => {
-        clients.delete(socket)
-      })
+			socket.on('close', () => {
+				clients.delete(socket)
+			})
 
-      socket.on('error', err => {
-        clients.delete(socket)
-        logForDebugging(`[udsMessaging] client error: ${errorMessage(err)}`)
-      })
-    })
+			socket.on('error', err => {
+				clients.delete(socket)
+				logForDebugging(`[udsMessaging] client error: ${errorMessage(err)}`)
+			})
+		})
 
-    srv.on('error', reject)
+		srv.on('error', reject)
 
-    srv.listen(path, () => {
-      server = srv
-      // Export so child processes can discover the socket
-      process.env.CLAUDE_CODE_MESSAGING_SOCKET = path
-      logForDebugging(
-        `[udsMessaging] server listening on ${path}${opts?.isExplicit ? ' (explicit)' : ''}`,
-      )
-      resolve()
-    })
-  })
+		srv.listen(path, () => {
+			server = srv
+			// Export so child processes can discover the socket
+			process.env.CLAUDE_CODE_MESSAGING_SOCKET = path
+			logForDebugging(
+				`[udsMessaging] server listening on ${path}${opts?.isExplicit ? ' (explicit)' : ''}`,
+			)
+			resolve()
+		})
+	})
 
-  // Register cleanup so the socket file is removed on exit
-  registerCleanup(async () => {
-    await stopUdsMessaging()
-  })
+	// Register cleanup so the socket file is removed on exit
+	registerCleanup(async () => {
+		await stopUdsMessaging()
+	})
 }
 
 /**
  * Stop the UDS messaging server and clean up the socket file.
  */
 export async function stopUdsMessaging(): Promise<void> {
-  if (!server) return
+	if (!server) return
 
-  // Close all connected clients
-  for (const socket of clients) {
-    socket.destroy()
-  }
-  clients.clear()
+	// Close all connected clients
+	for (const socket of clients) {
+		socket.destroy()
+	}
+	clients.clear()
 
-  await new Promise<void>(resolve => {
-    server!.close(() => resolve())
-  })
-  server = null
+	await new Promise<void>(resolve => {
+		server!.close(() => resolve())
+	})
+	server = null
 
-  // Remove socket file
-  if (socketPath) {
-    try {
-      await unlink(socketPath)
-    } catch {
-      // Already gone
-    }
-    delete process.env.CLAUDE_CODE_MESSAGING_SOCKET
-    logForDebugging(
-      `[udsMessaging] server stopped, socket removed: ${socketPath}`,
-    )
-    socketPath = null
-  }
+	// Remove socket file
+	if (socketPath) {
+		try {
+			await unlink(socketPath)
+		} catch {
+			// Already gone
+		}
+		delete process.env.CLAUDE_CODE_MESSAGING_SOCKET
+		logForDebugging(
+			`[udsMessaging] server stopped, socket removed: ${socketPath}`,
+		)
+		socketPath = null
+	}
 }
 
 /**
@@ -240,25 +240,25 @@ export async function stopUdsMessaging(): Promise<void> {
  * session wants to push a message to a peer's server).
  */
 export async function sendUdsMessage(
-  targetSocketPath: string,
-  message: UdsMessage,
+	targetSocketPath: string,
+	message: UdsMessage,
 ): Promise<void> {
-  const { createConnection } = await import('net')
-  message.from = message.from ?? socketPath ?? undefined
-  message.ts = message.ts ?? new Date().toISOString()
+	const {createConnection} = await import('net')
+	message.from = message.from ?? socketPath ?? undefined
+	message.ts = message.ts ?? new Date().toISOString()
 
-  return new Promise<void>((resolve, reject) => {
-    const conn = createConnection(targetSocketPath, () => {
-      conn.write(jsonStringify(message) + '\n', err => {
-        conn.end()
-        if (err) reject(err)
-        else resolve()
-      })
-    })
-    conn.on('error', reject)
-    // Timeout so we don't hang on unreachable sockets
-    conn.setTimeout(5000, () => {
-      conn.destroy(new Error('Connection timed out'))
-    })
-  })
+	return new Promise<void>((resolve, reject) => {
+		const conn = createConnection(targetSocketPath, () => {
+			conn.write(jsonStringify(message) + '\n', err => {
+				conn.end()
+				if (err) reject(err)
+				else resolve()
+			})
+		})
+		conn.on('error', reject)
+		// Timeout so we don't hang on unreachable sockets
+		conn.setTimeout(5000, () => {
+			conn.destroy(new Error('Connection timed out'))
+		})
+	})
 }

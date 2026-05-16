@@ -1,20 +1,20 @@
 import React from 'react'
-import { MessageResponse } from '../../../../../../neptune-cli/src/components/MessageResponse'
-import { Text } from '@anthropic/ink'
-import { countCharInString } from 'src/utils/stringUtils.js'
-import type { Input, Output } from './RemoteTriggerTool.js'
+import {MessageResponse} from '../../../../../../neptune-cli/src/components/MessageResponse'
+import {Text} from '@anthropic/ink'
+import {countCharInString} from 'src/utils/stringUtils.js'
+import type {Input, Output} from './RemoteTriggerTool.js'
 
 export function renderToolUseMessage(input: Partial<Input>): React.ReactNode {
-  return `${input.action ?? ''}${input.trigger_id ? ` ${input.trigger_id}` : ''}`
+	return `${input.action ?? ''}${input.trigger_id ? ` ${input.trigger_id}` : ''}`
 }
 
 export function renderToolResultMessage(output: Output): React.ReactNode {
-  const lines = countCharInString(output.json, '\n') + 1
-  return (
-    <MessageResponse>
-      <Text>
-        HTTP {output.status} <Text dimColor>({lines} lines)</Text>
-      </Text>
-    </MessageResponse>
-  )
+	const lines = countCharInString(output.json, '\n') + 1
+	return (
+		<MessageResponse>
+			<Text>
+				HTTP {output.status} <Text dimColor>({lines} lines)</Text>
+			</Text>
+		</MessageResponse>
+	)
 }

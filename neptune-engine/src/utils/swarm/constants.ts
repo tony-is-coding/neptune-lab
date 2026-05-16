@@ -10,7 +10,7 @@ export const HIDDEN_SESSION_NAME = 'claude-hidden'
  * Includes PID to ensure multiple Claude instances don't conflict.
  */
 export function getSwarmSocketName(): string {
-  return `claude-swarm-${process.pid}`
+	return `claude-swarm-${process.pid}`
 }
 
 /**

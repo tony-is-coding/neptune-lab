@@ -9,9 +9,9 @@
  * - AuditPermissionDelegate：审计日志装饰器
  */
 
-export type { PermissionDecision } from './PermissionDecision.js'
-export type { PermissionDelegate } from './PermissionDelegate.js'
-export { ReadOnlyPermissionDelegate } from './ReadOnlyPermissionDelegate.js'
-export { RBACPermissionDelegate } from './RBACPermissionDelegate.js'
-export type { RolePermissionMap, ToolPermissionRule } from './RBACPermissionDelegate.js'
-export { AuditPermissionDelegate } from './AuditPermissionDelegate.js'
+export type {PermissionDecision} from './PermissionDecision.js'
+export type {PermissionDelegate} from './PermissionDelegate.js'
+export {ReadOnlyPermissionDelegate} from './ReadOnlyPermissionDelegate.js'
+export {RBACPermissionDelegate} from './RBACPermissionDelegate.js'
+export type {RolePermissionMap, ToolPermissionRule} from './RBACPermissionDelegate.js'
+export {AuditPermissionDelegate} from './AuditPermissionDelegate.js'

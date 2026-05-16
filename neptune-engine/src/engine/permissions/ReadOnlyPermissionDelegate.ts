@@ -1,5 +1,5 @@
-import type { PermissionDecision } from './PermissionDecision.js'
-import type { PermissionDelegate } from './PermissionDelegate.js'
+import type {PermissionDecision} from './PermissionDecision.js'
+import type {PermissionDelegate} from './PermissionDelegate.js'
 
 /**
  * ReadOnlyPermissionDelegate — 内置只读策略
@@ -10,7 +10,7 @@ import type { PermissionDelegate } from './PermissionDelegate.js'
 const READ_ONLY_TOOLS = ['Read', 'Grep', 'Glob', 'WebSearch', 'WebFetch', 'Agent']
 
 export class ReadOnlyPermissionDelegate implements PermissionDelegate {
-  async onToolAccess(toolName: string, _input: Record<string, unknown>): Promise<PermissionDecision> {
-    return READ_ONLY_TOOLS.includes(toolName) ? 'allow' : 'deny'
-  }
+	async onToolAccess(toolName: string, _input: Record<string, unknown>): Promise<PermissionDecision> {
+		return READ_ONLY_TOOLS.includes(toolName) ? 'allow' : 'deny'
+	}
 }

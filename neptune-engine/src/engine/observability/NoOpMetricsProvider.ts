@@ -8,54 +8,54 @@
  * 所有方法都是空实现，确保零开销。
  */
 
-import type { IMetricsProvider } from './IMetricsProvider'
-import type { Counter, Gauge, Histogram, Timer } from './types'
+import type {IMetricsProvider} from './IMetricsProvider'
+import type {Counter, Gauge, Histogram, Timer} from './types'
 
 /**
  * 零开销 Counter 实现
  */
 class NoOpCounter implements Counter {
-  increment(_value?: number): void {
-    // 空实现
-  }
+    increment(_value?: number): void {
+        // 空实现
+    }
 }
 
 /**
  * 零开销 Gauge 实现
  */
 class NoOpGauge implements Gauge {
-  set(_value: number): void {
-    // 空实现
-  }
+    set(_value: number): void {
+        // 空实现
+    }
 }
 
 /**
  * 零开销 Histogram 实现
  */
 class NoOpHistogram implements Histogram {
-  record(_value: number, _attributes?: Record<string, unknown>): void {
-    // 空实现
-  }
+    record(_value: number, _attributes?: Record<string, unknown>): void {
+        // 空实现
+    }
 }
 
 /**
  * 零开销 Timer 实现
  */
 class NoOpTimer implements Timer {
-  private startTime: number | null = null
+    private startTime: number | null = null
 
-  start(): void {
-    this.startTime = Date.now()
-  }
-
-  stop(): number {
-    if (this.startTime === null) {
-      return 0
+    start(): void {
+        this.startTime = Date.now()
     }
-    const elapsed = Date.now() - this.startTime
-    this.startTime = null
-    return elapsed
-  }
+
+    stop(): number {
+        if (this.startTime === null) {
+            return 0
+        }
+        const elapsed = Date.now() - this.startTime
+        this.startTime = null
+        return elapsed
+    }
 }
 
 /**
@@ -64,37 +64,38 @@ class NoOpTimer implements Timer {
  * 所有方法返回空实现的指标，不执行任何实际操作。
  */
 export class NoOpMetricsProvider implements IMetricsProvider {
-  private static instance: NoOpMetricsProvider | null = null
+    private static instance: NoOpMetricsProvider | null = null
 
-  private constructor() {}
-
-  /**
-   * 获取全局单例
-   */
-  static getInstance(): NoOpMetricsProvider {
-    if (!NoOpMetricsProvider.instance) {
-      NoOpMetricsProvider.instance = new NoOpMetricsProvider()
+    private constructor() {
     }
-    return NoOpMetricsProvider.instance
-  }
 
-  counter(_name: string): Counter {
-    return new NoOpCounter()
-  }
+    /**
+     * 获取全局单例
+     */
+    static getInstance(): NoOpMetricsProvider {
+        if (!NoOpMetricsProvider.instance) {
+            NoOpMetricsProvider.instance = new NoOpMetricsProvider()
+        }
+        return NoOpMetricsProvider.instance
+    }
 
-  gauge(_name: string): Gauge {
-    return new NoOpGauge()
-  }
+    counter(_name: string): Counter {
+        return new NoOpCounter()
+    }
 
-  histogram(_name: string): Histogram {
-    return new NoOpHistogram()
-  }
+    gauge(_name: string): Gauge {
+        return new NoOpGauge()
+    }
 
-  timer(_name: string): Timer {
-    return new NoOpTimer()
-  }
+    histogram(_name: string): Histogram {
+        return new NoOpHistogram()
+    }
 
-  dispose(): void {
-    // 空实现
-  }
+    timer(_name: string): Timer {
+        return new NoOpTimer()
+    }
+
+    dispose(): void {
+        // 空实现
+    }
 }

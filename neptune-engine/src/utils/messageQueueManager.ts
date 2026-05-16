@@ -1,23 +1,23 @@
-import { feature } from 'bun:bundle'
-import type { ContentBlockParam } from '@anthropic-ai/sdk/resources/messages.mjs'
-import type { Permutations } from 'src/types/utils.js'
-import { getSessionId } from '../engine/session/SessionContext.js'
-import type { AppState } from '../state/AppState.js'
+import {feature} from 'bun:bundle'
+import type {ContentBlockParam} from '@anthropic-ai/sdk/resources/messages.mjs'
+import type {Permutations} from 'src/types/utils.js'
+import {getSessionId} from '../engine/session/SessionContext.js'
+import type {AppState} from '../state/AppState.js'
 import type {
-  QueueOperation,
-  QueueOperationMessage,
+	QueueOperation,
+	QueueOperationMessage,
 } from '../types/messageQueueTypes.js'
 import type {
-  EditablePromptInputMode,
-  PromptInputMode,
-  QueuedCommand,
-  QueuePriority,
+	EditablePromptInputMode,
+	PromptInputMode,
+	QueuedCommand,
+	QueuePriority,
 } from '../types/textInputTypes.js'
-import type { PastedContent } from './config.js'
-import { extractTextContent } from './messages.js'
-import { objectGroupBy } from './objectGroupBy.js'
-import { recordQueueOperation } from './sessionStorage.js'
-import { createSignal } from './signal.js'
+import type {PastedContent} from './config.js'
+import {extractTextContent} from './messages.js'
+import {objectGroupBy} from './objectGroupBy.js'
+import {recordQueueOperation} from './sessionStorage.js'
+import {createSignal} from './signal.js'
 
 export type SetAppState = (f: (prev: AppState) => AppState) => void
 
@@ -26,16 +26,16 @@ export type SetAppState = (f: (prev: AppState) => AppState) => void
 // ============================================================================
 
 function logOperation(operation: QueueOperation, content?: string): void {
-  // V2 fix: SessionId type narrowing - getSessionId() 可能返回 undefined
-  const sessionId = getSessionId() ?? ''
-  const queueOp: QueueOperationMessage = {
-    type: 'queue-operation',
-    operation,
-    timestamp: new Date().toISOString(),
-    sessionId,
-    ...(content !== undefined && { content }),
-  }
-  void recordQueueOperation(queueOp)
+	// V2 fix: SessionId type narrowing - getSessionId() 可能返回 undefined
+	const sessionId = getSessionId() ?? ''
+	const queueOp: QueueOperationMessage = {
+		type: 'queue-operation',
+		operation,
+		timestamp: new Date().toISOString(),
+		sessionId,
+		...(content !== undefined && {content}),
+	}
+	void recordQueueOperation(queueOp)
 }
 
 // ============================================================================
@@ -57,8 +57,8 @@ let snapshot: readonly QueuedCommand[] = Object.freeze([])
 const queueChanged = createSignal()
 
 function notifySubscribers(): void {
-  snapshot = Object.freeze([...commandQueue])
-  queueChanged.emit()
+	snapshot = Object.freeze([...commandQueue])
+	queueChanged.emit()
 }
 
 // ============================================================================
@@ -77,7 +77,7 @@ export const subscribeToCommandQueue = queueChanged.subscribe
  * Returns a frozen array that only changes reference on mutation.
  */
 export function getCommandQueueSnapshot(): readonly QueuedCommand[] {
-  return snapshot
+	return snapshot
 }
 
 // ============================================================================
@@ -89,21 +89,21 @@ export function getCommandQueueSnapshot(): readonly QueuedCommand[] {
  * Use for one-off reads where you need the actual commands.
  */
 export function getCommandQueue(): QueuedCommand[] {
-  return [...commandQueue]
+	return [...commandQueue]
 }
 
 /**
  * Get the current queue length without copying.
  */
 export function getCommandQueueLength(): number {
-  return commandQueue.length
+	return commandQueue.length
 }
 
 /**
  * Check if there are commands in the queue.
  */
 export function hasCommandsInQueue(): boolean {
-  return commandQueue.length > 0
+	return commandQueue.length > 0
 }
 
 /**
@@ -112,9 +112,9 @@ export function hasCommandsInQueue(): boolean {
  * are picked up by useSyncExternalStore consumers.
  */
 export function recheckCommandQueue(): void {
-  if (commandQueue.length > 0) {
-    notifySubscribers()
-  }
+	if (commandQueue.length > 0) {
+		notifySubscribers()
+	}
 }
 
 // ============================================================================
@@ -127,12 +127,12 @@ export function recheckCommandQueue(): void {
  * Defaults priority to 'next' (processed before task notifications).
  */
 export function enqueue(command: QueuedCommand): void {
-  commandQueue.push({ ...command, priority: command.priority ?? 'next' })
-  notifySubscribers()
-  logOperation(
-    'enqueue',
-    typeof command.value === 'string' ? command.value : undefined,
-  )
+	commandQueue.push({...command, priority: command.priority ?? 'next'})
+	notifySubscribers()
+	logOperation(
+		'enqueue',
+		typeof command.value === 'string' ? command.value : undefined,
+	)
 }
 
 /**
@@ -141,18 +141,18 @@ export function enqueue(command: QueuedCommand): void {
  * is never starved by system messages.
  */
 export function enqueuePendingNotification(command: QueuedCommand): void {
-  commandQueue.push({ ...command, priority: command.priority ?? 'later' })
-  notifySubscribers()
-  logOperation(
-    'enqueue',
-    typeof command.value === 'string' ? command.value : undefined,
-  )
+	commandQueue.push({...command, priority: command.priority ?? 'later'})
+	notifySubscribers()
+	logOperation(
+		'enqueue',
+		typeof command.value === 'string' ? command.value : undefined,
+	)
 }
 
 const PRIORITY_ORDER: Record<QueuePriority, number> = {
-  now: 0,
-  next: 1,
-  later: 2,
+	now: 0,
+	next: 1,
+	later: 2,
 }
 
 /**
@@ -166,31 +166,31 @@ const PRIORITY_ORDER: Record<QueuePriority, number> = {
  * the existing while-loop patterns.
  */
 export function dequeue(
-  filter?: (cmd: QueuedCommand) => boolean,
+	filter?: (cmd: QueuedCommand) => boolean,
 ): QueuedCommand | undefined {
-  if (commandQueue.length === 0) {
-    return undefined
-  }
+	if (commandQueue.length === 0) {
+		return undefined
+	}
 
-  // Find the first command with the highest priority (respecting filter)
-  let bestIdx = -1
-  let bestPriority = Infinity
-  for (let i = 0; i < commandQueue.length; i++) {
-    const cmd = commandQueue[i]!
-    if (filter && !filter(cmd)) continue
-    const priority = PRIORITY_ORDER[cmd.priority ?? 'next']
-    if (priority < bestPriority) {
-      bestIdx = i
-      bestPriority = priority
-    }
-  }
+	// Find the first command with the highest priority (respecting filter)
+	let bestIdx = -1
+	let bestPriority = Infinity
+	for (let i = 0; i < commandQueue.length; i++) {
+		const cmd = commandQueue[i]!
+		if (filter && !filter(cmd)) continue
+		const priority = PRIORITY_ORDER[cmd.priority ?? 'next']
+		if (priority < bestPriority) {
+			bestIdx = i
+			bestPriority = priority
+		}
+	}
 
-  if (bestIdx === -1) return undefined
+	if (bestIdx === -1) return undefined
 
-  const [dequeued] = commandQueue.splice(bestIdx, 1)
-  notifySubscribers()
-  logOperation('dequeue')
-  return dequeued
+	const [dequeued] = commandQueue.splice(bestIdx, 1)
+	notifySubscribers()
+	logOperation('dequeue')
+	return dequeued
 }
 
 /**
@@ -198,19 +198,19 @@ export function dequeue(
  * Logs a dequeue operation for each command.
  */
 export function dequeueAll(): QueuedCommand[] {
-  if (commandQueue.length === 0) {
-    return []
-  }
+	if (commandQueue.length === 0) {
+		return []
+	}
 
-  const commands = [...commandQueue]
-  commandQueue.length = 0
-  notifySubscribers()
+	const commands = [...commandQueue]
+	commandQueue.length = 0
+	notifySubscribers()
 
-  for (const _cmd of commands) {
-    logOperation('dequeue')
-  }
+	for (const _cmd of commands) {
+		logOperation('dequeue')
+	}
 
-  return commands
+	return commands
 }
 
 /**
@@ -218,24 +218,24 @@ export function dequeueAll(): QueuedCommand[] {
  * Accepts an optional `filter` — only commands passing the predicate are considered.
  */
 export function peek(
-  filter?: (cmd: QueuedCommand) => boolean,
+	filter?: (cmd: QueuedCommand) => boolean,
 ): QueuedCommand | undefined {
-  if (commandQueue.length === 0) {
-    return undefined
-  }
-  let bestIdx = -1
-  let bestPriority = Infinity
-  for (let i = 0; i < commandQueue.length; i++) {
-    const cmd = commandQueue[i]!
-    if (filter && !filter(cmd)) continue
-    const priority = PRIORITY_ORDER[cmd.priority ?? 'next']
-    if (priority < bestPriority) {
-      bestIdx = i
-      bestPriority = priority
-    }
-  }
-  if (bestIdx === -1) return undefined
-  return commandQueue[bestIdx]
+	if (commandQueue.length === 0) {
+		return undefined
+	}
+	let bestIdx = -1
+	let bestPriority = Infinity
+	for (let i = 0; i < commandQueue.length; i++) {
+		const cmd = commandQueue[i]!
+		if (filter && !filter(cmd)) continue
+		const priority = PRIORITY_ORDER[cmd.priority ?? 'next']
+		if (priority < bestPriority) {
+			bestIdx = i
+			bestPriority = priority
+		}
+	}
+	if (bestIdx === -1) return undefined
+	return commandQueue[bestIdx]
 }
 
 /**
@@ -243,27 +243,27 @@ export function peek(
  * Non-matching commands stay in the queue.
  */
 export function dequeueAllMatching(
-  predicate: (cmd: QueuedCommand) => boolean,
+	predicate: (cmd: QueuedCommand) => boolean,
 ): QueuedCommand[] {
-  const matched: QueuedCommand[] = []
-  const remaining: QueuedCommand[] = []
-  for (const cmd of commandQueue) {
-    if (predicate(cmd)) {
-      matched.push(cmd)
-    } else {
-      remaining.push(cmd)
-    }
-  }
-  if (matched.length === 0) {
-    return []
-  }
-  commandQueue.length = 0
-  commandQueue.push(...remaining)
-  notifySubscribers()
-  for (const _cmd of matched) {
-    logOperation('dequeue')
-  }
-  return matched
+	const matched: QueuedCommand[] = []
+	const remaining: QueuedCommand[] = []
+	for (const cmd of commandQueue) {
+		if (predicate(cmd)) {
+			matched.push(cmd)
+		} else {
+			remaining.push(cmd)
+		}
+	}
+	if (matched.length === 0) {
+		return []
+	}
+	commandQueue.length = 0
+	commandQueue.push(...remaining)
+	notifySubscribers()
+	for (const _cmd of matched) {
+		logOperation('dequeue')
+	}
+	return matched
 }
 
 /**
@@ -272,24 +272,24 @@ export function dequeueAllMatching(
  * (e.g. from getCommandsByMaxPriority). Logs a 'remove' operation for each.
  */
 export function remove(commandsToRemove: QueuedCommand[]): void {
-  if (commandsToRemove.length === 0) {
-    return
-  }
+	if (commandsToRemove.length === 0) {
+		return
+	}
 
-  const before = commandQueue.length
-  for (let i = commandQueue.length - 1; i >= 0; i--) {
-    if (commandsToRemove.includes(commandQueue[i]!)) {
-      commandQueue.splice(i, 1)
-    }
-  }
+	const before = commandQueue.length
+	for (let i = commandQueue.length - 1; i >= 0; i--) {
+		if (commandsToRemove.includes(commandQueue[i]!)) {
+			commandQueue.splice(i, 1)
+		}
+	}
 
-  if (commandQueue.length !== before) {
-    notifySubscribers()
-  }
+	if (commandQueue.length !== before) {
+		notifySubscribers()
+	}
 
-  for (const _cmd of commandsToRemove) {
-    logOperation('remove')
-  }
+	for (const _cmd of commandsToRemove) {
+		logOperation('remove')
+	}
 }
 
 /**
@@ -297,23 +297,23 @@ export function remove(commandsToRemove: QueuedCommand[]): void {
  * Returns the removed commands.
  */
 export function removeByFilter(
-  predicate: (cmd: QueuedCommand) => boolean,
+	predicate: (cmd: QueuedCommand) => boolean,
 ): QueuedCommand[] {
-  const removed: QueuedCommand[] = []
-  for (let i = commandQueue.length - 1; i >= 0; i--) {
-    if (predicate(commandQueue[i]!)) {
-      removed.unshift(commandQueue.splice(i, 1)[0]!)
-    }
-  }
+	const removed: QueuedCommand[] = []
+	for (let i = commandQueue.length - 1; i >= 0; i--) {
+		if (predicate(commandQueue[i]!)) {
+			removed.unshift(commandQueue.splice(i, 1)[0]!)
+		}
+	}
 
-  if (removed.length > 0) {
-    notifySubscribers()
-    for (const _cmd of removed) {
-      logOperation('remove')
-    }
-  }
+	if (removed.length > 0) {
+		notifySubscribers()
+		for (const _cmd of removed) {
+			logOperation('remove')
+		}
+	}
 
-  return removed
+	return removed
 }
 
 /**
@@ -321,11 +321,11 @@ export function removeByFilter(
  * Used by ESC cancellation to discard queued notifications.
  */
 export function clearCommandQueue(): void {
-  if (commandQueue.length === 0) {
-    return
-  }
-  commandQueue.length = 0
-  notifySubscribers()
+	if (commandQueue.length === 0) {
+		return
+	}
+	commandQueue.length = 0
+	notifySubscribers()
 }
 
 /**
@@ -333,8 +333,8 @@ export function clearCommandQueue(): void {
  * Used for test cleanup.
  */
 export function resetCommandQueue(): void {
-  commandQueue.length = 0
-  snapshot = Object.freeze([])
+	commandQueue.length = 0
+	snapshot = Object.freeze([])
 }
 
 // ============================================================================
@@ -342,13 +342,13 @@ export function resetCommandQueue(): void {
 // ============================================================================
 
 const NON_EDITABLE_MODES = new Set<PromptInputMode>([
-  'task-notification',
+	'task-notification',
 ] satisfies Permutations<Exclude<PromptInputMode, EditablePromptInputMode>>)
 
 export function isPromptInputModeEditable(
-  mode: PromptInputMode,
+	mode: PromptInputMode,
 ): mode is EditablePromptInputMode {
-  return !NON_EDITABLE_MODES.has(mode)
+	return !NON_EDITABLE_MODES.has(mode)
 }
 
 /**
@@ -358,7 +358,7 @@ export function isPromptInputModeEditable(
  * the user's input.
  */
 export function isQueuedCommandEditable(cmd: QueuedCommand): boolean {
-  return isPromptInputModeEditable(cmd.mode) && !cmd.isMeta
+	return isPromptInputModeEditable(cmd.mode) && !cmd.isMeta
 }
 
 /**
@@ -367,12 +367,12 @@ export function isQueuedCommandEditable(cmd: QueuedCommand): boolean {
  * sees what arrived) but stay non-editable (raw XML).
  */
 export function isQueuedCommandVisible(cmd: QueuedCommand): boolean {
-  if (
-    (feature('KAIROS') || feature('KAIROS_CHANNELS')) &&
-    (cmd as any).origin?.kind === 'channel'
-  )
-    return true
-  return isQueuedCommandEditable(cmd)
+	if (
+		(feature('KAIROS') || feature('KAIROS_CHANNELS')) &&
+		(cmd as any).origin?.kind === 'channel'
+	)
+		return true
+	return isQueuedCommandEditable(cmd)
 }
 
 /**
@@ -381,7 +381,7 @@ export function isQueuedCommandVisible(cmd: QueuedCommand): boolean {
  * For ContentBlockParam[], extracts text from text blocks.
  */
 function extractTextFromValue(value: string | ContentBlockParam[]): string {
-  return typeof value === 'string' ? value : extractTextContent(value, '\n')
+	return typeof value === 'string' ? value : extractTextContent(value, '\n')
 }
 
 /**
@@ -389,34 +389,34 @@ function extractTextFromValue(value: string | ContentBlockParam[]): string {
  * Returns empty array for string values or if no images found.
  */
 function extractImagesFromValue(
-  value: string | ContentBlockParam[],
-  startId: number,
+	value: string | ContentBlockParam[],
+	startId: number,
 ): PastedContent[] {
-  if (typeof value === 'string') {
-    return []
-  }
+	if (typeof value === 'string') {
+		return []
+	}
 
-  const images: PastedContent[] = []
-  let imageIndex = 0
-  for (const block of value) {
-    if (block.type === 'image' && block.source.type === 'base64') {
-      images.push({
-        id: startId + imageIndex,
-        type: 'image',
-        content: block.source.data,
-        mediaType: block.source.media_type,
-        filename: `image${imageIndex + 1}`,
-      })
-      imageIndex++
-    }
-  }
-  return images
+	const images: PastedContent[] = []
+	let imageIndex = 0
+	for (const block of value) {
+		if (block.type === 'image' && block.source.type === 'base64') {
+			images.push({
+				id: startId + imageIndex,
+				type: 'image',
+				content: block.source.data,
+				mediaType: block.source.media_type,
+				filename: `image${imageIndex + 1}`,
+			})
+			imageIndex++
+		}
+	}
+	return images
 }
 
 export type PopAllEditableResult = {
-  text: string
-  cursorOffset: number
-  images: PastedContent[]
+	text: string
+	cursorOffset: number
+	images: PastedContent[]
 }
 
 /**
@@ -427,61 +427,61 @@ export type PopAllEditableResult = {
  * Returns undefined if no editable commands in queue.
  */
 export function popAllEditable(
-  currentInput: string,
-  currentCursorOffset: number,
+	currentInput: string,
+	currentCursorOffset: number,
 ): PopAllEditableResult | undefined {
-  if (commandQueue.length === 0) {
-    return undefined
-  }
+	if (commandQueue.length === 0) {
+		return undefined
+	}
 
-  const { editable = [], nonEditable = [] } = objectGroupBy(
-    [...commandQueue],
-    cmd => (isQueuedCommandEditable(cmd) ? 'editable' : 'nonEditable'),
-  )
+	const {editable = [], nonEditable = []} = objectGroupBy(
+		[...commandQueue],
+		cmd => (isQueuedCommandEditable(cmd) ? 'editable' : 'nonEditable'),
+	)
 
-  if (editable.length === 0) {
-    return undefined
-  }
+	if (editable.length === 0) {
+		return undefined
+	}
 
-  // Extract text from queued commands (handles both strings and ContentBlockParam[])
-  const queuedTexts = editable.map(cmd => extractTextFromValue(cmd.value))
-  const newInput = [...queuedTexts, currentInput].filter(Boolean).join('\n')
+	// Extract text from queued commands (handles both strings and ContentBlockParam[])
+	const queuedTexts = editable.map(cmd => extractTextFromValue(cmd.value))
+	const newInput = [...queuedTexts, currentInput].filter(Boolean).join('\n')
 
-  // Calculate cursor offset: length of joined queued commands + 1 + current cursor offset
-  const cursorOffset = queuedTexts.join('\n').length + 1 + currentCursorOffset
+	// Calculate cursor offset: length of joined queued commands + 1 + current cursor offset
+	const cursorOffset = queuedTexts.join('\n').length + 1 + currentCursorOffset
 
-  // Extract images from queued commands
-  const images: PastedContent[] = []
-  let nextImageId = Date.now() // Use timestamp as base for unique IDs
-  for (const cmd of editable) {
-    // handlePromptSubmit queues images in pastedContents (value is a string).
-    // Preserve the original PastedContent id so imageStore lookups still work.
-    if (cmd.pastedContents) {
-      for (const content of Object.values(cmd.pastedContents)) {
-        if (content.type === 'image') {
-          images.push(content)
-        }
-      }
-    }
-    // Bridge/remote commands may embed images directly in ContentBlockParam[].
-    const cmdImages = extractImagesFromValue(cmd.value, nextImageId)
-    images.push(...cmdImages)
-    nextImageId += cmdImages.length
-  }
+	// Extract images from queued commands
+	const images: PastedContent[] = []
+	let nextImageId = Date.now() // Use timestamp as base for unique IDs
+	for (const cmd of editable) {
+		// handlePromptSubmit queues images in pastedContents (value is a string).
+		// Preserve the original PastedContent id so imageStore lookups still work.
+		if (cmd.pastedContents) {
+			for (const content of Object.values(cmd.pastedContents)) {
+				if (content.type === 'image') {
+					images.push(content)
+				}
+			}
+		}
+		// Bridge/remote commands may embed images directly in ContentBlockParam[].
+		const cmdImages = extractImagesFromValue(cmd.value, nextImageId)
+		images.push(...cmdImages)
+		nextImageId += cmdImages.length
+	}
 
-  for (const command of editable) {
-    logOperation(
-      'popAll',
-      typeof command.value === 'string' ? command.value : undefined,
-    )
-  }
+	for (const command of editable) {
+		logOperation(
+			'popAll',
+			typeof command.value === 'string' ? command.value : undefined,
+		)
+	}
 
-  // Replace queue contents with only the non-editable commands
-  commandQueue.length = 0
-  commandQueue.push(...nonEditable)
-  notifySubscribers()
+	// Replace queue contents with only the non-editable commands
+	commandQueue.length = 0
+	commandQueue.push(...nonEditable)
+	notifySubscribers()
 
-  return { text: newInput, cursorOffset, images }
+	return {text: newInput, cursorOffset, images}
 }
 
 // ============================================================================
@@ -493,7 +493,7 @@ export const subscribeToPendingNotifications = subscribeToCommandQueue
 
 /** @deprecated Use getCommandQueueSnapshot */
 export function getPendingNotificationsSnapshot(): readonly QueuedCommand[] {
-  return snapshot
+	return snapshot
 }
 
 /** @deprecated Use hasCommandsInQueue */
@@ -507,7 +507,7 @@ export const recheckPendingNotifications = recheckCommandQueue
 
 /** @deprecated Use dequeue */
 export function dequeuePendingNotification(): QueuedCommand | undefined {
-  return dequeue()
+	return dequeue()
 }
 
 /** @deprecated Use resetCommandQueue */
@@ -524,12 +524,12 @@ export const clearPendingNotifications = clearCommandQueue
  * Passing 'now' returns only now-priority commands; 'later' returns everything.
  */
 export function getCommandsByMaxPriority(
-  maxPriority: QueuePriority,
+	maxPriority: QueuePriority,
 ): QueuedCommand[] {
-  const threshold = PRIORITY_ORDER[maxPriority]
-  return commandQueue.filter(
-    cmd => PRIORITY_ORDER[cmd.priority ?? 'next'] <= threshold,
-  )
+	const threshold = PRIORITY_ORDER[maxPriority]
+	return commandQueue.filter(
+		cmd => PRIORITY_ORDER[cmd.priority ?? 'next'] <= threshold,
+	)
 }
 
 /**
@@ -540,9 +540,9 @@ export function getCommandsByMaxPriority(
  * as slash commands — their text is meant for the model.
  */
 export function isSlashCommand(cmd: QueuedCommand): boolean {
-  return (
-    typeof cmd.value === 'string' &&
-    cmd.value.trim().startsWith('/') &&
-    !cmd.skipSlashCommands
-  )
+	return (
+		typeof cmd.value === 'string' &&
+		cmd.value.trim().startsWith('/') &&
+		!cmd.skipSlashCommands
+	)
 }

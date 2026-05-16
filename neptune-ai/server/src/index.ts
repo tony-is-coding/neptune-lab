@@ -4,30 +4,30 @@ process.env.CLAUDE_CODE_DISABLE_CLAUDE_MDS = '1';
 // 覆盖 SDK 内部使用的 Anthropic 环境变量 — 强制走 Neptune 配置的 LLM Provider
 // SDK 的 callModel (queryModelWithStreaming) 直接读取这些 env vars
 if (process.env.NEPTUNE_LLM_API_KEY) {
-  process.env.ANTHROPIC_API_KEY = process.env.NEPTUNE_LLM_API_KEY;
+    process.env.ANTHROPIC_API_KEY = process.env.NEPTUNE_LLM_API_KEY;
 }
 if (process.env.NEPTUNE_LLM_BASE_URL) {
-  process.env.ANTHROPIC_BASE_URL = process.env.NEPTUNE_LLM_BASE_URL;
+    process.env.ANTHROPIC_BASE_URL = process.env.NEPTUNE_LLM_BASE_URL;
 }
 
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import bcrypt from 'bcrypt';
-import { eq } from 'drizzle-orm';
-import { config } from './config';
-import { db } from './db';
-import { users, tenants } from './db/schema';
-import { authRoutes } from './routes/auth';
-import { tenantRoutes } from './routes/tenants';
-import { userRoutes } from './routes/users';
-import { agentRoutes } from './routes/agents';
-import { sessionRoutes } from './routes/sessions';
-import { threadRoutes } from './routes/threads';
-import { billingRoutes } from './routes/billing';
-import { skillRoutes } from './routes/skills';
-import { authMiddleware } from './middleware/auth';
-import { initLogger, createLogger } from './utils/logger';
-import { initObservability, shutdownObservability } from './services/observability';
+import {eq} from 'drizzle-orm';
+import {config} from './config';
+import {db} from './db';
+import {users, tenants} from './db/schema';
+import {authRoutes} from './routes/auth';
+import {tenantRoutes} from './routes/tenants';
+import {userRoutes} from './routes/users';
+import {agentRoutes} from './routes/agents';
+import {sessionRoutes} from './routes/sessions';
+import {threadRoutes} from './routes/threads';
+import {billingRoutes} from './routes/billing';
+import {skillRoutes} from './routes/skills';
+import {authMiddleware} from './middleware/auth';
+import {initLogger, createLogger} from './utils/logger';
+import {initObservability, shutdownObservability} from './services/observability';
 
 // 初始化全局日志
 initLogger(config.log.level as any);
@@ -42,90 +42,90 @@ const log = createLogger('server');
  * 创建 Fastify 应用
  */
 async function createApp() {
-  const app = Fastify({
-    logger: false, // 禁用 Fastify 内置 pino，统一使用 LogUtil
-  });
-
-  // HTTP 请求/响应日志 hook
-  app.addHook('onRequest', (request, reply, done) => {
-    (request as any)._startTime = performance.now();
-    done();
-  });
-
-  app.addHook('onResponse', (request, reply, done) => {
-    const durationMs = Math.round(performance.now() - ((request as any)._startTime || 0));
-    const statusCode = reply.statusCode;
-    const level = statusCode >= 400 ? 'warn' : 'info';
-    log[level](`${request.method} ${request.url} ${statusCode}`, {
-      durationMs,
-      remoteAddress: request.ip,
+    const app = Fastify({
+        logger: false, // 禁用 Fastify 内置 pino，统一使用 LogUtil
     });
-    done();
-  });
 
-  // 注册 CORS 插件
-  await app.register(cors, {
-    origin: true, // 生产环境应该配置具体的 origin
-    credentials: true,
-  });
+    // HTTP 请求/响应日志 hook
+    app.addHook('onRequest', (request, reply, done) => {
+        (request as any)._startTime = performance.now();
+        done();
+    });
 
-  // 注册认证装饰器
-  app.decorate('authenticate', authMiddleware);
+    app.addHook('onResponse', (request, reply, done) => {
+        const durationMs = Math.round(performance.now() - ((request as any)._startTime || 0));
+        const statusCode = reply.statusCode;
+        const level = statusCode >= 400 ? 'warn' : 'info';
+        log[level](`${request.method} ${request.url} ${statusCode}`, {
+            durationMs,
+            remoteAddress: request.ip,
+        });
+        done();
+    });
 
-  // 健康检查端点
-  app.get('/health', async () => {
-    return {
-      status: 'ok',
-      timestamp: new Date().toISOString(),
-      uptime: process.uptime(),
-    };
-  });
+    // 注册 CORS 插件
+    await app.register(cors, {
+        origin: true, // 生产环境应该配置具体的 origin
+        credentials: true,
+    });
 
-  // 数据库健康检查
-  app.get('/health/db', async () => {
-    try {
-      await db.execute('SELECT 1');
-      return {
-        status: 'ok',
-        database: 'connected',
-      };
-    } catch (error) {
-      return {
-        status: 'error',
-        database: 'disconnected',
-        error: error instanceof Error ? error.message : 'Unknown error',
-      };
-    }
-  });
+    // 注册认证装饰器
+    app.decorate('authenticate', authMiddleware);
 
-  // API 路由组
-  app.register(async function (app) {
-    // 认证路由
-    await app.register(authRoutes, { prefix: '/auth' });
+    // 健康检查端点
+    app.get('/health', async () => {
+        return {
+            status: 'ok',
+            timestamp: new Date().toISOString(),
+            uptime: process.uptime(),
+        };
+    });
 
-    // 租户路由
-    await app.register(tenantRoutes, { prefix: '/tenants' });
+    // 数据库健康检查
+    app.get('/health/db', async () => {
+        try {
+            await db.execute('SELECT 1');
+            return {
+                status: 'ok',
+                database: 'connected',
+            };
+        } catch (error) {
+            return {
+                status: 'error',
+                database: 'disconnected',
+                error: error instanceof Error ? error.message : 'Unknown error',
+            };
+        }
+    });
 
-    // 用户路由
-    await app.register(userRoutes, { prefix: '/users' });
+    // API 路由组
+    app.register(async function (app) {
+        // 认证路由
+        await app.register(authRoutes, {prefix: '/auth'});
 
-    // Agent 模板路由
-    await app.register(agentRoutes, { prefix: '/agents' });
+        // 租户路由
+        await app.register(tenantRoutes, {prefix: '/tenants'});
 
-    // Thread CRUD + Chat 路由（必须在 sessionRoutes 之前注册，避免路径冲突）
-    await app.register(threadRoutes, { prefix: '/agents' });
+        // 用户路由
+        await app.register(userRoutes, {prefix: '/users'});
 
-    // Agent Chat 路由（旧接口兼容）
-    await app.register(sessionRoutes, { prefix: '/agents' });
+        // Agent 模板路由
+        await app.register(agentRoutes, {prefix: '/agents'});
 
-    // 计费路由
-    await app.register(billingRoutes, { prefix: '/tenants' });
+        // Thread CRUD + Chat 路由（必须在 sessionRoutes 之前注册，避免路径冲突）
+        await app.register(threadRoutes, {prefix: '/agents'});
 
-    // Skills 路由
-    await app.register(skillRoutes, { prefix: '/skills' });
-  }, { prefix: '/api/v1' });
+        // Agent Chat 路由（旧接口兼容）
+        await app.register(sessionRoutes, {prefix: '/agents'});
 
-  return app;
+        // 计费路由
+        await app.register(billingRoutes, {prefix: '/tenants'});
+
+        // Skills 路由
+        await app.register(skillRoutes, {prefix: '/skills'});
+    }, {prefix: '/api/v1'});
+
+    return app;
 }
 
 /**
@@ -135,70 +135,70 @@ async function createApp() {
  * 如果 admin 邮箱已存在则跳过。
  */
 async function ensureDefaultAdmin() {
-  try {
-    const existing = await db.query.users.findFirst({
-      where: eq(users.email, 'admin'),
-    });
+    try {
+        const existing = await db.query.users.findFirst({
+            where: eq(users.email, 'admin'),
+        });
 
-    if (existing) return;
+        if (existing) return;
 
-    // 创建默认租户
-    const [tenant] = await db.insert(tenants).values({ name: 'Default' }).returning();
+        // 创建默认租户
+        const [tenant] = await db.insert(tenants).values({name: 'Default'}).returning();
 
-    // 创建管理员用户
-    const passwordHash = await bcrypt.hash('admin', 10);
-    await db.insert(users).values({
-      tenantId: tenant.id,
-      name: 'Admin',
-      email: 'admin@neptune.ai',
-      passwordHash,
-      role: 'admin',
-    });
+        // 创建管理员用户
+        const passwordHash = await bcrypt.hash('admin', 10);
+        await db.insert(users).values({
+            tenantId: tenant.id,
+            name: 'Admin',
+            email: 'admin@neptune.ai',
+            passwordHash,
+            role: 'admin',
+        });
 
-    log.info('Default admin created — email: admin@neptune.ai');
-  } catch (error) {
-    log.debug('Default admin creation skipped', { reason: (error as Error).message });
-  }
+        log.info('Default admin created — email: admin@neptune.ai');
+    } catch (error) {
+        log.debug('Default admin creation skipped', {reason: (error as Error).message});
+    }
 }
 
 /**
  * 启动服务器
  */
 async function start() {
-  const app = await createApp();
+    const app = await createApp();
 
-  try {
-    // 启动前确保默认管理员存在
-    await ensureDefaultAdmin();
+    try {
+        // 启动前确保默认管理员存在
+        await ensureDefaultAdmin();
 
-    await app.listen({
-      port: config.server.port,
-      host: config.server.host,
-    });
+        await app.listen({
+            port: config.server.port,
+            host: config.server.host,
+        });
 
-    log.info('Neptune-AI server started', {
-      host: config.server.host,
-      port: config.server.port,
-    });
-  } catch (error) {
-    log.error('Server start failed', { detail: (error as Error).message });
-    process.exit(1);
-  }
+        log.info('Neptune-AI server started', {
+            host: config.server.host,
+            port: config.server.port,
+        });
+    } catch (error) {
+        log.error('Server start failed', {detail: (error as Error).message});
+        process.exit(1);
+    }
 }
 
 // 如果直接运行此文件，则启动服务器
 if (import.meta.main) {
-  start();
+    start();
 
-  // 优雅关闭
-  process.on('SIGTERM', async () => {
-    await shutdownObservability();
-    process.exit(0);
-  });
-  process.on('SIGINT', async () => {
-    await shutdownObservability();
-    process.exit(0);
-  });
+    // 优雅关闭
+    process.on('SIGTERM', async () => {
+        await shutdownObservability();
+        process.exit(0);
+    });
+    process.on('SIGINT', async () => {
+        await shutdownObservability();
+        process.exit(0);
+    });
 }
 
-export { createApp };
+export {createApp};

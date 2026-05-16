@@ -12,10 +12,10 @@
  * - OpenAI 使用位置参数调用方式
  */
 
-import type { ProviderQueryParams, ProviderMessage } from '../ProviderAdapter.js'
-import { asSystemPrompt } from '../../../utils/systemPromptType.js'
-import { BaseProvider, type BaseProviderConfig } from './BaseProvider.js'
-import type { OpenAIProviderConfig } from '../types/ProviderConfigs.js'
+import type {ProviderQueryParams, ProviderMessage} from '../ProviderAdapter.js'
+import {asSystemPrompt} from '../../../utils/systemPromptType.js'
+import {BaseProvider, type BaseProviderConfig} from './BaseProvider.js'
+import type {OpenAIProviderConfig} from '../types/ProviderConfigs.js'
 
 // ============================================================
 // OpenAIProvider 实现
@@ -32,94 +32,94 @@ import type { OpenAIProviderConfig } from '../types/ProviderConfigs.js'
  * - 实现方式：在调用前临时设置环境变量，调用后恢复
  */
 export class OpenAIProvider extends BaseProvider<OpenAIProviderConfig> {
-  readonly type = 'openai' as const
+	readonly type = 'openai' as const
 
-  /** 保存原始环境变量，用于恢复 */
-  private readonly originalEnv = {
-    OPENAI_API_KEY: process.env.OPENAI_API_KEY,
-    OPENAI_BASE_URL: process.env.OPENAI_BASE_URL,
-  }
+	/** 保存原始环境变量，用于恢复 */
+	private readonly originalEnv = {
+		OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+		OPENAI_BASE_URL: process.env.OPENAI_BASE_URL,
+	}
 
-  /**
-   * 流式查询方法
-   *
-   * 将 ProviderQueryParams 转换为 CC 所需格式，调用 queryModelOpenAI，
-   * 并将流式响应转换为标准 ProviderMessage 格式。
-   *
-   * @param params 查询参数
-   * @returns 异步生成器，产出 ProviderMessage
-   */
-  async *query(params: ProviderQueryParams): AsyncGenerator<ProviderMessage> {
-    // T6: 应用配置中的 API Key 和 BaseURL（优先级高于环境变量）
-    this.applyConfig()
+	/**
+	 * 流式查询方法
+	 *
+	 * 将 ProviderQueryParams 转换为 CC 所需格式，调用 queryModelOpenAI，
+	 * 并将流式响应转换为标准 ProviderMessage 格式。
+	 *
+	 * @param params 查询参数
+	 * @returns 异步生成器，产出 ProviderMessage
+	 */
+	async* query(params: ProviderQueryParams): AsyncGenerator<ProviderMessage> {
+		// T6: 应用配置中的 API Key 和 BaseURL（优先级高于环境变量）
+		this.applyConfig()
 
-    try {
-      const { queryModelOpenAI } = await import('../../../services/api/openai/index.js')
+		try {
+			const {queryModelOpenAI} = await import('../../../services/api/openai/index.js')
 
-      const systemPrompt = asSystemPrompt(params.systemPrompt ? [params.systemPrompt] : [])
-      const options = this.buildOptions(params)
+			const systemPrompt = asSystemPrompt(params.systemPrompt ? [params.systemPrompt] : [])
+			const options = this.buildOptions(params)
 
-      const stream = queryModelOpenAI(
-        params.messages,
-        systemPrompt,
-        params.tools ?? [],
-        params.signal || new AbortController().signal,
-        options,
-      )
+			const stream = queryModelOpenAI(
+				params.messages,
+				systemPrompt,
+				params.tools ?? [],
+				params.signal || new AbortController().signal,
+				options,
+			)
 
-      try {
-        for await (const event of stream) {
-          yield this.convertToProviderMessage(event)
-        }
-      } finally {
-        // 确保在提前退出/中断/超时场景下清理 stream
-        const iterator = stream[Symbol.asyncIterator]()
-        if (typeof iterator.return === 'function') {
-          await iterator.return()
-        }
-      }
-    } catch (error) {
-      yield this.createErrorResponse(error)
-    } finally {
-      // T6: 恢复原始环境变量
-      this.restoreConfig()
-    }
-  }
+			try {
+				for await (const event of stream) {
+					yield this.convertToProviderMessage(event)
+				}
+			} finally {
+				// 确保在提前退出/中断/超时场景下清理 stream
+				const iterator = stream[Symbol.asyncIterator]()
+				if (typeof iterator.return === 'function') {
+					await iterator.return()
+				}
+			}
+		} catch (error) {
+			yield this.createErrorResponse(error)
+		} finally {
+			// T6: 恢复原始环境变量
+			this.restoreConfig()
+		}
+	}
 
-  /**
-   * 应用配置中的 API Key 和 BaseURL
-   *
-   * T6 新增：通过临时设置环境变量实现配置注入
-   * 优先级：配置传入 > 环境变量
-   */
-  private applyConfig(): void {
-    // 应用 API Key
-    if (this.config.apiKey && typeof this.config.apiKey === 'string') {
-      process.env.OPENAI_API_KEY = this.config.apiKey
-    }
+	/**
+	 * 应用配置中的 API Key 和 BaseURL
+	 *
+	 * T6 新增：通过临时设置环境变量实现配置注入
+	 * 优先级：配置传入 > 环境变量
+	 */
+	private applyConfig(): void {
+		// 应用 API Key
+		if (this.config.apiKey && typeof this.config.apiKey === 'string') {
+			process.env.OPENAI_API_KEY = this.config.apiKey
+		}
 
-    // 应用 Base URL
-    if (this.config.baseURL && typeof this.config.baseURL === 'string') {
-      process.env.OPENAI_BASE_URL = this.config.baseURL
-    }
-  }
+		// 应用 Base URL
+		if (this.config.baseURL && typeof this.config.baseURL === 'string') {
+			process.env.OPENAI_BASE_URL = this.config.baseURL
+		}
+	}
 
-  /**
-   * 恢复原始环境变量
-   *
-   * T6 新增：确保配置不会影响其他请求
-   */
-  private restoreConfig(): void {
-    if (this.originalEnv.OPENAI_API_KEY !== undefined) {
-      process.env.OPENAI_API_KEY = this.originalEnv.OPENAI_API_KEY
-    } else if (this.config.apiKey) {
-      delete process.env.OPENAI_API_KEY
-    }
+	/**
+	 * 恢复原始环境变量
+	 *
+	 * T6 新增：确保配置不会影响其他请求
+	 */
+	private restoreConfig(): void {
+		if (this.originalEnv.OPENAI_API_KEY !== undefined) {
+			process.env.OPENAI_API_KEY = this.originalEnv.OPENAI_API_KEY
+		} else if (this.config.apiKey) {
+			delete process.env.OPENAI_API_KEY
+		}
 
-    if (this.originalEnv.OPENAI_BASE_URL !== undefined) {
-      process.env.OPENAI_BASE_URL = this.originalEnv.OPENAI_BASE_URL
-    } else if (this.config.baseURL) {
-      delete process.env.OPENAI_BASE_URL
-    }
-  }
+		if (this.originalEnv.OPENAI_BASE_URL !== undefined) {
+			process.env.OPENAI_BASE_URL = this.originalEnv.OPENAI_BASE_URL
+		} else if (this.config.baseURL) {
+			delete process.env.OPENAI_BASE_URL
+		}
+	}
 }

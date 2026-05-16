@@ -1,3 +1,4 @@
 // Auto-generated stub — replace with real implementation
 export {};
-export const startEventLoopStallDetector: () => void = () => {};
+export const startEventLoopStallDetector: () => void = () => {
+};

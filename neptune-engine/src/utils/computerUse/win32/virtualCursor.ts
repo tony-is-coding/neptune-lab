@@ -15,7 +15,7 @@
 
 import * as fs from 'fs'
 import * as path from 'path'
-import { validateHwnd, getTmpDir } from './shared.js'
+import {validateHwnd, getTmpDir} from './shared.js'
 
 const CURSOR_SIZE = 20
 const CURSOR_COLOR_R = 255
@@ -28,8 +28,8 @@ let cursorStopFile: string | null = null
 let cursorScriptFile: string | null = null
 
 function buildCursorScript(hwnd: string, stopFile: string): string {
-  const stopFileEscaped = stopFile.replace(/\\/g, '\\\\')
-  return `
+	const stopFileEscaped = stopFile.replace(/\\/g, '\\\\')
+	return `
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 Add-Type @'
@@ -188,81 +188,86 @@ $timer.Start()
  * Start the virtual cursor overlay for a bound window.
  */
 export function showVirtualCursor(hwnd: string): boolean {
-  hwnd = validateHwnd(hwnd)
-  hideVirtualCursor()
-  try {
-    const tmpDir = getTmpDir()
-    const ts = Date.now()
-    const stopFile = path.join(tmpDir, `cu_vcursor_stop_${ts}`)
-    const scriptFile = path.join(tmpDir, `cu_vcursor_${ts}.ps1`)
-    const script = buildCursorScript(hwnd, stopFile)
-    fs.writeFileSync(scriptFile, script, 'utf-8')
+	hwnd = validateHwnd(hwnd)
+	hideVirtualCursor()
+	try {
+		const tmpDir = getTmpDir()
+		const ts = Date.now()
+		const stopFile = path.join(tmpDir, `cu_vcursor_stop_${ts}`)
+		const scriptFile = path.join(tmpDir, `cu_vcursor_${ts}.ps1`)
+		const script = buildCursorScript(hwnd, stopFile)
+		fs.writeFileSync(scriptFile, script, 'utf-8')
 
-    cursorProc = Bun.spawn(
-      [
-        'powershell',
-        '-NoProfile',
-        '-ExecutionPolicy',
-        'Bypass',
-        '-File',
-        scriptFile,
-      ],
-      { stdout: 'ignore', stderr: 'ignore' },
-    )
-    cursorStopFile = stopFile
-    cursorScriptFile = scriptFile
-    return true
-  } catch {
-    return false
-  }
+		cursorProc = Bun.spawn(
+			[
+				'powershell',
+				'-NoProfile',
+				'-ExecutionPolicy',
+				'Bypass',
+				'-File',
+				scriptFile,
+			],
+			{stdout: 'ignore', stderr: 'ignore'},
+		)
+		cursorStopFile = stopFile
+		cursorScriptFile = scriptFile
+		return true
+	} catch {
+		return false
+	}
 }
 
 /**
  * Move the virtual cursor to client-area coordinates.
  */
 export function moveVirtualCursor(
-  x: number,
-  y: number,
-  isClick: boolean = false,
+	x: number,
+	y: number,
+	isClick: boolean = false,
 ): void {
-  if (!cursorStopFile) return
-  const posFile = cursorStopFile + '.pos'
-  try {
-    const data = isClick
-      ? `${Math.round(x)},${Math.round(y)},click`
-      : `${Math.round(x)},${Math.round(y)}`
-    fs.writeFileSync(posFile, data, 'utf-8')
-  } catch {}
+	if (!cursorStopFile) return
+	const posFile = cursorStopFile + '.pos'
+	try {
+		const data = isClick
+			? `${Math.round(x)},${Math.round(y)},click`
+			: `${Math.round(x)},${Math.round(y)}`
+		fs.writeFileSync(posFile, data, 'utf-8')
+	} catch {
+	}
 }
 
 /**
  * Hide and destroy the virtual cursor.
  */
 export function hideVirtualCursor(): void {
-  if (cursorStopFile) {
-    try {
-      fs.writeFileSync(cursorStopFile, 'STOP', 'utf-8')
-    } catch {}
-    setTimeout(() => {
-      try {
-        cursorProc?.kill()
-      } catch {}
-      try {
-        if (cursorScriptFile) fs.unlinkSync(cursorScriptFile)
-      } catch {}
-      try {
-        if (cursorStopFile) fs.unlinkSync(cursorStopFile)
-      } catch {}
-    }, 2000)
-  }
-  cursorProc = null
-  cursorStopFile = null
-  cursorScriptFile = null
+	if (cursorStopFile) {
+		try {
+			fs.writeFileSync(cursorStopFile, 'STOP', 'utf-8')
+		} catch {
+		}
+		setTimeout(() => {
+			try {
+				cursorProc?.kill()
+			} catch {
+			}
+			try {
+				if (cursorScriptFile) fs.unlinkSync(cursorScriptFile)
+			} catch {
+			}
+			try {
+				if (cursorStopFile) fs.unlinkSync(cursorStopFile)
+			} catch {
+			}
+		}, 2000)
+	}
+	cursorProc = null
+	cursorStopFile = null
+	cursorScriptFile = null
 }
 
 /**
  * Check if virtual cursor is active.
  */
 export function isVirtualCursorActive(): boolean {
-  return cursorProc !== null
+	return cursorProc !== null
 }

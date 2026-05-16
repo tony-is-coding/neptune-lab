@@ -146,28 +146,28 @@ engine.resumeSession(sessionId)
 
 ### 存储（Storage）
 
-| 接口 | 职责 | 内置实现 |
-|------|------|----------|
-| `ISessionStore` | Session 元数据持久化 | InMemory, SQLite, Pg |
-| `ISessionContentStore` | 对话内容追加存储 | InMemory, Pg |
-| `IMemoryStore` | 用户级记忆隔离 | InMemory, Redis |
-| `IBackend<T>` | 通用 KV 存储 | InMemory, Filesystem, Composite |
+| 接口                     | 职责             | 内置实现                            |
+|------------------------|----------------|---------------------------------|
+| `ISessionStore`        | Session 元数据持久化 | InMemory, SQLite, Pg            |
+| `ISessionContentStore` | 对话内容追加存储       | InMemory, Pg                    |
+| `IMemoryStore`         | 用户级记忆隔离        | InMemory, Redis                 |
+| `IBackend<T>`          | 通用 KV 存储       | InMemory, Filesystem, Composite |
 
 注入方式：`AgentEngine.create({ sessionStore, sessionContentStore })`
 
 ### Provider
 
-| 接口 | 职责 |
-|------|------|
-| `ProviderAdapter` | LLM 调用抽象（query 方法返回 AsyncGenerator） |
-| `ProviderRegistry` | Provider 注册表（按 type 查找 adapter） |
+| 接口                 | 职责                                  |
+|--------------------|-------------------------------------|
+| `ProviderAdapter`  | LLM 调用抽象（query 方法返回 AsyncGenerator） |
+| `ProviderRegistry` | Provider 注册表（按 type 查找 adapter）     |
 
 注入方式：`AgentEngine.create({ provider: { type, config } })` 或 per-session 覆盖
 
 ### 权限（Permissions）
 
-| 接口 | 职责 |
-|------|------|
+| 接口                   | 职责                                         |
+|----------------------|--------------------------------------------|
 | `PermissionDelegate` | 单方法接口：`onToolAccess(tool, input) → 'allow' | 'deny' | 'ask'` |
 
 内置实现：`ReadOnlyPermissionDelegate` / `RBACPermissionDelegate` / `AuditPermissionDelegate`
@@ -176,51 +176,51 @@ engine.resumeSession(sessionId)
 
 ### 工具（Tools）
 
-| 接口 | 职责 |
-|------|------|
+| 接口              | 职责                               |
+|-----------------|----------------------------------|
 | `ToolExtension` | 自定义工具定义（name + schema + execute） |
 
 注入方式：`AgentEngine.create({ extensions: { tools: [...] } })`
 
 ### 事件（Events）
 
-| 方法 | 说明 |
-|------|------|
-| `engine.on(type, handler)` | 订阅事件 |
+| 方法                           | 说明   |
+|------------------------------|------|
+| `engine.on(type, handler)`   | 订阅事件 |
 | `engine.once(type, handler)` | 订阅一次 |
-| `engine.off(type, handler)` | 取消订阅 |
+| `engine.off(type, handler)`  | 取消订阅 |
 
 事件类型：`session:created` / `session:paused` / `session:resumed` / `session:destroyed` / `query:complete` / CC 原始消息类型
 
 ## 关键设计决策
 
-| 决策 | 原因 |
-|------|------|
-| QueryEngine per-session 缓存 | 保持多轮对话上下文，避免每次 query 重建 |
-| per-session 互斥锁 | CC QueryEngine 不支持并发 submitMessage |
+| 决策                         | 原因                                           |
+|----------------------------|----------------------------------------------|
+| QueryEngine per-session 缓存 | 保持多轮对话上下文，避免每次 query 重建                      |
+| per-session 互斥锁            | CC QueryEngine 不支持并发 submitMessage           |
 | ALS (AsyncLocalStorage) 隔离 | 多 session 并发时，getCwd/getSessionId 等全局调用返回正确值 |
-| write-through 持久化 | Session 变更立即同步到 store，store 失败降级为内存模式 |
-| Bridge 模式 | 不修改 CC QueryEngine，只在外层构造配置和适配类型 |
-| Provider per-session 覆盖 | 支持多租户场景（不同 session 用不同 API key） |
+| write-through 持久化          | Session 变更立即同步到 store，store 失败降级为内存模式        |
+| Bridge 模式                  | 不修改 CC QueryEngine，只在外层构造配置和适配类型             |
+| Provider per-session 覆盖    | 支持多租户场景（不同 session 用不同 API key）              |
 
 ## 文件导航
 
 想了解某个具体模块的设计？对应的设计文档在 `docs/feature-design/` 下：
 
-| 模块 | 设计文档 |
-|------|----------|
-| Session | `docs/feature-design/core-components/session-design.md` |
-| SessionManager | `docs/feature-design/core-components/session-manager-design.md` |
-| EngineState | `docs/feature-design/core-components/engine-state-design.md` |
-| EventBus | `docs/feature-design/core-components/event-bus-design.md` |
-| CCRuntime | `docs/feature-design/core-components/cc-runtime-design.md` |
-| Bootstrap | `docs/feature-design/core-components/bootstrap-design.md` |
-| Hook | `docs/feature-design/core-components/hook-core-design.md` |
-| QueryEngine | `docs/feature-design/core-components/query-engine-design.md` |
-| 数据流 | `docs/feature-design/core-components/data-flow-design.md` |
-| 扩展模型 | `docs/feature-design/core-components/extension-model-design.md` |
-| 上下文压缩 | `docs/feature-design/core-components/context-compactor-design.md` |
-| 序列化协议 | `docs/feature-design/core-components/serialization-protocol-design.md` |
+| 模块             | 设计文档                                                                       |
+|----------------|----------------------------------------------------------------------------|
+| Session        | `docs/feature-design/core-components/session-design.md`                    |
+| SessionManager | `docs/feature-design/core-components/session-manager-design.md`            |
+| EngineState    | `docs/feature-design/core-components/engine-state-design.md`               |
+| EventBus       | `docs/feature-design/core-components/event-bus-design.md`                  |
+| CCRuntime      | `docs/feature-design/core-components/cc-runtime-design.md`                 |
+| Bootstrap      | `docs/feature-design/core-components/bootstrap-design.md`                  |
+| Hook           | `docs/feature-design/core-components/hook-core-design.md`                  |
+| QueryEngine    | `docs/feature-design/core-components/query-engine-design.md`               |
+| 数据流            | `docs/feature-design/core-components/data-flow-design.md`                  |
+| 扩展模型           | `docs/feature-design/core-components/extension-model-design.md`            |
+| 上下文压缩          | `docs/feature-design/core-components/context-compactor-design.md`          |
+| 序列化协议          | `docs/feature-design/core-components/serialization-protocol-design.md`     |
 | Memory/Content | `docs/feature-design/core-components/memory-and-session-content-design.md` |
-| Storage | `docs/feature-design/storage-layer/session-store-design.md` |
-| Log | `docs/feature-design/global-log-optimizer/log-system-design.md` |
+| Storage        | `docs/feature-design/storage-layer/session-store-design.md`                |
+| Log            | `docs/feature-design/global-log-optimizer/log-system-design.md`            |

@@ -30,12 +30,12 @@
  * ```
  */
 
-export type { IConfigProvider, ConfigEntry } from './IConfigProvider.js'
-export { ConfigSource } from './IConfigProvider.js'
-export { NoOpConfigProvider, noOpConfigProvider } from './NoOpConfigProvider.js'
-export type { UnifiedConfig } from './UnifiedConfig.js'
-export { normalizeConfig } from './UnifiedConfig.js'
-export { ConfigDiagnostics, ConfigSummary } from './ConfigDiagnostics.js'
-export type { ConfigSourceType } from './ConfigDiagnostics.js'
-export type { EngineConfig, McpServerConfig } from './ConfigValidation.js'
-export { validateEngineConfig } from './ConfigValidation.js'
+export type {IConfigProvider, ConfigEntry} from './IConfigProvider.js'
+export {ConfigSource} from './IConfigProvider.js'
+export {NoOpConfigProvider, noOpConfigProvider} from './NoOpConfigProvider.js'
+export type {UnifiedConfig} from './UnifiedConfig.js'
+export {normalizeConfig} from './UnifiedConfig.js'
+export {ConfigDiagnostics, ConfigSummary} from './ConfigDiagnostics.js'
+export type {ConfigSourceType} from './ConfigDiagnostics.js'
+export type {EngineConfig, McpServerConfig} from './ConfigValidation.js'
+export {validateEngineConfig} from './ConfigValidation.js'

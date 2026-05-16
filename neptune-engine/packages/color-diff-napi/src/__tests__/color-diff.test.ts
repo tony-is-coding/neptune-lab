@@ -1,7 +1,7 @@
-import { describe, expect, test } from "bun:test";
-import { __test } from "../index";
+import {describe, expect, test} from "bun:test";
+import {__test} from "../index";
 
-const { ansi256FromRgb, colorToEscape, detectColorMode, detectLanguage, tokenize } = __test;
+const {ansi256FromRgb, colorToEscape, detectColorMode, detectLanguage, tokenize} = __test;
 
 describe("ansi256FromRgb", () => {
 	test("black maps to index 16", () => {
@@ -30,29 +30,29 @@ describe("ansi256FromRgb", () => {
 
 describe("colorToEscape", () => {
 	test("palette index < 8 uses standard ANSI codes", () => {
-		const color = { r: 1, g: 0, b: 0, a: 0 }; // palette index 1
+		const color = {r: 1, g: 0, b: 0, a: 0}; // palette index 1
 		expect(colorToEscape(color, true, "truecolor")).toBe("\x1b[31m"); // fg red
 		expect(colorToEscape(color, false, "truecolor")).toBe("\x1b[41m"); // bg red
 	});
 
 	test("palette index 8-15 uses bright ANSI codes", () => {
-		const color = { r: 9, g: 0, b: 0, a: 0 }; // bright red
+		const color = {r: 9, g: 0, b: 0, a: 0}; // bright red
 		expect(colorToEscape(color, true, "truecolor")).toBe("\x1b[91m");
 	});
 
 	test("alpha=1 returns terminal default", () => {
-		const color = { r: 0, g: 0, b: 0, a: 1 };
+		const color = {r: 0, g: 0, b: 0, a: 1};
 		expect(colorToEscape(color, true, "truecolor")).toBe("\x1b[39m");
 		expect(colorToEscape(color, false, "truecolor")).toBe("\x1b[49m");
 	});
 
 	test("truecolor uses RGB escape", () => {
-		const color = { r: 100, g: 150, b: 200, a: 255 };
+		const color = {r: 100, g: 150, b: 200, a: 255};
 		expect(colorToEscape(color, true, "truecolor")).toBe("\x1b[38;2;100;150;200m");
 	});
 
 	test("color256 uses 256-color escape", () => {
-		const color = { r: 100, g: 150, b: 200, a: 255 };
+		const color = {r: 100, g: 150, b: 200, a: 255};
 		const result = colorToEscape(color, true, "color256");
 		expect(result).toMatch(/^\x1b\[38;5;\d+m$/);
 	});

@@ -13,7 +13,7 @@
  * - 支持通过 config 覆盖特定 flag
  */
 
-import { LogUtil } from '../log/LogUtil.js'
+import {LogUtil} from '../log/LogUtil.js'
 
 // ============================================================
 // Feature Override 接口
@@ -25,8 +25,8 @@ import { LogUtil } from '../log/LogUtil.js'
  * 用于在非 Bun 环境或测试环境中手动控制 feature flag。
  */
 export interface FeatureOverride {
-  /** feature flag 名称 -> 是否启用（undefined = 使用默认行为） */
-  [flagName: string]: boolean | undefined
+	/** feature flag 名称 -> 是否启用（undefined = 使用默认行为） */
+	[flagName: string]: boolean | undefined
 }
 
 // ============================================================
@@ -35,8 +35,8 @@ export interface FeatureOverride {
 
 /** 检测是否在 Bun 环境中运行 */
 function isBunEnvironment(): boolean {
-  // 检测 Bun 特定的全局对象
-  return typeof (globalThis as any).Bun !== 'undefined'
+	// 检测 Bun 特定的全局对象
+	return typeof (globalThis as any).Bun !== 'undefined'
 }
 
 // ============================================================
@@ -56,32 +56,32 @@ function isBunEnvironment(): boolean {
  * @returns feature flag 是否启用
  */
 export async function isEnabled(
-  flagName: string,
-  overrides?: FeatureOverride,
+	flagName: string,
+	overrides?: FeatureOverride,
 ): Promise<boolean> {
-  // 优先级 1: 检查 overrides
-  if (overrides && flagName in overrides) {
-    const value = overrides[flagName]
-    if (value !== undefined) {
-      return value
-    }
-  }
+	// 优先级 1: 检查 overrides
+	if (overrides && flagName in overrides) {
+		const value = overrides[flagName]
+		if (value !== undefined) {
+			return value
+		}
+	}
 
-  // 优先级 2: Bun 环境使用原生 feature()
-  if (isBunEnvironment()) {
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const { feature } = require('bun:bundle') as { feature: (name: string) => boolean }
-      return feature(flagName)
-    } catch (error) {
-      // bun:bundle 不可用，降级到 false
-      LogUtil.debug('bun:bundle 不可用', { flagName, error: String(error) })
-      return false
-    }
-  }
+	// 优先级 2: Bun 环境使用原生 feature()
+	if (isBunEnvironment()) {
+		try {
+			// eslint-disable-next-line @typescript-eslint/no-require-imports
+			const {feature} = require('bun:bundle') as { feature: (name: string) => boolean }
+			return feature(flagName)
+		} catch (error) {
+			// bun:bundle 不可用，降级到 false
+			LogUtil.debug('bun:bundle 不可用', {flagName, error: String(error)})
+			return false
+		}
+	}
 
-  // 优先级 3: 非 Bun 环境默认返回 false
-  return false
+	// 优先级 3: 非 Bun 环境默认返回 false
+	return false
 }
 
 /**
@@ -95,32 +95,32 @@ export async function isEnabled(
  * @returns feature flag 是否启用
  */
 export function isEnabledSync(
-  flagName: string,
-  overrides?: FeatureOverride,
+	flagName: string,
+	overrides?: FeatureOverride,
 ): boolean {
-  // 优先级 1: 检查 overrides
-  if (overrides && flagName in overrides) {
-    const value = overrides[flagName]
-    if (value !== undefined) {
-      return value
-    }
-  }
+	// 优先级 1: 检查 overrides
+	if (overrides && flagName in overrides) {
+		const value = overrides[flagName]
+		if (value !== undefined) {
+			return value
+		}
+	}
 
-  // 优先级 2: Bun 环境使用原生 feature()
-  if (isBunEnvironment()) {
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const { feature } = require('bun:bundle') as { feature: (name: string) => boolean }
-      return feature(flagName)
-    } catch (error) {
-      // bun:bundle 不可用，降级到 false
-      LogUtil.debug('bun:bundle 不可用', { flagName, error: String(error) })
-      return false
-    }
-  }
+	// 优先级 2: Bun 环境使用原生 feature()
+	if (isBunEnvironment()) {
+		try {
+			// eslint-disable-next-line @typescript-eslint/no-require-imports
+			const {feature} = require('bun:bundle') as { feature: (name: string) => boolean }
+			return feature(flagName)
+		} catch (error) {
+			// bun:bundle 不可用，降级到 false
+			LogUtil.debug('bun:bundle 不可用', {flagName, error: String(error)})
+			return false
+		}
+	}
 
-  // 优先级 3: 非 Bun 环境默认返回 false
-  return false
+	// 优先级 3: 非 Bun 环境默认返回 false
+	return false
 }
 
 // ============================================================
@@ -134,17 +134,17 @@ export function isEnabledSync(
  * @returns 检查 feature flag 的函数
  */
 export function createFeatureChecker(overrides: FeatureOverride) {
-  return {
-    /**
-     * 检查 feature flag 是否启用
-     */
-    check: (flagName: string) => isEnabledSync(flagName, overrides),
+	return {
+		/**
+		 * 检查 feature flag 是否启用
+		 */
+		check: (flagName: string) => isEnabledSync(flagName, overrides),
 
-    /**
-     * 更新 overrides 配置
-     */
-    update: (newOverrides: Partial<FeatureOverride>) => {
-      Object.assign(overrides, newOverrides)
-    },
-  }
+		/**
+		 * 更新 overrides 配置
+		 */
+		update: (newOverrides: Partial<FeatureOverride>) => {
+			Object.assign(overrides, newOverrides)
+		},
+	}
 }

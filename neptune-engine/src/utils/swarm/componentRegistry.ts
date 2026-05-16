@@ -8,8 +8,8 @@
 import type React from 'react'
 
 type It2SetupPromptProps = {
-  onDone: (result: 'installed' | 'use-tmux' | 'cancelled') => void
-  tmuxAvailable: boolean
+	onDone: (result: 'installed' | 'use-tmux' | 'cancelled') => void
+	tmuxAvailable: boolean
 }
 
 type It2SetupPromptComponent = React.ComponentType<It2SetupPromptProps>
@@ -20,9 +20,9 @@ let registeredIt2SetupPrompt: It2SetupPromptComponent | null = null
  * Register the It2SetupPrompt component (called by CLI at startup)
  */
 export function registerIt2SetupPrompt(
-  component: It2SetupPromptComponent,
+	component: It2SetupPromptComponent,
 ): void {
-  registeredIt2SetupPrompt = component
+	registeredIt2SetupPrompt = component
 }
 
 /**
@@ -30,5 +30,5 @@ export function registerIt2SetupPrompt(
  * Returns null if not registered (e.g., in SDK/headless mode)
  */
 export function getIt2SetupPrompt(): It2SetupPromptComponent | null {
-  return registeredIt2SetupPrompt
+	return registeredIt2SetupPrompt
 }

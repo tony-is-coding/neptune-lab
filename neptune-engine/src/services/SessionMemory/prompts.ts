@@ -1,9 +1,9 @@
-import { readFile } from 'fs/promises'
-import { join } from 'path'
-import { roughTokenCountEstimation } from '../../services/tokenEstimation.js'
-import { getClaudeConfigHomeDir } from '../../utils/envUtils.js'
-import { getErrnoCode, toError } from '../../utils/errors.js'
-import { logError } from '../../utils/log.js'
+import {readFile} from 'fs/promises'
+import {join} from 'path'
+import {roughTokenCountEstimation} from '../../services/tokenEstimation.js'
+import {getClaudeConfigHomeDir} from '../../utils/envUtils.js'
+import {getErrnoCode, toError} from '../../utils/errors.js'
+import {logError} from '../../utils/log.js'
 
 const MAX_SECTION_LENGTH = 2000
 const MAX_TOTAL_SESSION_MEMORY_TOKENS = 12000
@@ -41,7 +41,7 @@ _Step by step, what was attempted, done? Very terse summary for each step_
 `
 
 function getDefaultUpdatePrompt(): string {
-  return `IMPORTANT: This message and these instructions are NOT part of the actual user conversation. Do NOT include any references to "note-taking", "session notes extraction", or these update instructions in the notes content.
+	return `IMPORTANT: This message and these instructions are NOT part of the actual user conversation. Do NOT include any references to "note-taking", "session notes extraction", or these update instructions in the notes content.
 
 Based on the user conversation above (EXCLUDING this note-taking instruction message as well as system prompt, claude.md entries, or any past session summaries), update the session notes file.
 
@@ -84,23 +84,23 @@ REMEMBER: Use the Edit tool in parallel and stop. Do not continue after the edit
  * Load custom session memory template from file if it exists
  */
 export async function loadSessionMemoryTemplate(): Promise<string> {
-  const templatePath = join(
-    getClaudeConfigHomeDir(),
-    'session-memory',
-    'config',
-    'template.md',
-  )
+	const templatePath = join(
+		getClaudeConfigHomeDir(),
+		'session-memory',
+		'config',
+		'template.md',
+	)
 
-  try {
-    return await readFile(templatePath, { encoding: 'utf-8' })
-  } catch (e: unknown) {
-    const code = getErrnoCode(e)
-    if (code === 'ENOENT') {
-      return DEFAULT_SESSION_MEMORY_TEMPLATE
-    }
-    logError(toError(e))
-    return DEFAULT_SESSION_MEMORY_TEMPLATE
-  }
+	try {
+		return await readFile(templatePath, {encoding: 'utf-8'})
+	} catch (e: unknown) {
+		const code = getErrnoCode(e)
+		if (code === 'ENOENT') {
+			return DEFAULT_SESSION_MEMORY_TEMPLATE
+		}
+		logError(toError(e))
+		return DEFAULT_SESSION_MEMORY_TEMPLATE
+	}
 }
 
 /**
@@ -109,107 +109,107 @@ export async function loadSessionMemoryTemplate(): Promise<string> {
  * Use {{variableName}} syntax for variable substitution (e.g., {{currentNotes}}, {{notesPath}})
  */
 export async function loadSessionMemoryPrompt(): Promise<string> {
-  const promptPath = join(
-    getClaudeConfigHomeDir(),
-    'session-memory',
-    'config',
-    'prompt.md',
-  )
+	const promptPath = join(
+		getClaudeConfigHomeDir(),
+		'session-memory',
+		'config',
+		'prompt.md',
+	)
 
-  try {
-    return await readFile(promptPath, { encoding: 'utf-8' })
-  } catch (e: unknown) {
-    const code = getErrnoCode(e)
-    if (code === 'ENOENT') {
-      return getDefaultUpdatePrompt()
-    }
-    logError(toError(e))
-    return getDefaultUpdatePrompt()
-  }
+	try {
+		return await readFile(promptPath, {encoding: 'utf-8'})
+	} catch (e: unknown) {
+		const code = getErrnoCode(e)
+		if (code === 'ENOENT') {
+			return getDefaultUpdatePrompt()
+		}
+		logError(toError(e))
+		return getDefaultUpdatePrompt()
+	}
 }
 
 /**
  * Parse the session memory file and analyze section sizes
  */
 function analyzeSectionSizes(content: string): Record<string, number> {
-  const sections: Record<string, number> = {}
-  const lines = content.split('\n')
-  let currentSection = ''
-  let currentContent: string[] = []
+	const sections: Record<string, number> = {}
+	const lines = content.split('\n')
+	let currentSection = ''
+	let currentContent: string[] = []
 
-  for (const line of lines) {
-    if (line.startsWith('# ')) {
-      if (currentSection && currentContent.length > 0) {
-        const sectionContent = currentContent.join('\n').trim()
-        sections[currentSection] = roughTokenCountEstimation(sectionContent)
-      }
-      currentSection = line
-      currentContent = []
-    } else {
-      currentContent.push(line)
-    }
-  }
+	for (const line of lines) {
+		if (line.startsWith('# ')) {
+			if (currentSection && currentContent.length > 0) {
+				const sectionContent = currentContent.join('\n').trim()
+				sections[currentSection] = roughTokenCountEstimation(sectionContent)
+			}
+			currentSection = line
+			currentContent = []
+		} else {
+			currentContent.push(line)
+		}
+	}
 
-  if (currentSection && currentContent.length > 0) {
-    const sectionContent = currentContent.join('\n').trim()
-    sections[currentSection] = roughTokenCountEstimation(sectionContent)
-  }
+	if (currentSection && currentContent.length > 0) {
+		const sectionContent = currentContent.join('\n').trim()
+		sections[currentSection] = roughTokenCountEstimation(sectionContent)
+	}
 
-  return sections
+	return sections
 }
 
 /**
  * Generate reminders for sections that are too long
  */
 function generateSectionReminders(
-  sectionSizes: Record<string, number>,
-  totalTokens: number,
+	sectionSizes: Record<string, number>,
+	totalTokens: number,
 ): string {
-  const overBudget = totalTokens > MAX_TOTAL_SESSION_MEMORY_TOKENS
-  const oversizedSections = Object.entries(sectionSizes)
-    .filter(([_, tokens]) => tokens > MAX_SECTION_LENGTH)
-    .sort(([, a], [, b]) => b - a)
-    .map(
-      ([section, tokens]) =>
-        `- "${section}" is ~${tokens} tokens (limit: ${MAX_SECTION_LENGTH})`,
-    )
+	const overBudget = totalTokens > MAX_TOTAL_SESSION_MEMORY_TOKENS
+	const oversizedSections = Object.entries(sectionSizes)
+		.filter(([_, tokens]) => tokens > MAX_SECTION_LENGTH)
+		.sort(([, a], [, b]) => b - a)
+		.map(
+			([section, tokens]) =>
+				`- "${section}" is ~${tokens} tokens (limit: ${MAX_SECTION_LENGTH})`,
+		)
 
-  if (oversizedSections.length === 0 && !overBudget) {
-    return ''
-  }
+	if (oversizedSections.length === 0 && !overBudget) {
+		return ''
+	}
 
-  const parts: string[] = []
+	const parts: string[] = []
 
-  if (overBudget) {
-    parts.push(
-      `\n\nCRITICAL: The session memory file is currently ~${totalTokens} tokens, which exceeds the maximum of ${MAX_TOTAL_SESSION_MEMORY_TOKENS} tokens. You MUST condense the file to fit within this budget. Aggressively shorten oversized sections by removing less important details, merging related items, and summarizing older entries. Prioritize keeping "Current State" and "Errors & Corrections" accurate and detailed.`,
-    )
-  }
+	if (overBudget) {
+		parts.push(
+			`\n\nCRITICAL: The session memory file is currently ~${totalTokens} tokens, which exceeds the maximum of ${MAX_TOTAL_SESSION_MEMORY_TOKENS} tokens. You MUST condense the file to fit within this budget. Aggressively shorten oversized sections by removing less important details, merging related items, and summarizing older entries. Prioritize keeping "Current State" and "Errors & Corrections" accurate and detailed.`,
+		)
+	}
 
-  if (oversizedSections.length > 0) {
-    parts.push(
-      `\n\n${overBudget ? 'Oversized sections to condense' : 'IMPORTANT: The following sections exceed the per-section limit and MUST be condensed'}:\n${oversizedSections.join('\n')}`,
-    )
-  }
+	if (oversizedSections.length > 0) {
+		parts.push(
+			`\n\n${overBudget ? 'Oversized sections to condense' : 'IMPORTANT: The following sections exceed the per-section limit and MUST be condensed'}:\n${oversizedSections.join('\n')}`,
+		)
+	}
 
-  return parts.join('')
+	return parts.join('')
 }
 
 /**
  * Substitute variables in the prompt template using {{variable}} syntax
  */
 function substituteVariables(
-  template: string,
-  variables: Record<string, string>,
+	template: string,
+	variables: Record<string, string>,
 ): string {
-  // Single-pass replacement avoids two bugs: (1) $ backreference corruption
-  // (replacer fn treats $ literally), and (2) double-substitution when user
-  // content happens to contain {{varName}} matching a later variable.
-  return template.replace(/\{\{(\w+)\}\}/g, (match, key: string) =>
-    Object.prototype.hasOwnProperty.call(variables, key)
-      ? variables[key]!
-      : match,
-  )
+	// Single-pass replacement avoids two bugs: (1) $ backreference corruption
+	// (replacer fn treats $ literally), and (2) double-substitution when user
+	// content happens to contain {{varName}} matching a later variable.
+	return template.replace(/\{\{(\w+)\}\}/g, (match, key: string) =>
+		Object.prototype.hasOwnProperty.call(variables, key)
+			? variables[key]!
+			: match,
+	)
 }
 
 /**
@@ -218,32 +218,32 @@ function substituteVariables(
  * which means we should fall back to legacy compact behavior.
  */
 export async function isSessionMemoryEmpty(content: string): Promise<boolean> {
-  const template = await loadSessionMemoryTemplate()
-  // Compare trimmed content to detect if it's just the template
-  return content.trim() === template.trim()
+	const template = await loadSessionMemoryTemplate()
+	// Compare trimmed content to detect if it's just the template
+	return content.trim() === template.trim()
 }
 
 export async function buildSessionMemoryUpdatePrompt(
-  currentNotes: string,
-  notesPath: string,
+	currentNotes: string,
+	notesPath: string,
 ): Promise<string> {
-  const promptTemplate = await loadSessionMemoryPrompt()
+	const promptTemplate = await loadSessionMemoryPrompt()
 
-  // Analyze section sizes and generate reminders if needed
-  const sectionSizes = analyzeSectionSizes(currentNotes)
-  const totalTokens = roughTokenCountEstimation(currentNotes)
-  const sectionReminders = generateSectionReminders(sectionSizes, totalTokens)
+	// Analyze section sizes and generate reminders if needed
+	const sectionSizes = analyzeSectionSizes(currentNotes)
+	const totalTokens = roughTokenCountEstimation(currentNotes)
+	const sectionReminders = generateSectionReminders(sectionSizes, totalTokens)
 
-  // Substitute variables in the prompt
-  const variables = {
-    currentNotes,
-    notesPath,
-  }
+	// Substitute variables in the prompt
+	const variables = {
+		currentNotes,
+		notesPath,
+	}
 
-  const basePrompt = substituteVariables(promptTemplate, variables)
+	const basePrompt = substituteVariables(promptTemplate, variables)
 
-  // Add section size reminders and/or total budget warnings
-  return basePrompt + sectionReminders
+	// Add section size reminders and/or total budget warnings
+	return basePrompt + sectionReminders
 }
 
 /**
@@ -254,71 +254,71 @@ export async function buildSessionMemoryUpdatePrompt(
  * Returns the truncated content and whether any truncation occurred.
  */
 export function truncateSessionMemoryForCompact(content: string): {
-  truncatedContent: string
-  wasTruncated: boolean
+	truncatedContent: string
+	wasTruncated: boolean
 } {
-  const lines = content.split('\n')
-  const maxCharsPerSection = MAX_SECTION_LENGTH * 4 // roughTokenCountEstimation uses length/4
-  const outputLines: string[] = []
-  let currentSectionLines: string[] = []
-  let currentSectionHeader = ''
-  let wasTruncated = false
+	const lines = content.split('\n')
+	const maxCharsPerSection = MAX_SECTION_LENGTH * 4 // roughTokenCountEstimation uses length/4
+	const outputLines: string[] = []
+	let currentSectionLines: string[] = []
+	let currentSectionHeader = ''
+	let wasTruncated = false
 
-  for (const line of lines) {
-    if (line.startsWith('# ')) {
-      const result = flushSessionSection(
-        currentSectionHeader,
-        currentSectionLines,
-        maxCharsPerSection,
-      )
-      outputLines.push(...result.lines)
-      wasTruncated = wasTruncated || result.wasTruncated
-      currentSectionHeader = line
-      currentSectionLines = []
-    } else {
-      currentSectionLines.push(line)
-    }
-  }
+	for (const line of lines) {
+		if (line.startsWith('# ')) {
+			const result = flushSessionSection(
+				currentSectionHeader,
+				currentSectionLines,
+				maxCharsPerSection,
+			)
+			outputLines.push(...result.lines)
+			wasTruncated = wasTruncated || result.wasTruncated
+			currentSectionHeader = line
+			currentSectionLines = []
+		} else {
+			currentSectionLines.push(line)
+		}
+	}
 
-  // Flush the last section
-  const result = flushSessionSection(
-    currentSectionHeader,
-    currentSectionLines,
-    maxCharsPerSection,
-  )
-  outputLines.push(...result.lines)
-  wasTruncated = wasTruncated || result.wasTruncated
+	// Flush the last section
+	const result = flushSessionSection(
+		currentSectionHeader,
+		currentSectionLines,
+		maxCharsPerSection,
+	)
+	outputLines.push(...result.lines)
+	wasTruncated = wasTruncated || result.wasTruncated
 
-  return {
-    truncatedContent: outputLines.join('\n'),
-    wasTruncated,
-  }
+	return {
+		truncatedContent: outputLines.join('\n'),
+		wasTruncated,
+	}
 }
 
 function flushSessionSection(
-  sectionHeader: string,
-  sectionLines: string[],
-  maxCharsPerSection: number,
+	sectionHeader: string,
+	sectionLines: string[],
+	maxCharsPerSection: number,
 ): { lines: string[]; wasTruncated: boolean } {
-  if (!sectionHeader) {
-    return { lines: sectionLines, wasTruncated: false }
-  }
+	if (!sectionHeader) {
+		return {lines: sectionLines, wasTruncated: false}
+	}
 
-  const sectionContent = sectionLines.join('\n')
-  if (sectionContent.length <= maxCharsPerSection) {
-    return { lines: [sectionHeader, ...sectionLines], wasTruncated: false }
-  }
+	const sectionContent = sectionLines.join('\n')
+	if (sectionContent.length <= maxCharsPerSection) {
+		return {lines: [sectionHeader, ...sectionLines], wasTruncated: false}
+	}
 
-  // Truncate at a line boundary near the limit
-  let charCount = 0
-  const keptLines: string[] = [sectionHeader]
-  for (const line of sectionLines) {
-    if (charCount + line.length + 1 > maxCharsPerSection) {
-      break
-    }
-    keptLines.push(line)
-    charCount += line.length + 1
-  }
-  keptLines.push('\n[... section truncated for length ...]')
-  return { lines: keptLines, wasTruncated: true }
+	// Truncate at a line boundary near the limit
+	let charCount = 0
+	const keptLines: string[] = [sectionHeader]
+	for (const line of sectionLines) {
+		if (charCount + line.length + 1 > maxCharsPerSection) {
+			break
+		}
+		keptLines.push(line)
+		charCount += line.length + 1
+	}
+	keptLines.push('\n[... section truncated for length ...]')
+	return {lines: keptLines, wasTruncated: true}
 }

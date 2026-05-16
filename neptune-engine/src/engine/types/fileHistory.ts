@@ -17,4 +17,4 @@ export type {
 } from '../../utils/fileHistory.js'
 
 // 重新导出函数
-export { fileHistoryEnabled } from '../../utils/fileHistory.js'
+export {fileHistoryEnabled} from '../../utils/fileHistory.js'

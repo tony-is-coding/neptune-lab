@@ -4,21 +4,21 @@
  * These types define the control protocol between the CLI bridge and the server.
  * Used by bridge/transport layer, remote session manager, and CLI print/IO paths.
  */
-import type { z } from 'zod'
+import type {z} from 'zod'
 import type {
-  SDKControlRequestSchema,
-  SDKControlResponseSchema,
-  SDKControlInitializeRequestSchema,
-  SDKControlInitializeResponseSchema,
-  SDKControlMcpSetServersResponseSchema,
-  SDKControlReloadPluginsResponseSchema,
-  SDKControlPermissionRequestSchema,
-  SDKControlCancelRequestSchema,
-  SDKControlRequestInnerSchema,
-  StdoutMessageSchema,
-  StdinMessageSchema,
+	SDKControlRequestSchema,
+	SDKControlResponseSchema,
+	SDKControlInitializeRequestSchema,
+	SDKControlInitializeResponseSchema,
+	SDKControlMcpSetServersResponseSchema,
+	SDKControlReloadPluginsResponseSchema,
+	SDKControlPermissionRequestSchema,
+	SDKControlCancelRequestSchema,
+	SDKControlRequestInnerSchema,
+	StdoutMessageSchema,
+	StdinMessageSchema,
 } from './controlSchemas.js'
-import type { SDKPartialAssistantMessageSchema } from './coreSchemas.js'
+import type {SDKPartialAssistantMessageSchema} from './coreSchemas.js'
 
 export type SDKControlRequest = z.infer<ReturnType<typeof SDKControlRequestSchema>>
 export type SDKControlResponse = z.infer<ReturnType<typeof SDKControlResponseSchema>>

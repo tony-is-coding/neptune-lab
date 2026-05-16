@@ -4,9 +4,9 @@
  */
 
 export interface WindowInfo {
-  hwnd: string
-  pid: number
-  title: string
+	hwnd: string
+	pid: number
+	title: string
 }
 
 const ENUM_WINDOWS_PS = `
@@ -58,35 +58,35 @@ public class WinEnum {
  * Returns HWND, PID, and window title for each.
  */
 export function listWindows(): WindowInfo[] {
-  const result = Bun.spawnSync({
-    cmd: [
-      'powershell',
-      '-NoProfile',
-      '-NonInteractive',
-      '-Command',
-      ENUM_WINDOWS_PS,
-    ],
-    stdout: 'pipe',
-    stderr: 'pipe',
-  })
-  const raw = new TextDecoder().decode(result.stdout).trim()
-  if (!raw) return []
+	const result = Bun.spawnSync({
+		cmd: [
+			'powershell',
+			'-NoProfile',
+			'-NonInteractive',
+			'-Command',
+			ENUM_WINDOWS_PS,
+		],
+		stdout: 'pipe',
+		stderr: 'pipe',
+	})
+	const raw = new TextDecoder().decode(result.stdout).trim()
+	if (!raw) return []
 
-  return raw
-    .split('\n')
-    .filter(Boolean)
-    .map(line => {
-      const trimmed = line.trim()
-      const firstPipe = trimmed.indexOf('|')
-      const secondPipe = trimmed.indexOf('|', firstPipe + 1)
-      if (firstPipe === -1 || secondPipe === -1) return null
+	return raw
+		.split('\n')
+		.filter(Boolean)
+		.map(line => {
+			const trimmed = line.trim()
+			const firstPipe = trimmed.indexOf('|')
+			const secondPipe = trimmed.indexOf('|', firstPipe + 1)
+			if (firstPipe === -1 || secondPipe === -1) return null
 
-      const hwnd = trimmed.slice(0, firstPipe)
-      const pid = Number(trimmed.slice(firstPipe + 1, secondPipe))
-      const title = trimmed.slice(secondPipe + 1)
+			const hwnd = trimmed.slice(0, firstPipe)
+			const pid = Number(trimmed.slice(firstPipe + 1, secondPipe))
+			const title = trimmed.slice(secondPipe + 1)
 
-      if (!hwnd || isNaN(pid) || !title) return null
-      return { hwnd, pid, title }
-    })
-    .filter((item): item is WindowInfo => item !== null)
+			if (!hwnd || isNaN(pid) || !title) return null
+			return {hwnd, pid, title}
+		})
+		.filter((item): item is WindowInfo => item !== null)
 }

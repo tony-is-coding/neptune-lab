@@ -1,13 +1,13 @@
 import {
-  pgTable,
-  uuid,
-  text,
-  jsonb,
-  boolean,
-  timestamp,
-  bigserial,
-  integer,
-  index,
+    pgTable,
+    uuid,
+    text,
+    jsonb,
+    boolean,
+    timestamp,
+    bigserial,
+    integer,
+    index,
 } from 'drizzle-orm/pg-core';
 
 /**
@@ -15,15 +15,15 @@ import {
  * 存储租户信息、配额、计费配置
  */
 export const tenants = pgTable('tenants', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  name: text('name').notNull(),
-  quota: jsonb('quota').$type<{
-    maxTokensPerDay: number;
-    maxConcurrentSessions: number;
-  }>().default({ maxTokensPerDay: 1000000, maxConcurrentSessions: 10 }),
-  billingConfig: jsonb('billing_config').$type<Record<string, unknown>>().default({}),
-  createdAt: timestamp('created_at').defaultNow(),
-  updatedAt: timestamp('updated_at').defaultNow(),
+    id: uuid('id').primaryKey().defaultRandom(),
+    name: text('name').notNull(),
+    quota: jsonb('quota').$type<{
+        maxTokensPerDay: number;
+        maxConcurrentSessions: number;
+    }>().default({maxTokensPerDay: 1000000, maxConcurrentSessions: 10}),
+    billingConfig: jsonb('billing_config').$type<Record<string, unknown>>().default({}),
+    createdAt: timestamp('created_at').defaultNow(),
+    updatedAt: timestamp('updated_at').defaultNow(),
 });
 
 /**
@@ -31,15 +31,15 @@ export const tenants = pgTable('tenants', {
  * 存储用户信息、角色、所属租户
  */
 export const users = pgTable('users', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  tenantId: uuid('tenant_id').notNull().references(() => tenants.id),
-  name: text('name').notNull(),
-  email: text('email').notNull().unique(),
-  passwordHash: text('password_hash').notNull(),
-  role: text('role').notNull().default('user'), // 'admin' | 'user'
-  createdAt: timestamp('created_at').defaultNow(),
+    id: uuid('id').primaryKey().defaultRandom(),
+    tenantId: uuid('tenant_id').notNull().references(() => tenants.id),
+    name: text('name').notNull(),
+    email: text('email').notNull().unique(),
+    passwordHash: text('password_hash').notNull(),
+    role: text('role').notNull().default('user'), // 'admin' | 'user'
+    createdAt: timestamp('created_at').defaultNow(),
 }, (table) => ({
-  tenantIdx: index('users_tenant_id_idx').on(table.tenantId),
+    tenantIdx: index('users_tenant_id_idx').on(table.tenantId),
 }));
 
 /**
@@ -47,75 +47,75 @@ export const users = pgTable('users', {
  * 存储 Agent 模板配置（systemPrompt/tools/skills/MCP）
  */
 export const agentTemplates = pgTable('agent_templates', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  tenantId: uuid('tenant_id').notNull().references(() => tenants.id),
-  name: text('name').notNull(),
-  description: text('description'),
-  icon: text('icon').default('smart_toy'),
-  systemPrompt: text('system_prompt').notNull(),
-  /**
-   * Prompt Config — 模块化 System Prompt 配置（Phase 2）
-   *
-   * 如果存在，使用模块化组装；否则回退到 system_prompt
-   *
-   * 结构：
-   * - identity: Agent 身份描述（岗位名称、职责、能力边界）
-   * - inlineSkills: 内联技能定义（可选，优先于 skills 表关联）
-   * - knowledgeConfig: 知识库配置（可选）
-   * - toolInstructions: 工具约束覆盖（可选，默认自动生成）
-   * - disableGuard: 是否禁用平台 Guard（仅管理员可操作，默认 false）
-   */
-  promptConfig: jsonb('prompt_config').$type<{
-    // Block 2: Agent 身份（必填）
-    identity: string;
+    id: uuid('id').primaryKey().defaultRandom(),
+    tenantId: uuid('tenant_id').notNull().references(() => tenants.id),
+    name: text('name').notNull(),
+    description: text('description'),
+    icon: text('icon').default('smart_toy'),
+    systemPrompt: text('system_prompt').notNull(),
+    /**
+     * Prompt Config — 模块化 System Prompt 配置（Phase 2）
+     *
+     * 如果存在，使用模块化组装；否则回退到 system_prompt
+     *
+     * 结构：
+     * - identity: Agent 身份描述（岗位名称、职责、能力边界）
+     * - inlineSkills: 内联技能定义（可选，优先于 skills 表关联）
+     * - knowledgeConfig: 知识库配置（可选）
+     * - toolInstructions: 工具约束覆盖（可选，默认自动生成）
+     * - disableGuard: 是否禁用平台 Guard（仅管理员可操作，默认 false）
+     */
+    promptConfig: jsonb('prompt_config').$type<{
+        // Block 2: Agent 身份（必填）
+        identity: string;
 
-    // Block 3: 内联技能定义（可选，优先于 skills 表关联）
-    inlineSkills?: Array<{
-      name: string;
-      content: string;
-    }>;
+        // Block 3: 内联技能定义（可选，优先于 skills 表关联）
+        inlineSkills?: Array<{
+            name: string;
+            content: string;
+        }>;
 
-    // Block 4: 知识库配置（可选）
-    knowledgeConfig?: {
-      maxDocuments: number;       // 最多注入多少文档
-      maxTokensPerDoc: number;    // 每文档最大 token
-      summaryMode: 'full' | 'summary' | 'keywords';  // 注入模式
-    };
+        // Block 4: 知识库配置（可选）
+        knowledgeConfig?: {
+            maxDocuments: number;       // 最多注入多少文档
+            maxTokensPerDoc: number;    // 每文档最大 token
+            summaryMode: 'full' | 'summary' | 'keywords';  // 注入模式
+        };
 
-    // Block 5: 工具约束覆盖（可选，默认自动生成）
-    toolInstructions?: string;
+        // Block 5: 工具约束覆盖（可选，默认自动生成）
+        toolInstructions?: string;
 
-    // 是否禁用平台 Guard（仅管理员可操作，默认 false）
-    disableGuard?: boolean;
-  }>(),
-  modelConfig: jsonb('model_config').$type<{
-    provider: string;
-    model: string;
-    temperature: number;
-    maxTokens: number;
-  }>().notNull(),
-  tools: jsonb('tools').$type<string[]>().default([]),
-  skills: jsonb('skills').$type<Array<{
-    id: string;
-    name: string;
-    version?: string;
-  }>>().default([]),
-  mcpServers: jsonb('mcp_servers').$type<Array<{
-    name: string;
-    url: string;
-    authConfig?: Record<string, unknown>;
-  }>>().default([]),
-  constraints: jsonb('constraints').$type<{
-    maxTokensPerTurn: number;
-    maxTurnsPerSession: number;
-    maxConcurrentSessions: number;
-  }>(),
-  version: integer('version').default(1),
-  isActive: boolean('is_active').default(true),
-  createdAt: timestamp('created_at').defaultNow(),
-  updatedAt: timestamp('updated_at').defaultNow(),
+        // 是否禁用平台 Guard（仅管理员可操作，默认 false）
+        disableGuard?: boolean;
+    }>(),
+    modelConfig: jsonb('model_config').$type<{
+        provider: string;
+        model: string;
+        temperature: number;
+        maxTokens: number;
+    }>().notNull(),
+    tools: jsonb('tools').$type<string[]>().default([]),
+    skills: jsonb('skills').$type<Array<{
+        id: string;
+        name: string;
+        version?: string;
+    }>>().default([]),
+    mcpServers: jsonb('mcp_servers').$type<Array<{
+        name: string;
+        url: string;
+        authConfig?: Record<string, unknown>;
+    }>>().default([]),
+    constraints: jsonb('constraints').$type<{
+        maxTokensPerTurn: number;
+        maxTurnsPerSession: number;
+        maxConcurrentSessions: number;
+    }>(),
+    version: integer('version').default(1),
+    isActive: boolean('is_active').default(true),
+    createdAt: timestamp('created_at').defaultNow(),
+    updatedAt: timestamp('updated_at').defaultNow(),
 }, (table) => ({
-  tenantActiveIdx: index('agent_templates_tenant_active_idx').on(table.tenantId, table.isActive),
+    tenantActiveIdx: index('agent_templates_tenant_active_idx').on(table.tenantId, table.isActive),
 }));
 
 /**
@@ -123,20 +123,20 @@ export const agentTemplates = pgTable('agent_templates', {
  * 存储 Session 元数据（状态/归属）
  */
 export const sessions = pgTable('sessions', {
-  id: text('id').primaryKey(), // Session ID（text 类型，与 SDK SessionId 一致）
-  tenantId: uuid('tenant_id').notNull().references(() => tenants.id),
-  userId: uuid('user_id').notNull().references(() => users.id),
-  templateId: uuid('template_id').references(() => agentTemplates.id),
-  status: text('status').notNull().default('created'), // 'created' | 'running' | 'idle' | 'completed' | 'error'
-  title: text('title'),
-  summary: text('summary'),
-  workspace: text('workspace').notNull(), // 租户隔离的工作目录
-  lastActiveAt: timestamp('last_active_at'), // 最后活跃时间
-  createdAt: timestamp('created_at').defaultNow(),
-  updatedAt: timestamp('updated_at').defaultNow(),
+    id: text('id').primaryKey(), // Session ID（text 类型，与 SDK SessionId 一致）
+    tenantId: uuid('tenant_id').notNull().references(() => tenants.id),
+    userId: uuid('user_id').notNull().references(() => users.id),
+    templateId: uuid('template_id').references(() => agentTemplates.id),
+    status: text('status').notNull().default('created'), // 'created' | 'running' | 'idle' | 'completed' | 'error'
+    title: text('title'),
+    summary: text('summary'),
+    workspace: text('workspace').notNull(), // 租户隔离的工作目录
+    lastActiveAt: timestamp('last_active_at'), // 最后活跃时间
+    createdAt: timestamp('created_at').defaultNow(),
+    updatedAt: timestamp('updated_at').defaultNow(),
 }, (table) => ({
-  tenantStatusIdx: index('sessions_tenant_status_idx').on(table.tenantId, table.status),
-  userIdx: index('sessions_user_id_idx').on(table.userId),
+    tenantStatusIdx: index('sessions_tenant_status_idx').on(table.tenantId, table.status),
+    userIdx: index('sessions_user_id_idx').on(table.userId),
 }));
 
 /**
@@ -144,18 +144,18 @@ export const sessions = pgTable('sessions', {
  * 存储 token 使用和费用记录
  */
 export const billingRecords = pgTable('billing_records', {
-  id: bigserial('id', { mode: 'number' }).primaryKey(),
-  tenantId: uuid('tenant_id').notNull().references(() => tenants.id),
-  sessionId: text('session_id'), // Session ID（text 类型，与 sessions.id 一致）
-  userId: uuid('user_id').references(() => users.id),
-  inputTokens: integer('input_tokens').notNull(),
-  outputTokens: integer('output_tokens').notNull(),
-  model: text('model'),
-  costCents: integer('cost_cents'), // 费用（分）
-  createdAt: timestamp('created_at').defaultNow(),
+    id: bigserial('id', {mode: 'number'}).primaryKey(),
+    tenantId: uuid('tenant_id').notNull().references(() => tenants.id),
+    sessionId: text('session_id'), // Session ID（text 类型，与 sessions.id 一致）
+    userId: uuid('user_id').references(() => users.id),
+    inputTokens: integer('input_tokens').notNull(),
+    outputTokens: integer('output_tokens').notNull(),
+    model: text('model'),
+    costCents: integer('cost_cents'), // 费用（分）
+    createdAt: timestamp('created_at').defaultNow(),
 }, (table) => ({
-  tenantIdx: index('billing_records_tenant_id_idx').on(table.tenantId),
-  sessionIdx: index('billing_records_session_id_idx').on(table.sessionId),
+    tenantIdx: index('billing_records_tenant_id_idx').on(table.tenantId),
+    sessionIdx: index('billing_records_session_id_idx').on(table.sessionId),
 }));
 
 /**
@@ -163,17 +163,17 @@ export const billingRecords = pgTable('billing_records', {
  * 存储 Agent 上传的文档/记忆文件
  */
 export const documents = pgTable('documents', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  templateId: uuid('template_id').notNull().references(() => agentTemplates.id),
-  tenantId: uuid('tenant_id').notNull().references(() => tenants.id),
-  name: text('name').notNull(),
-  type: text('type').notNull(), // MIME type（如 application/pdf, text/markdown）
-  category: text('category').notNull().default('document'), // 'memory' | 'knowledge' | 'document'
-  size: integer('size').notNull().default(0),
-  path: text('path').notNull(), // 文件系统路径
-  uploadedAt: timestamp('uploaded_at').defaultNow(),
+    id: uuid('id').primaryKey().defaultRandom(),
+    templateId: uuid('template_id').notNull().references(() => agentTemplates.id),
+    tenantId: uuid('tenant_id').notNull().references(() => tenants.id),
+    name: text('name').notNull(),
+    type: text('type').notNull(), // MIME type（如 application/pdf, text/markdown）
+    category: text('category').notNull().default('document'), // 'memory' | 'knowledge' | 'document'
+    size: integer('size').notNull().default(0),
+    path: text('path').notNull(), // 文件系统路径
+    uploadedAt: timestamp('uploaded_at').defaultNow(),
 }, (table) => ({
-  templateIdx: index('documents_template_id_idx').on(table.templateId),
+    templateIdx: index('documents_template_id_idx').on(table.templateId),
 }));
 
 /**
@@ -181,17 +181,17 @@ export const documents = pgTable('documents', {
  * 存储 Agent 技能模板
  */
 export const skills = pgTable('skills', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  tenantId: uuid('tenant_id').notNull().references(() => tenants.id),
-  name: text('name').notNull(),
-  description: text('description'),
-  content: text('content'), // 技能的具体内容（可选）
-  status: text('status').notNull().default('active'), // 'active' | 'draft'
-  createdAt: timestamp('created_at').defaultNow(),
-  updatedAt: timestamp('updated_at').defaultNow(),
+    id: uuid('id').primaryKey().defaultRandom(),
+    tenantId: uuid('tenant_id').notNull().references(() => tenants.id),
+    name: text('name').notNull(),
+    description: text('description'),
+    content: text('content'), // 技能的具体内容（可选）
+    status: text('status').notNull().default('active'), // 'active' | 'draft'
+    createdAt: timestamp('created_at').defaultNow(),
+    updatedAt: timestamp('updated_at').defaultNow(),
 }, (table) => ({
-  tenantIdx: index('skills_tenant_id_idx').on(table.tenantId),
-  statusIdx: index('skills_status_idx').on(table.status),
+    tenantIdx: index('skills_tenant_id_idx').on(table.tenantId),
+    statusIdx: index('skills_status_idx').on(table.status),
 }));
 
 /**
@@ -199,14 +199,14 @@ export const skills = pgTable('skills', {
  * 存储 Agent 与 Skill 的多对多关系
  */
 export const agentSkills = pgTable('agent_skills', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  agentId: uuid('agent_id').notNull().references(() => agentTemplates.id, { onDelete: 'cascade' }),
-  skillId: uuid('skill_id').notNull().references(() => skills.id, { onDelete: 'cascade' }),
-  assignedAt: timestamp('assigned_at').defaultNow(),
+    id: uuid('id').primaryKey().defaultRandom(),
+    agentId: uuid('agent_id').notNull().references(() => agentTemplates.id, {onDelete: 'cascade'}),
+    skillId: uuid('skill_id').notNull().references(() => skills.id, {onDelete: 'cascade'}),
+    assignedAt: timestamp('assigned_at').defaultNow(),
 }, (table) => ({
-  agentIdx: index('agent_skills_agent_id_idx').on(table.agentId),
-  skillIdx: index('agent_skills_skill_id_idx').on(table.skillId),
-  uniqueAgentSkill: index('agent_skills_agent_skill_unique_idx').on(table.agentId, table.skillId),
+    agentIdx: index('agent_skills_agent_id_idx').on(table.agentId),
+    skillIdx: index('agent_skills_skill_id_idx').on(table.skillId),
+    uniqueAgentSkill: index('agent_skills_agent_skill_unique_idx').on(table.agentId, table.skillId),
 }));
 
 // 类型导出

@@ -6,11 +6,11 @@
  * while keeping the side question response separate from main conversation.
  */
 
-import { formatAPIError } from '../services/api/errorUtils.js'
-import type { NonNullableUsage } from '../services/api/logging.js'
-import type { Message, SystemAPIErrorMessage } from '../types/message.js'
-import { type CacheSafeParams, runForkedAgent } from './forkedAgent.js'
-import { createUserMessage, extractTextContent } from './messages.js'
+import {formatAPIError} from '../services/api/errorUtils.js'
+import type {NonNullableUsage} from '../services/api/logging.js'
+import type {Message, SystemAPIErrorMessage} from '../types/message.js'
+import {type CacheSafeParams, runForkedAgent} from './forkedAgent.js'
+import {createUserMessage, extractTextContent} from './messages.js'
 
 // Pattern to detect "/btw" at start of input (case-insensitive, word boundary)
 const BTW_PATTERN = /^\/btw\b/gi
@@ -20,29 +20,29 @@ const BTW_PATTERN = /^\/btw\b/gi
  * Similar to findThinkingTriggerPositions in thinking.ts.
  */
 export function findBtwTriggerPositions(text: string): Array<{
-  word: string
-  start: number
-  end: number
+	word: string
+	start: number
+	end: number
 }> {
-  const positions: Array<{ word: string; start: number; end: number }> = []
-  const matches = text.matchAll(BTW_PATTERN)
+	const positions: Array<{ word: string; start: number; end: number }> = []
+	const matches = text.matchAll(BTW_PATTERN)
 
-  for (const match of matches) {
-    if (match.index !== undefined) {
-      positions.push({
-        word: match[0],
-        start: match.index,
-        end: match.index + match[0].length,
-      })
-    }
-  }
+	for (const match of matches) {
+		if (match.index !== undefined) {
+			positions.push({
+				word: match[0],
+				start: match.index,
+				end: match.index + match[0].length,
+			})
+		}
+	}
 
-  return positions
+	return positions
 }
 
 export type SideQuestionResult = {
-  response: string | null
-  usage: NonNullableUsage
+	response: string | null
+	usage: NonNullableUsage
 }
 
 /**
@@ -51,14 +51,14 @@ export type SideQuestionResult = {
  * All tools are blocked and we cap at 1 turn.
  */
 export async function runSideQuestion({
-  question,
-  cacheSafeParams,
-}: {
-  question: string
-  cacheSafeParams: CacheSafeParams
+										  question,
+										  cacheSafeParams,
+									  }: {
+	question: string
+	cacheSafeParams: CacheSafeParams
 }): Promise<SideQuestionResult> {
-  // Wrap the question with instructions to answer without tools
-  const wrappedQuestion = `<system-reminder>This is a side question from the user. You must answer this question directly in a single response.
+	// Wrap the question with instructions to answer without tools
+	const wrappedQuestion = `<system-reminder>This is a side question from the user. You must answer this question directly in a single response.
 
 IMPORTANT CONTEXT:
 - You are a separate, lightweight agent spawned to answer this one question
@@ -77,28 +77,28 @@ Simply answer the question with the information you have.</system-reminder>
 
 ${question}`
 
-  const agentResult = await runForkedAgent({
-    promptMessages: [createUserMessage({ content: wrappedQuestion })],
-    // Do NOT override thinkingConfig — thinking is part of the API cache key,
-    // and diverging from the main thread's config busts the prompt cache.
-    // Adaptive thinking on a quick Q&A has negligible overhead.
-    cacheSafeParams,
-    canUseTool: async () => ({
-      behavior: 'deny' as const,
-      message: 'Side questions cannot use tools',
-      decisionReason: { type: 'other' as const, reason: 'side_question' },
-    }),
-    querySource: 'side_question',
-    forkLabel: 'side_question',
-    maxTurns: 1, // Single turn only - no tool use loops
-    // No future request shares this suffix; skip writing cache entries.
-    skipCacheWrite: true,
-  })
+	const agentResult = await runForkedAgent({
+		promptMessages: [createUserMessage({content: wrappedQuestion})],
+		// Do NOT override thinkingConfig — thinking is part of the API cache key,
+		// and diverging from the main thread's config busts the prompt cache.
+		// Adaptive thinking on a quick Q&A has negligible overhead.
+		cacheSafeParams,
+		canUseTool: async () => ({
+			behavior: 'deny' as const,
+			message: 'Side questions cannot use tools',
+			decisionReason: {type: 'other' as const, reason: 'side_question'},
+		}),
+		querySource: 'side_question',
+		forkLabel: 'side_question',
+		maxTurns: 1, // Single turn only - no tool use loops
+		// No future request shares this suffix; skip writing cache entries.
+		skipCacheWrite: true,
+	})
 
-  return {
-    response: extractSideQuestionResponse(agentResult.messages),
-    usage: agentResult.totalUsage,
-  }
+	return {
+		response: extractSideQuestionResponse(agentResult.messages),
+		usage: agentResult.totalUsage,
+	}
 }
 
 /**
@@ -123,33 +123,36 @@ ${question}`
  *     interruption, no assistant message at all.
  */
 function extractSideQuestionResponse(messages: Message[]): string | null {
-  // Flatten all assistant content blocks across the per-block messages.
-  const assistantBlocks = messages.flatMap(m =>
-    m.type === 'assistant' ? (m.message!.content as unknown as Array<{ type: string; [key: string]: unknown }>) : [],
-  )
+	// Flatten all assistant content blocks across the per-block messages.
+	const assistantBlocks = messages.flatMap(m =>
+		m.type === 'assistant' ? (m.message!.content as unknown as Array<{
+			type: string;
+			[key: string]: unknown
+		}>) : [],
+	)
 
-  if (assistantBlocks.length > 0) {
-    // Concatenate all text blocks (there's normally at most one, but be safe).
-    const text = extractTextContent(assistantBlocks, '\n\n').trim()
-    if (text) return text
+	if (assistantBlocks.length > 0) {
+		// Concatenate all text blocks (there's normally at most one, but be safe).
+		const text = extractTextContent(assistantBlocks, '\n\n').trim()
+		if (text) return text
 
-    // No text — check if the model tried to call a tool despite instructions.
-    const toolUse = assistantBlocks.find(b => b.type === 'tool_use')
-    if (toolUse) {
-      const toolName = 'name' in toolUse ? (toolUse as any).name : 'a tool'
-      return `(The model tried to call ${toolName} instead of answering directly. Try rephrasing or ask in the main conversation.)`
-    }
-  }
+		// No text — check if the model tried to call a tool despite instructions.
+		const toolUse = assistantBlocks.find(b => b.type === 'tool_use')
+		if (toolUse) {
+			const toolName = 'name' in toolUse ? (toolUse as any).name : 'a tool'
+			return `(The model tried to call ${toolName} instead of answering directly. Try rephrasing or ask in the main conversation.)`
+		}
+	}
 
-  // No assistant content — likely API error exhausted retries. Surface the
-  // first system api_error message so the user sees what happened.
-  const apiErr = messages.find(
-    (m): m is SystemAPIErrorMessage =>
-      m.type === 'system' && 'subtype' in m && m.subtype === 'api_error',
-  )
-  if (apiErr) {
-    return `(API error: ${formatAPIError(apiErr.error as any)})`
-  }
+	// No assistant content — likely API error exhausted retries. Surface the
+	// first system api_error message so the user sees what happened.
+	const apiErr = messages.find(
+		(m): m is SystemAPIErrorMessage =>
+			m.type === 'system' && 'subtype' in m && m.subtype === 'api_error',
+	)
+	if (apiErr) {
+		return `(API error: ${formatAPIError(apiErr.error as any)})`
+	}
 
-  return null
+	return null
 }

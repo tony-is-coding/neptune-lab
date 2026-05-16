@@ -1,45 +1,45 @@
-import { feature } from 'bun:bundle'
+import {feature} from 'bun:bundle'
 import React, {
-  useContext,
-  useEffect,
-  useState,
-  useSyncExternalStore,
+	useContext,
+	useEffect,
+	useState,
+	useSyncExternalStore,
 } from 'react'
-import { EngineState } from '../engine/EngineState.js'
+import {EngineState} from '../engine/EngineState.js'
 
 // DCE: voice context is ant-only. External builds get a passthrough.
 /* eslint-disable @typescript-eslint/no-require-imports */
 const VoiceProvider: (props: { children: React.ReactNode }) => React.ReactNode =
-  feature('VOICE_MODE')
-    ? require('../context/voice.js').VoiceProvider
-    : ({ children }) => children
+	feature('VOICE_MODE')
+		? require('../context/voice.js').VoiceProvider
+		: ({children}) => children
 
 /* eslint-enable @typescript-eslint/no-require-imports */
 
 // 从纯 JS 函数导入类型和默认值
 import {
-  type AppState,
-  type AppStateStore,
-  getDefaultAppState,
+	type AppState,
+	type AppStateStore,
+	getDefaultAppState,
 } from './AppStateStore.js'
 // 从纯 JS 函数导入 createAppStateStore
-import { createAppStateStore } from './createAppStateStore.js'
+import {createAppStateStore} from './createAppStateStore.js'
 
 // TODO: Remove these re-exports once all callers import directly from
 // ./AppStateStore.js. Kept for back-compat during migration so .ts callers
 // can incrementally move off the .tsx import and stop pulling React.
 export {
-  type AppState,
-  type AppStateStore,
-  type CompletionBoundary,
-  getDefaultAppState,
-  IDLE_SPECULATION_STATE,
-  type SpeculationResult,
-  type SpeculationState,
+	type AppState,
+	type AppStateStore,
+	type CompletionBoundary,
+	getDefaultAppState,
+	IDLE_SPECULATION_STATE,
+	type SpeculationResult,
+	type SpeculationState,
 } from './AppStateStore.js'
 
 // 导出纯 JS 函数供 SDK 使用
-export { createAppStateStore } from './createAppStateStore.js'
+export {createAppStateStore} from './createAppStateStore.js'
 
 export const AppStoreContext = React.createContext<AppStateStore | null>(null)
 
@@ -47,7 +47,7 @@ export const AppStoreContext = React.createContext<AppStateStore | null>(null)
 const MailboxContext = React.createContext<Mailbox | undefined>(undefined)
 
 // 导入 Mailbox 类型（用于类型注解）
-import type { Mailbox } from '../utils/mailbox.js'
+import type {Mailbox} from '../utils/mailbox.js'
 
 /**
  * useMailbox - 获取 Mailbox 实例（从 AppState）
@@ -56,64 +56,64 @@ import type { Mailbox } from '../utils/mailbox.js'
  * 这样 AppState 不再依赖外部 context 文件。
  */
 export function useMailbox(): Mailbox | undefined {
-  return useContext(MailboxContext)
+	return useContext(MailboxContext)
 }
 
 type Props = {
-  children: React.ReactNode
-  initialState?: AppState
-  onChangeAppState?: (args: { newState: AppState; oldState: AppState }) => void
+	children: React.ReactNode
+	initialState?: AppState
+	onChangeAppState?: (args: { newState: AppState; oldState: AppState }) => void
 }
 
 const HasAppStateContext = React.createContext<boolean>(false)
 
 export function AppStateProvider({
-  children,
-  initialState,
-  onChangeAppState,
-}: Props): React.ReactNode {
-  // Don't allow nested AppStateProviders.
-  const hasAppStateContext = useContext(HasAppStateContext)
-  if (hasAppStateContext) {
-    throw new Error(
-      'AppStateProvider can not be nested within another AppStateProvider',
-    )
-  }
+									 children,
+									 initialState,
+									 onChangeAppState,
+								 }: Props): React.ReactNode {
+	// Don't allow nested AppStateProviders.
+	const hasAppStateContext = useContext(HasAppStateContext)
+	if (hasAppStateContext) {
+		throw new Error(
+			'AppStateProvider can not be nested within another AppStateProvider',
+		)
+	}
 
-  // 使用纯 JS 函数创建 store 和 mailbox（从 createAppStateStore 提取）
-  // Store is created once and never changes -- stable context value means
-  // the provider never triggers re-renders. Consumers subscribe to slices
-  // via useSyncExternalStore in useAppState(selector).
-  const { store, mailbox, cleanup } = useState(() =>
-    createAppStateStore(
-      initialState ?? getDefaultAppState(),
-      onChangeAppState,
-    ),
-  )[0]
+	// 使用纯 JS 函数创建 store 和 mailbox（从 createAppStateStore 提取）
+	// Store is created once and never changes -- stable context value means
+	// the provider never triggers re-renders. Consumers subscribe to slices
+	// via useSyncExternalStore in useAppState(selector).
+	const {store, mailbox, cleanup} = useState(() =>
+		createAppStateStore(
+			initialState ?? getDefaultAppState(),
+			onChangeAppState,
+		),
+	)[0]
 
-  // 在组件卸载时清理订阅
-  useEffect(() => cleanup, [cleanup])
+	// 在组件卸载时清理订阅
+	useEffect(() => cleanup, [cleanup])
 
-  return (
-    <HasAppStateContext.Provider value={true}>
-      <AppStoreContext.Provider value={store}>
-        <MailboxContext.Provider value={mailbox}>
-          <VoiceProvider>{children}</VoiceProvider>
-        </MailboxContext.Provider>
-      </AppStoreContext.Provider>
-    </HasAppStateContext.Provider>
-  )
+	return (
+		<HasAppStateContext.Provider value={true}>
+			<AppStoreContext.Provider value={store}>
+				<MailboxContext.Provider value={mailbox}>
+					<VoiceProvider>{children}</VoiceProvider>
+				</MailboxContext.Provider>
+			</AppStoreContext.Provider>
+		</HasAppStateContext.Provider>
+	)
 }
 
 function useAppStore(): AppStateStore {
-  // eslint-disable-next-line react-hooks/rules-of-hooks
-  const store = useContext(AppStoreContext)
-  if (!store) {
-    throw new ReferenceError(
-      'useAppState/useSetAppState cannot be called outside of an <AppStateProvider />',
-    )
-  }
-  return store
+	// eslint-disable-next-line react-hooks/rules-of-hooks
+	const store = useContext(AppStoreContext)
+	if (!store) {
+		throw new ReferenceError(
+			'useAppState/useSetAppState cannot be called outside of an <AppStateProvider />',
+		)
+	}
+	return store
 }
 
 /**
@@ -133,22 +133,22 @@ function useAppStore(): AppStateStore {
  * ```
  */
 export function useAppState<T>(selector: (state: AppState) => T): T {
-  const store = useAppStore()
+	const store = useAppStore()
 
-  const get = () => {
-    const state = store.getState()
-    const selected = selector(state)
+	const get = () => {
+		const state = store.getState()
+		const selected = selector(state)
 
-    if (process.env.USER_TYPE === 'ant' && state === selected) {
-      throw new Error(
-        `Your selector in \`useAppState(${selector.toString()})\` returned the original state, which is not allowed. You must instead return a property for optimised rendering.`,
-      )
-    }
+		if (process.env.USER_TYPE === 'ant' && state === selected) {
+			throw new Error(
+				`Your selector in \`useAppState(${selector.toString()})\` returned the original state, which is not allowed. You must instead return a property for optimised rendering.`,
+			)
+		}
 
-    return selected
-  }
+		return selected
+	}
 
-  return useSyncExternalStore(store.subscribe, get, get)
+	return useSyncExternalStore(store.subscribe, get, get)
 }
 
 /**
@@ -157,16 +157,16 @@ export function useAppState<T>(selector: (state: AppState) => T): T {
  * this hook will never re-render from state changes.
  */
 export function useSetAppState(): (
-  updater: (prev: AppState) => AppState,
+	updater: (prev: AppState) => AppState,
 ) => void {
-  return useAppStore().setState
+	return useAppStore().setState
 }
 
 /**
  * Get the store directly (for passing getState/setState to non-React code).
  */
 export function useAppStateStore(): AppStateStore {
-  return useAppStore()
+	return useAppStore()
 }
 
 /**
@@ -179,20 +179,21 @@ export function useAppStateStore(): AppStateStore {
  * @throws ReferenceError if called outside of an AppStateProvider
  */
 export function useEngineState(): EngineState {
-  return useAppStore().getEngineState()
+	return useAppStore().getEngineState()
 }
 
-const NOOP_SUBSCRIBE = () => () => {}
+const NOOP_SUBSCRIBE = () => () => {
+}
 
 /**
  * Safe version of useAppState that returns undefined if called outside of AppStateProvider.
  * Useful for components that may be rendered in contexts where AppStateProvider isn't available.
  */
 export function useAppStateMaybeOutsideOfProvider<T>(
-  selector: (state: AppState) => T,
+	selector: (state: AppState) => T,
 ): T | undefined {
-  const store = useContext(AppStoreContext)
-  return useSyncExternalStore(store ? store.subscribe : NOOP_SUBSCRIBE, () =>
-    store ? selector(store.getState()) : undefined,
-  )
+	const store = useContext(AppStoreContext)
+	return useSyncExternalStore(store ? store.subscribe : NOOP_SUBSCRIBE, () =>
+		store ? selector(store.getState()) : undefined,
+	)
 }

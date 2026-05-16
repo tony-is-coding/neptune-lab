@@ -5,4 +5,4 @@
  */
 
 export * from './types';
-export { PlanManager } from './PlanManager';
+export {PlanManager} from './PlanManager';

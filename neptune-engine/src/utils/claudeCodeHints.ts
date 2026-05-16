@@ -15,27 +15,27 @@
  * See docs/claude-code-hints.md for the vendor-facing spec.
  */
 
-import { logForDebugging } from './debug.js'
-import { createSignal } from './signal.js'
+import {logForDebugging} from './debug.js'
+import {createSignal} from './signal.js'
 
 export type ClaudeCodeHintType = 'plugin'
 
 export type ClaudeCodeHint = {
-  /** Spec version declared by the emitter. Unknown versions are dropped. */
-  v: number
-  /** Hint discriminator. v1 defines only `plugin`. */
-  type: ClaudeCodeHintType
-  /**
-   * Hint payload. For `type: 'plugin'`: a `name@marketplace` slug
-   * matching the form accepted by `parsePluginIdentifier`.
-   */
-  value: string
-  /**
-   * First token of the shell command that produced this hint. Shown in the
-   * install prompt so the user can spot a mismatch between the tool that
-   * emitted the hint and the plugin it recommends.
-   */
-  sourceCommand: string
+	/** Spec version declared by the emitter. Unknown versions are dropped. */
+	v: number
+	/** Hint discriminator. v1 defines only `plugin`. */
+	type: ClaudeCodeHintType
+	/**
+	 * Hint payload. For `type: 'plugin'`: a `name@marketplace` slug
+	 * matching the form accepted by `parsePluginIdentifier`.
+	 */
+	value: string
+	/**
+	 * First token of the shell command that produced this hint. Shown in the
+	 * install prompt so the user can spot a mismatch between the tool that
+	 * emitted the hint and the plugin it recommends.
+	 */
+	sourceCommand: string
 }
 
 /** Spec versions this harness understands. */
@@ -70,67 +70,67 @@ const ATTR_RE = /(\w+)=(?:"([^"]*)"|([^\s/>]+))/g
  *   whitespace-separated token is recorded as `sourceCommand`.
  */
 export function extractClaudeCodeHints(
-  output: string,
-  command: string,
+	output: string,
+	command: string,
 ): { hints: ClaudeCodeHint[]; stripped: string } {
-  // Fast path: no tag open sequence → no work, no allocation.
-  if (!output.includes('<claude-code-hint')) {
-    return { hints: [], stripped: output }
-  }
+	// Fast path: no tag open sequence → no work, no allocation.
+	if (!output.includes('<claude-code-hint')) {
+		return {hints: [], stripped: output}
+	}
 
-  const sourceCommand = firstCommandToken(command)
-  const hints: ClaudeCodeHint[] = []
+	const sourceCommand = firstCommandToken(command)
+	const hints: ClaudeCodeHint[] = []
 
-  const stripped = output.replace(HINT_TAG_RE, rawLine => {
-    const attrs = parseAttrs(rawLine)
-    const v = Number(attrs.v)
-    const type = attrs.type
-    const value = attrs.value
+	const stripped = output.replace(HINT_TAG_RE, rawLine => {
+		const attrs = parseAttrs(rawLine)
+		const v = Number(attrs.v)
+		const type = attrs.type
+		const value = attrs.value
 
-    if (!SUPPORTED_VERSIONS.has(v)) {
-      logForDebugging(
-        `[claudeCodeHints] dropped hint with unsupported v=${attrs.v}`,
-      )
-      return ''
-    }
-    if (!type || !SUPPORTED_TYPES.has(type)) {
-      logForDebugging(
-        `[claudeCodeHints] dropped hint with unsupported type=${type}`,
-      )
-      return ''
-    }
-    if (!value) {
-      logForDebugging('[claudeCodeHints] dropped hint with empty value')
-      return ''
-    }
+		if (!SUPPORTED_VERSIONS.has(v)) {
+			logForDebugging(
+				`[claudeCodeHints] dropped hint with unsupported v=${attrs.v}`,
+			)
+			return ''
+		}
+		if (!type || !SUPPORTED_TYPES.has(type)) {
+			logForDebugging(
+				`[claudeCodeHints] dropped hint with unsupported type=${type}`,
+			)
+			return ''
+		}
+		if (!value) {
+			logForDebugging('[claudeCodeHints] dropped hint with empty value')
+			return ''
+		}
 
-    hints.push({ v, type: type as ClaudeCodeHintType, value, sourceCommand })
-    return ''
-  })
+		hints.push({v, type: type as ClaudeCodeHintType, value, sourceCommand})
+		return ''
+	})
 
-  // Dropping a matched line leaves a blank line (the surrounding newlines
-  // remain). Collapse runs of blank lines introduced by the replace so the
-  // model-visible output doesn't grow vertical whitespace.
-  const collapsed =
-    hints.length > 0 || stripped !== output
-      ? stripped.replace(/\n{3,}/g, '\n\n')
-      : stripped
+	// Dropping a matched line leaves a blank line (the surrounding newlines
+	// remain). Collapse runs of blank lines introduced by the replace so the
+	// model-visible output doesn't grow vertical whitespace.
+	const collapsed =
+		hints.length > 0 || stripped !== output
+			? stripped.replace(/\n{3,}/g, '\n\n')
+			: stripped
 
-  return { hints, stripped: collapsed }
+	return {hints, stripped: collapsed}
 }
 
 function parseAttrs(tagBody: string): Record<string, string> {
-  const attrs: Record<string, string> = {}
-  for (const m of tagBody.matchAll(ATTR_RE)) {
-    attrs[m[1]!] = m[2] ?? m[3] ?? ''
-  }
-  return attrs
+	const attrs: Record<string, string> = {}
+	for (const m of tagBody.matchAll(ATTR_RE)) {
+		attrs[m[1]!] = m[2] ?? m[3] ?? ''
+	}
+	return attrs
 }
 
 function firstCommandToken(command: string): string {
-  const trimmed = command.trim()
-  const spaceIdx = trimmed.search(/\s/)
-  return spaceIdx === -1 ? trimmed : trimmed.slice(0, spaceIdx)
+	const trimmed = command.trim()
+	const spaceIdx = trimmed.search(/\s/)
+	return spaceIdx === -1 ? trimmed : trimmed.slice(0, spaceIdx)
 }
 
 // ============================================================================
@@ -153,41 +153,41 @@ const notify = pendingHintChanged.emit
 
 /** Raw store write. Callers should gate first (see module comment). */
 export function setPendingHint(hint: ClaudeCodeHint): void {
-  if (shownThisSession) return
-  pendingHint = hint
-  notify()
+	if (shownThisSession) return
+	pendingHint = hint
+	notify()
 }
 
 /** Clear the slot without flipping the session flag — for rejected hints. */
 export function clearPendingHint(): void {
-  if (pendingHint !== null) {
-    pendingHint = null
-    notify()
-  }
+	if (pendingHint !== null) {
+		pendingHint = null
+		notify()
+	}
 }
 
 /** Flip the once-per-session flag. Call only when a dialog is actually shown. */
 export function markShownThisSession(): void {
-  shownThisSession = true
+	shownThisSession = true
 }
 
 export const subscribeToPendingHint = pendingHintChanged.subscribe
 
 export function getPendingHintSnapshot(): ClaudeCodeHint | null {
-  return pendingHint
+	return pendingHint
 }
 
 export function hasShownHintThisSession(): boolean {
-  return shownThisSession
+	return shownThisSession
 }
 
 /** Test-only reset. */
 export function _resetClaudeCodeHintStore(): void {
-  pendingHint = null
-  shownThisSession = false
+	pendingHint = null
+	shownThisSession = false
 }
 
 export const _test = {
-  parseAttrs,
-  firstCommandToken,
+	parseAttrs,
+	firstCommandToken,
 }

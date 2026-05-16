@@ -9,5 +9,5 @@
  */
 
 // 重新导出 QueryEngine 类型
-export type { QueryEngineConfig } from '../../QueryEngine.js'
-export { QueryEngine } from '../../QueryEngine.js'
+export type {QueryEngineConfig} from '../../QueryEngine.js'
+export {QueryEngine} from '../../QueryEngine.js'

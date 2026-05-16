@@ -44,7 +44,7 @@ const dialogComponents = new Map<string, ComponentType>()
  * - ComputerUseApproval
  */
 export function registerDialogComponent(name: string, component: ComponentType): void {
-  dialogComponents.set(name, component)
+	dialogComponents.set(name, component)
 }
 
 /**
@@ -57,7 +57,7 @@ export function registerDialogComponent(name: string, component: ComponentType):
  * - Fail-safe to non-interactive behavior
  */
 export function getDialogComponent(name: string): ComponentType | undefined {
-  return dialogComponents.get(name)
+	return dialogComponents.get(name)
 }
 
 // ============================================================================
@@ -74,7 +74,7 @@ const inlineComponents = new Map<string, ComponentType>()
  * - BashModeProgress
  */
 export function registerInlineComponent(name: string, component: ComponentType): void {
-  inlineComponents.set(name, component)
+	inlineComponents.set(name, component)
 }
 
 /**
@@ -82,7 +82,7 @@ export function registerInlineComponent(name: string, component: ComponentType):
  * Returns undefined if not registered (e.g., in SDK/headless mode).
  */
 export function getInlineComponent(name: string): ComponentType | undefined {
-  return inlineComponents.get(name)
+	return inlineComponents.get(name)
 }
 
 // ============================================================================
@@ -99,7 +99,7 @@ const primitiveComponents = new Map<string, ComponentType>()
  * - MessageResponse
  */
 export function registerPrimitiveComponent(name: string, component: ComponentType): void {
-  primitiveComponents.set(name, component)
+	primitiveComponents.set(name, component)
 }
 
 /**
@@ -107,7 +107,7 @@ export function registerPrimitiveComponent(name: string, component: ComponentTyp
  * Returns undefined if not registered (e.g., in SDK/headless mode).
  */
 export function getPrimitiveComponent(name: string): ComponentType | undefined {
-  return primitiveComponents.get(name)
+	return primitiveComponents.get(name)
 }
 
 // ============================================================================
@@ -124,11 +124,11 @@ export function getPrimitiveComponent(name: string): ComponentType | undefined {
 const typeDefinitions = new Map<string, unknown>()
 
 export function registerTypeDefinition(name: string, type: unknown): void {
-  typeDefinitions.set(name, type)
+	typeDefinitions.set(name, type)
 }
 
 export function getTypeDefinition(name: string): unknown | undefined {
-  return typeDefinitions.get(name)
+	return typeDefinitions.get(name)
 }
 
 // ============================================================================
@@ -140,25 +140,25 @@ export function getTypeDefinition(name: string): unknown | undefined {
  * Primarily used for testing.
  */
 export function clearAllRegistry(): void {
-  dialogComponents.clear()
-  inlineComponents.clear()
-  primitiveComponents.clear()
-  typeDefinitions.clear()
+	dialogComponents.clear()
+	inlineComponents.clear()
+	primitiveComponents.clear()
+	typeDefinitions.clear()
 }
 
 /**
  * Get registration status for debugging.
  */
 export function getRegistryStatus(): {
-  dialog: string[]
-  inline: string[]
-  primitive: string[]
-  types: string[]
+	dialog: string[]
+	inline: string[]
+	primitive: string[]
+	types: string[]
 } {
-  return {
-    dialog: Array.from(dialogComponents.keys()),
-    inline: Array.from(inlineComponents.keys()),
-    primitive: Array.from(primitiveComponents.keys()),
-    types: Array.from(typeDefinitions.keys()),
-  }
+	return {
+		dialog: Array.from(dialogComponents.keys()),
+		inline: Array.from(inlineComponents.keys()),
+		primitive: Array.from(primitiveComponents.keys()),
+		types: Array.from(typeDefinitions.keys()),
+	}
 }

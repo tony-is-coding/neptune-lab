@@ -15,7 +15,7 @@
 
 import * as fs from 'fs'
 import * as path from 'path'
-import { validateHwnd, getTmpDir } from './shared.js'
+import {validateHwnd, getTmpDir} from './shared.js'
 
 const INDICATOR_WIDTH = 350
 const INDICATOR_HEIGHT = 28
@@ -30,8 +30,8 @@ let scriptFile: string | null = null
 let msgFile: string | null = null
 
 function buildIndicatorScript(hwnd: string, sf: string): string {
-  const sfEsc = sf.replace(/\\/g, '\\\\')
-  return `
+	const sfEsc = sf.replace(/\\/g, '\\\\')
+	return `
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 Add-Type @'
@@ -155,100 +155,106 @@ $timer.Start()
 
 /** Start the input indicator for a bound window */
 export function showIndicator(hwnd: string): boolean {
-  hwnd = validateHwnd(hwnd)
-  hideIndicator()
-  try {
-    const tmpDir = getTmpDir()
-    const ts = Date.now()
-    stopFile = path.join(tmpDir, `cu_indicator_stop_${ts}`)
-    scriptFile = path.join(tmpDir, `cu_indicator_${ts}.ps1`)
-    msgFile = stopFile + '.msg'
-    fs.writeFileSync(scriptFile, buildIndicatorScript(hwnd, stopFile), 'utf-8')
-    indicatorProc = Bun.spawn(
-      [
-        'powershell',
-        '-NoProfile',
-        '-ExecutionPolicy',
-        'Bypass',
-        '-File',
-        scriptFile,
-      ],
-      { stdout: 'ignore', stderr: 'ignore' },
-    )
-    return true
-  } catch {
-    return false
-  }
+	hwnd = validateHwnd(hwnd)
+	hideIndicator()
+	try {
+		const tmpDir = getTmpDir()
+		const ts = Date.now()
+		stopFile = path.join(tmpDir, `cu_indicator_stop_${ts}`)
+		scriptFile = path.join(tmpDir, `cu_indicator_${ts}.ps1`)
+		msgFile = stopFile + '.msg'
+		fs.writeFileSync(scriptFile, buildIndicatorScript(hwnd, stopFile), 'utf-8')
+		indicatorProc = Bun.spawn(
+			[
+				'powershell',
+				'-NoProfile',
+				'-ExecutionPolicy',
+				'Bypass',
+				'-File',
+				scriptFile,
+			],
+			{stdout: 'ignore', stderr: 'ignore'},
+		)
+		return true
+	} catch {
+		return false
+	}
 }
 
 /** Update the indicator message */
 export function updateIndicator(message: string): void {
-  if (!msgFile) return
-  try {
-    fs.writeFileSync(msgFile, message, 'utf-8')
-  } catch {}
+	if (!msgFile) return
+	try {
+		fs.writeFileSync(msgFile, message, 'utf-8')
+	} catch {
+	}
 }
 
 /** Hide and destroy the indicator */
 export function hideIndicator(): void {
-  if (stopFile) {
-    try {
-      fs.writeFileSync(stopFile, 'STOP', 'utf-8')
-    } catch {}
-    setTimeout(() => {
-      try {
-        indicatorProc?.kill()
-      } catch {}
-      try {
-        if (scriptFile) fs.unlinkSync(scriptFile)
-      } catch {}
-      try {
-        if (stopFile) fs.unlinkSync(stopFile)
-      } catch {}
-      try {
-        if (msgFile) fs.unlinkSync(msgFile)
-      } catch {}
-    }, 2000)
-  }
-  indicatorProc = null
-  stopFile = null
-  scriptFile = null
-  msgFile = null
+	if (stopFile) {
+		try {
+			fs.writeFileSync(stopFile, 'STOP', 'utf-8')
+		} catch {
+		}
+		setTimeout(() => {
+			try {
+				indicatorProc?.kill()
+			} catch {
+			}
+			try {
+				if (scriptFile) fs.unlinkSync(scriptFile)
+			} catch {
+			}
+			try {
+				if (stopFile) fs.unlinkSync(stopFile)
+			} catch {
+			}
+			try {
+				if (msgFile) fs.unlinkSync(msgFile)
+			} catch {
+			}
+		}, 2000)
+	}
+	indicatorProc = null
+	stopFile = null
+	scriptFile = null
+	msgFile = null
 }
 
 // ── Convenience methods for common actions ──
 
 export function indicateTyping(text: string): void {
-  const preview = text.length > 30 ? text.slice(0, 30) + '...' : text
-  updateIndicator(`\u2328 Typing "${preview}"`)
+	const preview = text.length > 30 ? text.slice(0, 30) + '...' : text
+	updateIndicator(`\u2328 Typing "${preview}"`)
 }
 
 export function indicateKey(combo: string): void {
-  updateIndicator(`\u2328 ${combo}`)
+	updateIndicator(`\u2328 ${combo}`)
 }
 
 export function indicateClick(
-  x: number,
-  y: number,
-  button: string = 'left',
+	x: number,
+	y: number,
+	button: string = 'left',
 ): void {
-  updateIndicator(
-    `\uD83D\uDDB1 ${button === 'right' ? 'Right-click' : 'Click'} (${x}, ${y})`,
-  )
+	updateIndicator(
+		`\uD83D\uDDB1 ${button === 'right' ? 'Right-click' : 'Click'} (${x}, ${y})`,
+	)
 }
 
 export function indicateScroll(direction: string, amount: number): void {
-  const arrow =
-    direction === 'up'
-      ? '\u2191'
-      : direction === 'down'
-        ? '\u2193'
-        : direction === 'left'
-          ? '\u2190'
-          : '\u2192'
-  updateIndicator(`\uD83D\uDCDC Scroll ${arrow} ${amount}`)
+	const arrow =
+		direction === 'up'
+			? '\u2191'
+			: direction === 'down'
+				? '\u2193'
+				: direction === 'left'
+					? '\u2190'
+					: '\u2192'
+	updateIndicator(`\uD83D\uDCDC Scroll ${arrow} ${amount}`)
 }
 
 export function indicateDone(): void {
-  updateIndicator('\u2705 Done')
+	updateIndicator('\u2705 Done')
 }

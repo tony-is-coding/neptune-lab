@@ -16,4 +16,4 @@ export type {
 } from '../../utils/model/model.js'
 
 // 重新导出函数
-export { getSmallFastModel, isNonCustomOpusModel } from '../../utils/model/model.js'
+export {getSmallFastModel, isNonCustomOpusModel} from '../../utils/model/model.js'

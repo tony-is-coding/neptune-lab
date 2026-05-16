@@ -18,9 +18,9 @@ let getCcrAutoConnectDefaultImpl: (() => boolean) | undefined
  * Called from CLI bridge initialization code.
  */
 export function registerCcrAutoConnectDefault(
-  impl: () => boolean,
+	impl: () => boolean,
 ): void {
-  getCcrAutoConnectDefaultImpl = impl
+	getCcrAutoConnectDefaultImpl = impl
 }
 
 /**
@@ -28,5 +28,5 @@ export function registerCcrAutoConnectDefault(
  * Returns false if no implementation is registered (non-CLI builds).
  */
 export function getCcrAutoConnectDefault(): boolean {
-  return getCcrAutoConnectDefaultImpl?.() ?? false
+	return getCcrAutoConnectDefaultImpl?.() ?? false
 }

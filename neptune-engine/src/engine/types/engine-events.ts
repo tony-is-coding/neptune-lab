@@ -16,57 +16,57 @@
  * ```
  */
 export interface EngineEventMap {
-  /** Session 创建成功事件 */
-  'session:created': { sessionId: string; workspace: string }
+	/** Session 创建成功事件 */
+	'session:created': { sessionId: string; workspace: string }
 
-  /** Session 销毁成功事件 */
-  'session:destroyed': { sessionId: string; workspace: string }
+	/** Session 销毁成功事件 */
+	'session:destroyed': { sessionId: string; workspace: string }
 
-  /** Session 暂停成功事件 */
-  'session:paused': { sessionId: string; workspace: string }
+	/** Session 暂停成功事件 */
+	'session:paused': { sessionId: string; workspace: string }
 
-  /** Session 恂复成功事件 */
-  'session:resumed': { sessionId: string; workspace: string }
+	/** Session 恂复成功事件 */
+	'session:resumed': { sessionId: string; workspace: string }
 
-  /** Engine 停止事件 */
-  'engine:stopped': Record<string, never>
+	/** Engine 停止事件 */
+	'engine:stopped': Record<string, never>
 
-  /** Engine 关机事件（gracefulShutdown 触发） */
-  'engine:shutdown': { reason: string }
+	/** Engine 关机事件（gracefulShutdown 触发） */
+	'engine:shutdown': { reason: string }
 
-  /** 错误事件 */
-  'error': { error: Error; source: string; eventType?: string; sessionId?: string }
+	/** 错误事件 */
+	'error': { error: Error; source: string; eventType?: string; sessionId?: string }
 
-  // CC 原始消息事件（透传）—— 使用 SDKMessage 保持灵活性
-  /** Assistant 消息事件 */
-  'assistant': { type: string; [key: string]: unknown }
+	// CC 原始消息事件（透传）—— 使用 SDKMessage 保持灵活性
+	/** Assistant 消息事件 */
+	'assistant': { type: string; [key: string]: unknown }
 
-  /** 文本消息事件 */
-  'text': { type: string; [key: string]: unknown }
+	/** 文本消息事件 */
+	'text': { type: string; [key: string]: unknown }
 
-  /** 工具调用事件 */
-  'tool_use': { type: string; [key: string]: unknown }
+	/** 工具调用事件 */
+	'tool_use': { type: string; [key: string]: unknown }
 
-  /** 工具结果事件 */
-  'tool_result': { type: string; [key: string]: unknown }
+	/** 工具结果事件 */
+	'tool_result': { type: string; [key: string]: unknown }
 
-  /** 通用消息事件 */
-  'message': { type: string; [key: string]: unknown }
+	/** 通用消息事件 */
+	'message': { type: string; [key: string]: unknown }
 
-  /** Query 完成事件（含 token 用量） */
-  'query:complete': {
-    sessionId: string
-    modelUsage: Record<string, {
-      inputTokens: number
-      outputTokens: number
-      cacheReadInputTokens: number
-      cacheCreationInputTokens: number
-      webSearchRequests: number
-      costUSD: number
-      contextWindow: number
-      maxOutputTokens: number
-    }>
-  }
+	/** Query 完成事件（含 token 用量） */
+	'query:complete': {
+		sessionId: string
+		modelUsage: Record<string, {
+			inputTokens: number
+			outputTokens: number
+			cacheReadInputTokens: number
+			cacheCreationInputTokens: number
+			webSearchRequests: number
+			costUSD: number
+			contextWindow: number
+			maxOutputTokens: number
+		}>
+	}
 }
 
 /**

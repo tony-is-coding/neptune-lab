@@ -10,10 +10,14 @@ export type LogLevel = 'debug' | 'info' | 'warn' | 'error'
 
 /** Engine 日志接口 */
 export interface EngineLogger {
-  debug(msg: string, attrs?: Record<string, unknown>): void
-  info(msg: string, attrs?: Record<string, unknown>): void
-  warn(msg: string, attrs?: Record<string, unknown>): void
-  error(msg: string, attrs?: Record<string, unknown>): void
-  /** 创建子 logger，继承父级属性和级别 */
-  child(name: string): EngineLogger
+	debug(msg: string, attrs?: Record<string, unknown>): void
+
+	info(msg: string, attrs?: Record<string, unknown>): void
+
+	warn(msg: string, attrs?: Record<string, unknown>): void
+
+	error(msg: string, attrs?: Record<string, unknown>): void
+
+	/** 创建子 logger，继承父级属性和级别 */
+	child(name: string): EngineLogger
 }

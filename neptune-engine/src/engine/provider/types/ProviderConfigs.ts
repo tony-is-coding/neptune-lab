@@ -5,7 +5,7 @@
  * 这些配置类型会被 ProviderConfig discriminated union 引用。
  */
 
-import type { BaseProviderConfig } from '../adapters/BaseProvider.js'
+import type {BaseProviderConfig} from '../adapters/BaseProvider.js'
 
 // ============================================================
 // Anthropic Provider 配置
@@ -15,12 +15,12 @@ import type { BaseProviderConfig } from '../adapters/BaseProvider.js'
  * Anthropic Provider 的配置项
  */
 export interface AnthropicProviderConfig extends BaseProviderConfig {
-  /** API Key（可选，默认使用 CC 的认证机制） */
-  apiKey?: string
-  /** Base URL（可选，默认使用 CC 的配置） */
-  baseURL?: string
-  /** Beta flags（可选） */
-  betaFlags?: string[]
+	/** API Key（可选，默认使用 CC 的认证机制） */
+	apiKey?: string
+	/** Base URL（可选，默认使用 CC 的配置） */
+	baseURL?: string
+	/** Beta flags（可选） */
+	betaFlags?: string[]
 }
 
 // ============================================================
@@ -31,12 +31,12 @@ export interface AnthropicProviderConfig extends BaseProviderConfig {
  * OpenAI Provider 的配置项
  */
 export interface OpenAIProviderConfig extends BaseProviderConfig {
-  /** API Key（可选，默认使用 CC 的认证机制） */
-  apiKey?: string
-  /** Base URL（可选，默认使用 CC 的配置） */
-  baseURL?: string
-  /** Organization（可选） */
-  organization?: string
+	/** API Key（可选，默认使用 CC 的认证机制） */
+	apiKey?: string
+	/** Base URL（可选，默认使用 CC 的配置） */
+	baseURL?: string
+	/** Organization（可选） */
+	organization?: string
 }
 
 // ============================================================
@@ -47,8 +47,8 @@ export interface OpenAIProviderConfig extends BaseProviderConfig {
  * Gemini Provider 的配置项
  */
 export interface GeminiProviderConfig extends BaseProviderConfig {
-  /** API Key（可选，默认使用 CC 的认证机制） */
-  apiKey?: string
+	/** API Key（可选，默认使用 CC 的认证机制） */
+	apiKey?: string
 }
 
 // ============================================================
@@ -59,8 +59,8 @@ export interface GeminiProviderConfig extends BaseProviderConfig {
  * Grok Provider 的配置项
  */
 export interface GrokProviderConfig extends BaseProviderConfig {
-  /** API Key（可选，默认使用 CC 的认证机制） */
-  apiKey?: string
+	/** API Key（可选，默认使用 CC 的认证机制） */
+	apiKey?: string
 }
 
 // ============================================================
@@ -71,14 +71,14 @@ export interface GrokProviderConfig extends BaseProviderConfig {
  * Bedrock Provider 的配置项
  */
 export interface BedrockProviderConfig extends BaseProviderConfig {
-  /** AWS Region（可选，默认使用 CC 的配置） */
-  region?: string
-  /** AWS Access Key ID（可选） */
-  accessKeyId?: string
-  /** AWS Secret Access Key（可选） */
-  secretAccessKey?: string
-  /** AWS Session Token（可选） */
-  sessionToken?: string
+	/** AWS Region（可选，默认使用 CC 的配置） */
+	region?: string
+	/** AWS Access Key ID（可选） */
+	accessKeyId?: string
+	/** AWS Secret Access Key（可选） */
+	secretAccessKey?: string
+	/** AWS Session Token（可选） */
+	sessionToken?: string
 }
 
 // ============================================================
@@ -89,10 +89,10 @@ export interface BedrockProviderConfig extends BaseProviderConfig {
  * Vertex Provider 的配置项
  */
 export interface VertexProviderConfig extends BaseProviderConfig {
-  /** Google Cloud Project ID（可选，默认使用 CC 的配置） */
-  projectId?: string
-  /** Google Cloud Region（可选，默认使用 CC 的配置） */
-  region?: string
+	/** Google Cloud Project ID（可选，默认使用 CC 的配置） */
+	projectId?: string
+	/** Google Cloud Region（可选，默认使用 CC 的配置） */
+	region?: string
 }
 
 // ============================================================
@@ -103,8 +103,8 @@ export interface VertexProviderConfig extends BaseProviderConfig {
  * Foundry Provider 的配置项
  */
 export interface FoundryProviderConfig extends BaseProviderConfig {
-  /** Base URL（可选，默认使用 CC 的配置） */
-  baseURL?: string
-  /** API Key（可选，默认使用 CC 的认证机制） */
-  apiKey?: string
+	/** Base URL（可选，默认使用 CC 的配置） */
+	baseURL?: string
+	/** API Key（可选，默认使用 CC 的认证机制） */
+	apiKey?: string
 }

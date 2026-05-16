@@ -4,7 +4,7 @@
  * 提供通知的发送、订阅功能，用于框架核心。
  */
 
-import type { CoreNotification, NotificationEmitter } from '../types/notification.js'
+import type {CoreNotification, NotificationEmitter} from '../types/notification.js'
 
 export type NotificationHandler = (notification: CoreNotification) => void
 
@@ -14,33 +14,33 @@ export type NotificationHandler = (notification: CoreNotification) => void
  * 返回一个 NotificationEmitter 实例，支持订阅通知事件。
  */
 export function createNotificationEmitter(): NotificationEmitter & {
-  subscribe: (handler: NotificationHandler) => () => void
-  clear: () => void
+	subscribe: (handler: NotificationHandler) => () => void
+	clear: () => void
 } {
-  const handlers = new Set<NotificationHandler>()
+	const handlers = new Set<NotificationHandler>()
 
-  return {
-    emit(notification: CoreNotification) {
-      for (const handler of handlers) {
-        try {
-          handler(notification)
-        } catch (error) {
-          console.error('Error in notification handler:', error)
-        }
-      }
-    },
+	return {
+		emit(notification: CoreNotification) {
+			for (const handler of handlers) {
+				try {
+					handler(notification)
+				} catch (error) {
+					console.error('Error in notification handler:', error)
+				}
+			}
+		},
 
-    subscribe(handler: NotificationHandler) {
-      handlers.add(handler)
-      return () => {
-        handlers.delete(handler)
-      }
-    },
+		subscribe(handler: NotificationHandler) {
+			handlers.add(handler)
+			return () => {
+				handlers.delete(handler)
+			}
+		},
 
-    clear() {
-      handlers.clear()
-    },
-  }
+		clear() {
+			handlers.clear()
+		},
+	}
 }
 
 /**
@@ -56,5 +56,5 @@ export const defaultNotificationEmitter = createNotificationEmitter()
  * @returns 全局默认通知发送器
  */
 export function getGlobalNotificationEmitter(): NotificationEmitter {
-  return defaultNotificationEmitter
+	return defaultNotificationEmitter
 }

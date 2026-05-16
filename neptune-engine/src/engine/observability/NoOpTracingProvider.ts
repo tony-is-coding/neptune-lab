@@ -8,32 +8,32 @@
  * 所有方法都是空实现，确保零开销。
  */
 
-import type { ITracingProvider } from './ITracingProvider'
-import type { Span, SpanStatus } from './types'
+import type {ITracingProvider} from './ITracingProvider'
+import type {Span, SpanStatus} from './types'
 
 /**
  * 零开销 Span 实现
  */
 class NoOpSpan implements Span {
-  readonly name: string
-  readonly attributes: Record<string, unknown>
+	readonly name: string
+	readonly attributes: Record<string, unknown>
 
-  constructor(name: string, attributes?: Record<string, unknown>) {
-    this.name = name
-    this.attributes = attributes ?? {}
-  }
+	constructor(name: string, attributes?: Record<string, unknown>) {
+		this.name = name
+		this.attributes = attributes ?? {}
+	}
 
-  setStatus(_status: SpanStatus): Span {
-    return this
-  }
+	setStatus(_status: SpanStatus): Span {
+		return this
+	}
 
-  addEvent(_name: string, _attributes?: Record<string, unknown>): Span {
-    return this
-  }
+	addEvent(_name: string, _attributes?: Record<string, unknown>): Span {
+		return this
+	}
 
-  end(): void {
-    // 空实现
-  }
+	end(): void {
+		// 空实现
+	}
 }
 
 /**
@@ -42,38 +42,39 @@ class NoOpSpan implements Span {
  * 所有方法返回空实现的 Span，不执行任何实际操作。
  */
 export class NoOpTracingProvider implements ITracingProvider {
-  private static instance: NoOpTracingProvider | null = null
+	private static instance: NoOpTracingProvider | null = null
 
-  private constructor() {}
+	private constructor() {
+	}
 
-  /**
-   * 获取全局单例
-   */
-  static getInstance(): NoOpTracingProvider {
-    if (!NoOpTracingProvider.instance) {
-      NoOpTracingProvider.instance = new NoOpTracingProvider()
-    }
-    return NoOpTracingProvider.instance
-  }
+	/**
+	 * 获取全局单例
+	 */
+	static getInstance(): NoOpTracingProvider {
+		if (!NoOpTracingProvider.instance) {
+			NoOpTracingProvider.instance = new NoOpTracingProvider()
+		}
+		return NoOpTracingProvider.instance
+	}
 
-  startSpan(name: string, attributes?: Record<string, unknown>): Span {
-    return new NoOpSpan(name, attributes)
-  }
+	startSpan(name: string, attributes?: Record<string, unknown>): Span {
+		return new NoOpSpan(name, attributes)
+	}
 
-  runInSpan<T>(
-    name: string,
-    fn: (span: Span) => T,
-    attributes?: Record<string, unknown>
-  ): T {
-    const span = this.startSpan(name, attributes)
-    try {
-      return fn(span)
-    } finally {
-      span.end()
-    }
-  }
+	runInSpan<T>(
+		name: string,
+		fn: (span: Span) => T,
+		attributes?: Record<string, unknown>
+	): T {
+		const span = this.startSpan(name, attributes)
+		try {
+			return fn(span)
+		} finally {
+			span.end()
+		}
+	}
 
-  dispose(): void {
-    // 空实现
-  }
+	dispose(): void {
+		// 空实现
+	}
 }

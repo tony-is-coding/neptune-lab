@@ -11,12 +11,12 @@
  * - API Key 从环境变量 NEPTUNE_LLM_API_KEY 读取
  */
 
-import { AgentEngine } from 'claude-code-best/engine';
-import type { EngineFactory } from './thread-manager.js';
-import type { DestroyableEngine } from './engine-pool.js';
-import { TenantPermissionDelegate } from './permission-delegate.js';
-import { createLogger } from '../utils/logger.js';
-import { getTracingProvider, getMetricsProvider } from './observability/index.js';
+import {AgentEngine} from 'claude-code-best/engine';
+import type {EngineFactory} from './thread-manager.js';
+import type {DestroyableEngine} from './engine-pool.js';
+import {TenantPermissionDelegate} from './permission-delegate.js';
+import {createLogger} from '../utils/logger.js';
+import {getTracingProvider, getMetricsProvider} from './observability/index.js';
 
 const log = createLogger('engine-factory');
 
@@ -27,105 +27,106 @@ const log = createLogger('engine-factory');
  * EnginePool 只关心 destroy()，而 ThreadManager.dispatch() 需要 query()。
  */
 export interface QueryableEngine extends DestroyableEngine {
-  query(sessionId: string, content: string): AsyncIterable<unknown>;
-  on(event: string, handler: (payload: unknown) => void): void;
+    query(sessionId: string, content: string): AsyncIterable<unknown>;
+
+    on(event: string, handler: (payload: unknown) => void): void;
 }
 
 /**
  * ClaudeCodeEngineFactory 配置
  */
 export interface ClaudeCodeEngineFactoryConfig {
-  /** Anthropic API Key（必需） */
-  apiKey: string;
-  /** 自定义 API Base URL（可选，用于代理或兼容 API） */
-  baseURL?: string;
-  /** 默认模型（可选，如 claude-sonnet-4-20250514 或 glm-5.1） */
-  defaultModel?: string;
+    /** Anthropic API Key（必需） */
+    apiKey: string;
+    /** 自定义 API Base URL（可选，用于代理或兼容 API） */
+    baseURL?: string;
+    /** 默认模型（可选，如 claude-sonnet-4-20250514 或 glm-5.1） */
+    defaultModel?: string;
 }
 
 /**
  * ClaudeCodeEngineFactory — 生产环境的 EngineFactory 实现
  */
 export class ClaudeCodeEngineFactory implements EngineFactory {
-  private apiKey: string;
-  private baseURL?: string;
-  private defaultModel?: string;
+    private apiKey: string;
+    private baseURL?: string;
+    private defaultModel?: string;
 
-  constructor(config: ClaudeCodeEngineFactoryConfig) {
-    this.apiKey = config.apiKey;
-    this.baseURL = config.baseURL;
-    this.defaultModel = config.defaultModel;
-  }
-
-  async createAndLoad(params: {
-    systemPrompt: string;
-    memoryRoot: string;
-    workspace: string;
-    tools: string[];
-    mcpServerUrls: string[];
-    tenantId: string;
-  }): Promise<{
-    engine: DestroyableEngine;
-    sdkSessionId: string;
-  }> {
-    const startTime = performance.now();
-    log.info('Engine creating', { tenantId: params.tenantId, workspace: params.workspace });
-
-    // 1. 创建权限委托
-    const permissionDelegate = new TenantPermissionDelegate(
-      {
-        tenantId: params.tenantId,
-        workspace: params.workspace,
-        mcpServers: params.mcpServerUrls,
-      },
-      {
-        tools: params.tools,
-      },
-    );
-
-    try {
-      // 2. 创建 Engine 实例
-      const engine = AgentEngine.create({
-        systemPrompt: params.systemPrompt,
-        memoryRoot: params.memoryRoot,
-        tracingProvider: getTracingProvider(),
-        metricsProvider: getMetricsProvider(),
-        extensions: {
-          permissions: {
-            bypassPermissions: true,
-          },
-        },
-        provider: {
-          type: 'anthropic',
-          config: {
-            apiKey: this.apiKey,
-            ...(this.baseURL ? { baseURL: this.baseURL } : {}),
-            ...(this.defaultModel ? { model: this.defaultModel, defaultModel: this.defaultModel } : {}),
-          },
-        },
-      } as any);
-
-      // 3. 创建 SDK Session（绑定到 workspace）
-      const sdkSessionId = await engine.createSession({
-        workspace: params.workspace,
-        systemPrompt: params.systemPrompt,
-      });
-
-      const durationMs = Math.round(performance.now() - startTime);
-      log.info('Engine created', { tenantId: params.tenantId, sdkSessionId, durationMs });
-
-      return {
-        engine: engine as unknown as DestroyableEngine,
-        sdkSessionId,
-      };
-    } catch (error) {
-      const durationMs = Math.round(performance.now() - startTime);
-      log.error('Engine creation failed', {
-        tenantId: params.tenantId,
-        durationMs,
-        detail: (error as Error).message,
-      });
-      throw error;
+    constructor(config: ClaudeCodeEngineFactoryConfig) {
+        this.apiKey = config.apiKey;
+        this.baseURL = config.baseURL;
+        this.defaultModel = config.defaultModel;
     }
-  }
+
+    async createAndLoad(params: {
+        systemPrompt: string;
+        memoryRoot: string;
+        workspace: string;
+        tools: string[];
+        mcpServerUrls: string[];
+        tenantId: string;
+    }): Promise<{
+        engine: DestroyableEngine;
+        sdkSessionId: string;
+    }> {
+        const startTime = performance.now();
+        log.info('Engine creating', {tenantId: params.tenantId, workspace: params.workspace});
+
+        // 1. 创建权限委托
+        const permissionDelegate = new TenantPermissionDelegate(
+            {
+                tenantId: params.tenantId,
+                workspace: params.workspace,
+                mcpServers: params.mcpServerUrls,
+            },
+            {
+                tools: params.tools,
+            },
+        );
+
+        try {
+            // 2. 创建 Engine 实例
+            const engine = AgentEngine.create({
+                systemPrompt: params.systemPrompt,
+                memoryRoot: params.memoryRoot,
+                tracingProvider: getTracingProvider(),
+                metricsProvider: getMetricsProvider(),
+                extensions: {
+                    permissions: {
+                        bypassPermissions: true,
+                    },
+                },
+                provider: {
+                    type: 'anthropic',
+                    config: {
+                        apiKey: this.apiKey,
+                        ...(this.baseURL ? {baseURL: this.baseURL} : {}),
+                        ...(this.defaultModel ? {model: this.defaultModel, defaultModel: this.defaultModel} : {}),
+                    },
+                },
+            } as any);
+
+            // 3. 创建 SDK Session（绑定到 workspace）
+            const sdkSessionId = await engine.createSession({
+                workspace: params.workspace,
+                systemPrompt: params.systemPrompt,
+            });
+
+            const durationMs = Math.round(performance.now() - startTime);
+            log.info('Engine created', {tenantId: params.tenantId, sdkSessionId, durationMs});
+
+            return {
+                engine: engine as unknown as DestroyableEngine,
+                sdkSessionId,
+            };
+        } catch (error) {
+            const durationMs = Math.round(performance.now() - startTime);
+            log.error('Engine creation failed', {
+                tenantId: params.tenantId,
+                durationMs,
+                detail: (error as Error).message,
+            });
+            throw error;
+        }
+    }
 }

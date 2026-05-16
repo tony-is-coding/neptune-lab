@@ -5,58 +5,58 @@
  * value setting, and hit-testing via PowerShell + System.Windows.Automation.
  */
 
-import { ps } from './shared.js'
+import {ps} from './shared.js'
 
 export interface UIElement {
-  name: string
-  controlType: string // Button, Edit, Text, List, Window, etc.
-  automationId: string
-  boundingRect: { x: number; y: number; w: number; h: number }
-  isEnabled: boolean
-  value?: string
-  children?: UIElement[]
+	name: string
+	controlType: string // Button, Edit, Text, List, Window, etc.
+	automationId: string
+	boundingRect: { x: number; y: number; w: number; h: number }
+	isEnabled: boolean
+	value?: string
+	children?: UIElement[]
 }
 
 const VALID_CONTROL_TYPES = new Set([
-  'Button',
-  'Calendar',
-  'CheckBox',
-  'ComboBox',
-  'Custom',
-  'DataGrid',
-  'DataItem',
-  'Document',
-  'Edit',
-  'Group',
-  'Header',
-  'HeaderItem',
-  'Hyperlink',
-  'Image',
-  'List',
-  'ListItem',
-  'Menu',
-  'MenuBar',
-  'MenuItem',
-  'Pane',
-  'ProgressBar',
-  'RadioButton',
-  'ScrollBar',
-  'Separator',
-  'Slider',
-  'Spinner',
-  'SplitButton',
-  'StatusBar',
-  'Tab',
-  'TabItem',
-  'Table',
-  'Text',
-  'Thumb',
-  'TitleBar',
-  'ToolBar',
-  'ToolTip',
-  'Tree',
-  'TreeItem',
-  'Window',
+	'Button',
+	'Calendar',
+	'CheckBox',
+	'ComboBox',
+	'Custom',
+	'DataGrid',
+	'DataItem',
+	'Document',
+	'Edit',
+	'Group',
+	'Header',
+	'HeaderItem',
+	'Hyperlink',
+	'Image',
+	'List',
+	'ListItem',
+	'Menu',
+	'MenuBar',
+	'MenuItem',
+	'Pane',
+	'ProgressBar',
+	'RadioButton',
+	'ScrollBar',
+	'Separator',
+	'Slider',
+	'Spinner',
+	'SplitButton',
+	'StatusBar',
+	'Tab',
+	'TabItem',
+	'Table',
+	'Text',
+	'Thumb',
+	'TitleBar',
+	'ToolBar',
+	'ToolTip',
+	'Tree',
+	'TreeItem',
+	'Window',
 ])
 
 // ---------------------------------------------------------------------------
@@ -70,12 +70,12 @@ Add-Type -AssemblyName WindowsBase
 `
 
 function parseJsonSafe<T>(raw: string, fallback: T): T {
-  try {
-    if (!raw) return fallback
-    return JSON.parse(raw) as T
-  } catch {
-    return fallback
-  }
+	try {
+		if (!raw) return fallback
+		return JSON.parse(raw) as T
+	} catch {
+		return fallback
+	}
 }
 
 // PowerShell snippet that finds a window by exact or partial title match.
@@ -107,8 +107,8 @@ if ($window -eq $null) {
  * Get the UI element tree of a window, up to `depth` levels deep (default 3).
  */
 export function getUITree(windowTitle: string, depth: number = 3): UIElement[] {
-  const escapedTitle = windowTitle.replace(/'/g, "''")
-  const script = `
+	const escapedTitle = windowTitle.replace(/'/g, "''")
+	const script = `
 ${UIA_ASSEMBLIES}
 $title = '${escapedTitle}'
 ${PS_FIND_WINDOW}
@@ -155,54 +155,54 @@ if ($tree -eq $null -or $tree.Count -eq 0) {
   $tree | ConvertTo-Json -Depth 20 -Compress
 }
 `
-  const raw = ps(script)
-  const parsed = parseJsonSafe<UIElement | UIElement[]>(raw, [])
-  return Array.isArray(parsed) ? parsed : [parsed]
+	const raw = ps(script)
+	const parsed = parseJsonSafe<UIElement | UIElement[]>(raw, [])
+	return Array.isArray(parsed) ? parsed : [parsed]
 }
 
 /**
  * Find a single element inside a window matching the given query fields.
  */
 export function findElement(
-  windowTitle: string,
-  query: { name?: string; controlType?: string; automationId?: string },
+	windowTitle: string,
+	query: { name?: string; controlType?: string; automationId?: string },
 ): UIElement | null {
-  const escapedTitle = windowTitle.replace(/'/g, "''")
+	const escapedTitle = windowTitle.replace(/'/g, "''")
 
-  // Build conditions array
-  const conditions: string[] = []
-  if (query.name) {
-    const v = query.name.replace(/'/g, "''")
-    conditions.push(
-      `[System.Windows.Automation.PropertyCondition]::new([System.Windows.Automation.AutomationElement]::NameProperty, '${v}')`,
-    )
-  }
-  if (query.controlType) {
-    if (!VALID_CONTROL_TYPES.has(query.controlType)) {
-      return null // Invalid control type
-    }
-    const v = query.controlType.replace(/'/g, "''")
-    conditions.push(
-      `[System.Windows.Automation.PropertyCondition]::new([System.Windows.Automation.AutomationElement]::ControlTypeProperty, [System.Windows.Automation.ControlType]::${v})`,
-    )
-  }
-  if (query.automationId) {
-    const v = query.automationId.replace(/'/g, "''")
-    conditions.push(
-      `[System.Windows.Automation.PropertyCondition]::new([System.Windows.Automation.AutomationElement]::AutomationIdProperty, '${v}')`,
-    )
-  }
+	// Build conditions array
+	const conditions: string[] = []
+	if (query.name) {
+		const v = query.name.replace(/'/g, "''")
+		conditions.push(
+			`[System.Windows.Automation.PropertyCondition]::new([System.Windows.Automation.AutomationElement]::NameProperty, '${v}')`,
+		)
+	}
+	if (query.controlType) {
+		if (!VALID_CONTROL_TYPES.has(query.controlType)) {
+			return null // Invalid control type
+		}
+		const v = query.controlType.replace(/'/g, "''")
+		conditions.push(
+			`[System.Windows.Automation.PropertyCondition]::new([System.Windows.Automation.AutomationElement]::ControlTypeProperty, [System.Windows.Automation.ControlType]::${v})`,
+		)
+	}
+	if (query.automationId) {
+		const v = query.automationId.replace(/'/g, "''")
+		conditions.push(
+			`[System.Windows.Automation.PropertyCondition]::new([System.Windows.Automation.AutomationElement]::AutomationIdProperty, '${v}')`,
+		)
+	}
 
-  if (conditions.length === 0) return null
+	if (conditions.length === 0) return null
 
-  let conditionExpr: string
-  if (conditions.length === 1) {
-    conditionExpr = conditions[0]
-  } else {
-    conditionExpr = `[System.Windows.Automation.AndCondition]::new(@(${conditions.join(', ')}))`
-  }
+	let conditionExpr: string
+	if (conditions.length === 1) {
+		conditionExpr = conditions[0]
+	} else {
+		conditionExpr = `[System.Windows.Automation.AndCondition]::new(@(${conditions.join(', ')}))`
+	}
 
-  const script = `
+	const script = `
 ${UIA_ASSEMBLIES}
 $title = '${escapedTitle}'
 ${PS_FIND_WINDOW}
@@ -235,21 +235,21 @@ try {
 } catch {}
 $obj | ConvertTo-Json -Compress
 `
-  const raw = ps(script)
-  return parseJsonSafe<UIElement | null>(raw, null)
+	const raw = ps(script)
+	return parseJsonSafe<UIElement | null>(raw, null)
 }
 
 /**
  * Click an element by its automationId using InvokePattern.
  */
 export function clickElement(
-  windowTitle: string,
-  automationId: string,
+	windowTitle: string,
+	automationId: string,
 ): boolean {
-  const escapedTitle = windowTitle.replace(/'/g, "''")
-  const escapedId = automationId.replace(/'/g, "''")
+	const escapedTitle = windowTitle.replace(/'/g, "''")
+	const escapedId = automationId.replace(/'/g, "''")
 
-  const script = `
+	const script = `
 ${UIA_ASSEMBLIES}
 $title = '${escapedTitle}'
 ${PS_FIND_WINDOW}
@@ -272,22 +272,22 @@ try {
   Write-Output 'false'
 }
 `
-  return ps(script) === 'true'
+	return ps(script) === 'true'
 }
 
 /**
  * Set the value of an element by its automationId using ValuePattern.
  */
 export function setValue(
-  windowTitle: string,
-  automationId: string,
-  value: string,
+	windowTitle: string,
+	automationId: string,
+	value: string,
 ): boolean {
-  const escapedTitle = windowTitle.replace(/'/g, "''")
-  const escapedId = automationId.replace(/'/g, "''")
-  const escapedValue = value.replace(/'/g, "''")
+	const escapedTitle = windowTitle.replace(/'/g, "''")
+	const escapedId = automationId.replace(/'/g, "''")
+	const escapedValue = value.replace(/'/g, "''")
 
-  const script = `
+	const script = `
 ${UIA_ASSEMBLIES}
 $title = '${escapedTitle}'
 ${PS_FIND_WINDOW}
@@ -310,14 +310,14 @@ try {
   Write-Output 'false'
 }
 `
-  return ps(script) === 'true'
+	return ps(script) === 'true'
 }
 
 /**
  * Get the UI element at a specific screen coordinate.
  */
 export function elementAtPoint(x: number, y: number): UIElement | null {
-  const script = `
+	const script = `
 ${UIA_ASSEMBLIES}
 try {
   $point = [System.Windows.Point]::new(${x}, ${y})
@@ -348,6 +348,6 @@ try {
   Write-Output 'null'
 }
 `
-  const raw = ps(script)
-  return parseJsonSafe<UIElement | null>(raw, null)
+	const raw = ps(script)
+	return parseJsonSafe<UIElement | null>(raw, null)
 }

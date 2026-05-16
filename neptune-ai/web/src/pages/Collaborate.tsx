@@ -9,7 +9,7 @@ import { UserMessage } from '../components/chat/UserMessage';
 import { AssistantMessage } from '../components/chat/AssistantMessage';
 import { ChatInput } from '../components/chat/ChatInput';
 import { ArtifactPanel } from '../components/artifact/ArtifactPanel';
-import { TaskBar } from '../components/task/TaskBar';
+import { FloatingPlanPanel } from '../components/chat/FloatingPlanPanel';
 import {
   EmptyCollaborateView,
   AgentWelcomeView,
@@ -50,6 +50,22 @@ export function Collaborate() {
   const { getMessages, getPlanTasks, sendMessage, loadHistory, isStreaming, updateBlock } = useChatMessages();
   const messages = getMessages(activeThreadId || '');
   const planTasks = getPlanTasks(activeThreadId || '');
+
+  // 从 messages 中提取最新的 plan todos（用于 FloatingPlanPanel）
+  const currentPlanTodos = (() => {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const msg = messages[i];
+      if (msg.role === 'assistant') {
+        for (let j = msg.blocks.length - 1; j >= 0; j--) {
+          const block = msg.blocks[j];
+          if (block.type === 'plan') {
+            return block.todos;
+          }
+        }
+      }
+    }
+    return [];
+  })();
 
   // UI state
   const [rightPanel, setRightPanel] = useState<RightPanel>('none');
@@ -541,10 +557,10 @@ export function Collaborate() {
                 </div>
               </div>
 
-              {/* TaskBar 和 ChatInput */}
+              {/* FloatingPlanPanel 和 ChatInput */}
               {activeAgent && activeThreadId && (
                 <>
-                  <TaskBar planTasks={planTasks} />
+                  <FloatingPlanPanel todos={currentPlanTodos} />
                   <ChatInput
                     agentName={activeAgent.name}
                     onSend={handleSend}

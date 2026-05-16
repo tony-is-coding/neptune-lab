@@ -16,6 +16,7 @@ SessionContext 原有 30+ 字段，随着 CC 代码迁移到 engine/，需要明
 - `memoryPath` - 用户记忆路径，可选，用于记忆隔离
 
 **使用位置**：
+
 - `AgentEngine.ts` 中设置 `sessionCtx.memoryPath`
 - `SessionContextStorage.ts` 中通过 `getCwd()` 访问 `cwd`
 - 各种工具通过 `getSessionId()` 访问 `sessionId`
@@ -32,6 +33,7 @@ SessionContext 原有 30+ 字段，随着 CC 代码迁移到 engine/，需要明
 - `modelStrings` - 模型字符串
 
 **使用位置**：
+
 - CC 原始代码通过 `getSessionContext()` 获取完整上下文
 - QueryEngine 等组件通过辅助函数间接访问
 
@@ -46,6 +48,7 @@ SessionContext 原有 30+ 字段，随着 CC 代码迁移到 engine/，需要明
 - 其他 CC 特性字段：`scheduledTasksEnabled`, `sessionCronTasks`, 等
 
 **保留原因**：
+
 - 保持与 CC 原始代码的兼容性
 - 支持未来可能的 engine/ 功能扩展
 - 避免破坏现有的 CC 功能

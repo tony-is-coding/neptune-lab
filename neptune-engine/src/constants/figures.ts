@@ -9,10 +9,10 @@ export * from './figures-core.js'
 // 这些是 Bridge/Remote Control 功能专用的，SDK 不需要
 
 export const BRIDGE_SPINNER_FRAMES = [
-  '\u00b7|\u00b7',
-  '\u00b7/\u00b7',
-  '\u00b7\u2014\u00b7',
-  '\u00b7\\\u00b7',
+	'\u00b7|\u00b7',
+	'\u00b7/\u00b7',
+	'\u00b7\u2014\u00b7',
+	'\u00b7\\\u00b7',
 ]
 export const BRIDGE_READY_INDICATOR = '\u00b7\u2714\ufe0e\u00b7'
 export const BRIDGE_FAILED_INDICATOR = '\u00d7'

@@ -7,7 +7,7 @@
  */
 
 // 接口和类型
-export type { OffloadStrategy, OffloadResult } from './OffloadStrategy.js'
+export type {OffloadStrategy, OffloadResult} from './OffloadStrategy.js'
 
 // 默认实现
-export { DefaultOffloadStrategy } from './DefaultOffloadStrategy.js'
+export {DefaultOffloadStrategy} from './DefaultOffloadStrategy.js'

@@ -1,6 +1,6 @@
-import { feature } from 'bun:bundle'
-import { getKairosActive } from '../bootstrap/state.js'
-import { getFeatureValue_CACHED_MAY_BE_STALE } from '../services/analytics/growthbook.js'
+import {feature} from 'bun:bundle'
+import {getKairosActive} from '../bootstrap/state.js'
+import {getFeatureValue_CACHED_MAY_BE_STALE} from '../services/analytics/growthbook.js'
 
 /**
  * Runtime gate for KAIROS features.
@@ -13,13 +13,13 @@ import { getFeatureValue_CACHED_MAY_BE_STALE } from '../services/analytics/growt
  * the session qualifies for KAIROS features).
  */
 export async function isKairosEnabled(): Promise<boolean> {
-  if (!feature('KAIROS')) {
-    return false
-  }
-  if (
-    !getFeatureValue_CACHED_MAY_BE_STALE('tengu_kairos_assistant', false)
-  ) {
-    return false
-  }
-  return getKairosActive()
+	if (!feature('KAIROS')) {
+		return false
+	}
+	if (
+		!getFeatureValue_CACHED_MAY_BE_STALE('tengu_kairos_assistant', false)
+	) {
+		return false
+	}
+	return getKairosActive()
 }

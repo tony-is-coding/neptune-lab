@@ -1,4 +1,4 @@
-import { drizzle } from 'drizzle-orm/postgres-js';
+import {drizzle} from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import * as schema from './schema';
 
@@ -8,16 +8,16 @@ import * as schema from './schema';
  * 在生产环境中，可能需要配置连接池参数
  */
 function createDbConnection() {
-  const connectionString = process.env.DATABASE_URL ||
-    'postgresql://postgres:postgres@localhost:5433/neptune_ai';
+    const connectionString = process.env.DATABASE_URL ||
+        'postgresql://postgres:postgres@localhost:5433/neptune_ai';
 
-  const client = postgres(connectionString, {
-    max: 10, // 最大连接数
-    idle_timeout: 20,
-    connect_timeout: 10,
-  });
+    const client = postgres(connectionString, {
+        max: 10, // 最大连接数
+        idle_timeout: 20,
+        connect_timeout: 10,
+    });
 
-  return drizzle(client, { schema });
+    return drizzle(client, {schema});
 }
 
 /**

@@ -4,6 +4,7 @@ import { TextBlock } from './TextBlock';
 import { ToolUseBlock } from './ToolUseBlock';
 import { ArtifactBlock } from './ArtifactBlock';
 import { QuestionBlock } from './QuestionBlock';
+import { PlanBlock } from './PlanBlock';
 
 interface AssistantMessageProps {
   message: ChatMessage;
@@ -121,6 +122,14 @@ export function AssistantMessage({ message, agentIcon, onOpenArtifact, onAnswerQ
                     key={`${message.id}-ask-${block.id}`}
                     block={block}
                     onAnswer={onAnswerQuestion || (() => {})}
+                  />
+                );
+
+              case 'plan':
+                return (
+                  <PlanBlock
+                    key={`${message.id}-plan-${block.id}`}
+                    todos={block.todos}
                   />
                 );
 

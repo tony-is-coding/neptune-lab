@@ -11,25 +11,27 @@
  * - 配置转换类型安全
  */
 
-import { LogUtil } from 'src/engine/log'
-import type { QueryEngineConfig } from '../../QueryEngine.js'
-import type { Tools, Tool, ToolUseContext, ToolInputJSONSchema } from '../../Tool.js'
-import type { Message, AssistantMessage } from '../types/message.js'
-import type { Command } from '../types/command.js'
-import type { CanUseToolFn } from '../types/permissions.js'
-import { z } from 'zod'
-import type { CCRuntime } from '../cc-runtime/CCRuntime.js'
-import { getGlobalCCRuntime } from '../cc-runtime/DefaultCCRuntime.js'
-import type { CoreAppState } from '../types/CoreAppState.js'
-import { createDefaultCoreAppState } from '../state/CoreAppStateFactory.js'
-import type { PermissionDelegate } from '../permissions/PermissionDelegate.js'
-import type { UnifiedConfig } from '../config/UnifiedConfig.js'
-import { getGlobalProviderRegistry } from '../provider/ProviderRegistry.js'
-import type { ProviderAdapter } from '../provider/ProviderAdapter.js'
-import type { QueryDeps } from '../../query/deps.js'
-import { productionDeps } from '../../query/deps.js'
-import { EngineError, EngineErrorCode } from '../errors.js'
-import type { SDKTool } from '../types/tool-extension.js'
+import {LogUtil} from 'src/engine/log'
+
+const log = LogUtil.getInstance().child('EngineBridge')
+import type {QueryEngineConfig} from '../../QueryEngine.js'
+import type {Tools, Tool, ToolUseContext, ToolInputJSONSchema} from '../../Tool.js'
+import type {Message, AssistantMessage} from '../types/message.js'
+import type {Command} from '../types/command.js'
+import type {CanUseToolFn} from '../types/permissions.js'
+import {z} from 'zod'
+import type {CCRuntime} from '../cc-runtime/CCRuntime.js'
+import {getGlobalCCRuntime} from '../cc-runtime/DefaultCCRuntime.js'
+import type {CoreAppState} from '../types/CoreAppState.js'
+import {createDefaultCoreAppState} from '../state/CoreAppStateFactory.js'
+import type {PermissionDelegate} from '../permissions/PermissionDelegate.js'
+import type {UnifiedConfig} from '../config/UnifiedConfig.js'
+import {getGlobalProviderRegistry} from '../provider/ProviderRegistry.js'
+import type {ProviderAdapter} from '../provider/ProviderAdapter.js'
+import type {QueryDeps} from '../../query/deps.js'
+import {productionDeps} from '../../query/deps.js'
+import {EngineError, EngineErrorCode} from '../errors.js'
+import type {SDKTool} from '../types/tool-extension.js'
 
 // ============================================================
 // 类型定义
@@ -37,21 +39,21 @@ import type { SDKTool } from '../types/tool-extension.js'
 
 /** 用户自定义工具扩展 */
 export interface ToolExtension {
-  name: string
-  description: string
-  inputSchema: {
-    type: 'object'
-    properties: Record<string, unknown>
-  }
-  execute: (params: Record<string, unknown>) => Promise<{ content: string }>
+	name: string
+	description: string
+	inputSchema: {
+		type: 'object'
+		properties: Record<string, unknown>
+	}
+	execute: (params: Record<string, unknown>) => Promise<{ content: string }>
 }
 
 /** 权限配置选项 */
 export interface PermissionConfig {
-  /** 是否绕过权限检查（用于 headless/自动化场景） */
-  bypassPermissions?: boolean
-  /** 可编程的权限决策委托（中间路径） */
-  delegate?: PermissionDelegate
+	/** 是否绕过权限检查（用于 headless/自动化场景） */
+	bypassPermissions?: boolean
+	/** 可编程的权限决策委托（中间路径） */
+	delegate?: PermissionDelegate
 }
 
 /**
@@ -60,19 +62,19 @@ export interface PermissionConfig {
  * @deprecated 使用 UnifiedConfig 替代。将在 V19 移除。
  */
 export interface BridgeOptions {
-  cwd: string
-  systemPrompt?: string | (() => Promise<string>)
-  tools?: ToolExtension[]
-  signal?: AbortSignal
-  /** 历史消息（会话恢复时传入）- 使用兼容的类型 */
-  initialMessages?: Array<Record<string, unknown>>
-  /** 权限配置 */
-  permissions?: PermissionConfig
-  /** Provider 配置（per-session 覆盖） */
-  provider?: {
-    type?: string
-    config?: Record<string, unknown>
-  }
+	cwd: string
+	systemPrompt?: string | (() => Promise<string>)
+	tools?: ToolExtension[]
+	signal?: AbortSignal
+	/** 历史消息（会话恢复时传入）- 使用兼容的类型 */
+	initialMessages?: Array<Record<string, unknown>>
+	/** 权限配置 */
+	permissions?: PermissionConfig
+	/** Provider 配置（per-session 覆盖） */
+	provider?: {
+		type?: string
+		config?: Record<string, unknown>
+	}
 }
 
 // ============================================================
@@ -95,30 +97,30 @@ export interface BridgeOptions {
  * @param workspace 工作目录
  */
 export function initializeRuntime(runtime?: CCRuntime, workspace?: string): void {
-  const ccRuntime = runtime ?? getGlobalCCRuntime()
+	const ccRuntime = runtime ?? getGlobalCCRuntime()
 
-  // 全局初始化（只需一次）
-  if (!ccRuntime.isInitialized()) {
-    // 1. 注入 MACRO defines（编译时常量在非 build 环境下不存在）
-    ccRuntime.injectMacroDefines()
+	// 全局初始化（只需一次）
+	if (!ccRuntime.isInitialized()) {
+		// 1. 注入 MACRO defines（编译时常量在非 build 环境下不存在）
+		ccRuntime.injectMacroDefines()
 
-    // 2. enableConfigs — 允许配置系统读取
-    ccRuntime.enableConfigs()
+		// 2. enableConfigs — 允许配置系统读取
+		ccRuntime.enableConfigs()
 
-    ccRuntime.markInitialized()
-  }
+		ccRuntime.markInitialized()
+	}
 
-  // Per-workspace 初始化
-  if (workspace && !ccRuntime.isWorkspaceInitialized(workspace)) {
-    // 3. 设置 bootstrap 单例（首次初始化该 workspace 时）
-    ccRuntime.setupBootstrap({
-      cwd: workspace,
-      originalCwd: workspace,
-      projectRoot: workspace,
-    })
+	// Per-workspace 初始化
+	if (workspace && !ccRuntime.isWorkspaceInitialized(workspace)) {
+		// 3. 设置 bootstrap 单例（首次初始化该 workspace 时）
+		ccRuntime.setupBootstrap({
+			cwd: workspace,
+			originalCwd: workspace,
+			projectRoot: workspace,
+		})
 
-    ccRuntime.markWorkspaceInitialized(workspace)
-  }
+		ccRuntime.markWorkspaceInitialized(workspace)
+	}
 }
 
 // ============================================================
@@ -143,61 +145,61 @@ export function initializeRuntime(runtime?: CCRuntime, workspace?: string): void
  * @returns ProviderAdapter 实例，如果类型不支持返回 undefined
  */
 async function createProviderWithConfig(
-  providerType: string,
-  config?: Record<string, unknown>,
-  options?: { providerRegistry?: Awaited<ReturnType<typeof getGlobalProviderRegistry>> },
+	providerType: string,
+	config?: Record<string, unknown>,
+	options?: { providerRegistry?: Awaited<ReturnType<typeof getGlobalProviderRegistry>> },
 ): Promise<ProviderAdapter | undefined> {
-  try {
-    // T7: 优先使用传入的自定义 ProviderRegistry
-    if (options?.providerRegistry?.has(providerType)) {
-      LogUtil.debug(`使用自定义 Provider: ${providerType}`)
-      return options.providerRegistry.get(providerType)
-    }
+	try {
+		// T7: 优先使用传入的自定义 ProviderRegistry
+		if (options?.providerRegistry?.has(providerType)) {
+			LogUtil.debug(`使用自定义 Provider: ${providerType}`)
+			return options.providerRegistry.get(providerType)
+		}
 
-    // 如果没有提供配置，使用全局注册表中的默认 Provider
-    if (!config || Object.keys(config).length === 0) {
-      const registry = await getGlobalProviderRegistry()
-      return registry.get(providerType)
-    }
+		// 如果没有提供配置，使用全局注册表中的默认 Provider
+		if (!config || Object.keys(config).length === 0) {
+			const registry = await getGlobalProviderRegistry()
+			return registry.get(providerType)
+		}
 
-    // fallback 到内置 Provider
-    switch (providerType) {
-      case 'anthropic': {
-        const { AnthropicProvider } = await import('../provider/adapters/AnthropicProvider.js')
-        return new AnthropicProvider(config)
-      }
-      case 'openai': {
-        const { OpenAIProvider } = await import('../provider/adapters/OpenAIProvider.js')
-        return new OpenAIProvider(config)
-      }
-      case 'gemini': {
-        const { GeminiProvider } = await import('../provider/adapters/GeminiProvider.js')
-        return new GeminiProvider(config)
-      }
-      case 'grok': {
-        const { GrokProvider } = await import('../provider/adapters/GrokProvider.js')
-        return new GrokProvider(config)
-      }
-      case 'bedrock': {
-        const { BedrockProvider } = await import('../provider/adapters/BedrockProvider.js')
-        return new BedrockProvider(config)
-      }
-      case 'vertex': {
-        const { VertexProvider } = await import('../provider/adapters/VertexProvider.js')
-        return new VertexProvider(config)
-      }
-      case 'foundry': {
-        const { FoundryProvider } = await import('../provider/adapters/FoundryProvider.js')
-        return new FoundryProvider(config)
-      }
-      default:
-        LogUtil.warn(`Unknown provider type: ${providerType}`)
-        return undefined
-    }
-  } catch (error) {
-    LogUtil.warn(`Failed to create provider '${providerType}':`, { detail: (error as Error).message })
-    return undefined
-  }
+		// fallback 到内置 Provider
+		switch (providerType) {
+			case 'anthropic': {
+				const {AnthropicProvider} = await import('../provider/adapters/AnthropicProvider.js')
+				return new AnthropicProvider(config)
+			}
+			case 'openai': {
+				const {OpenAIProvider} = await import('../provider/adapters/OpenAIProvider.js')
+				return new OpenAIProvider(config)
+			}
+			case 'gemini': {
+				const {GeminiProvider} = await import('../provider/adapters/GeminiProvider.js')
+				return new GeminiProvider(config)
+			}
+			case 'grok': {
+				const {GrokProvider} = await import('../provider/adapters/GrokProvider.js')
+				return new GrokProvider(config)
+			}
+			case 'bedrock': {
+				const {BedrockProvider} = await import('../provider/adapters/BedrockProvider.js')
+				return new BedrockProvider(config)
+			}
+			case 'vertex': {
+				const {VertexProvider} = await import('../provider/adapters/VertexProvider.js')
+				return new VertexProvider(config)
+			}
+			case 'foundry': {
+				const {FoundryProvider} = await import('../provider/adapters/FoundryProvider.js')
+				return new FoundryProvider(config)
+			}
+			default:
+				LogUtil.warn(`Unknown provider type: ${providerType}`)
+				return undefined
+		}
+	} catch (error) {
+		LogUtil.warn(`Failed to create provider '${providerType}':`, {detail: (error as Error).message})
+		return undefined
+	}
 }
 
 // ============================================================
@@ -214,167 +216,182 @@ async function createProviderWithConfig(
  * @returns QueryEngineConfig（类型安全，无 as any）
  */
 export async function buildQueryEngineConfig(config: UnifiedConfig, runtime?: CCRuntime): Promise<QueryEngineConfig> {
-  const ccRuntime = runtime ?? getGlobalCCRuntime()
-  const { cwd, systemPrompt, toolExtensions, provider } = config
+	const ccRuntime = runtime ?? getGlobalCCRuntime()
+	const {cwd, systemPrompt, toolExtensions, provider} = config
 
-  // 构造 CoreAppState（SDK/headless 模式，零 UI 依赖）
-  let appState: CoreAppState & Record<string, unknown> = createDefaultCoreAppState() as CoreAppState & Record<string, unknown>
+	// 构造 CoreAppState（SDK/headless 模式，零 UI 依赖）
+	let appState: CoreAppState & Record<string, unknown> = createDefaultCoreAppState() as CoreAppState & Record<string, unknown>
 
-  // 类型安全的 AppState 转换
-  // CoreAppState 是 QueryEngine 内部使用的最小字段集，运行时兼容
-  const getAppState = (): CoreAppState & Record<string, unknown> => appState
-  const setAppState = (fn: (prev: CoreAppState & Record<string, unknown>) => CoreAppState & Record<string, unknown>): void => {
-    appState = fn(appState)
-  }
+	// 类型安全的 AppState 转换
+	// CoreAppState 是 QueryEngine 内部使用的最小字段集，运行时兼容
+	const getAppState = (): CoreAppState & Record<string, unknown> => appState
+	const setAppState = (fn: (prev: CoreAppState & Record<string, unknown>) => CoreAppState & Record<string, unknown>): void => {
+		appState = fn(appState)
+	}
 
-  // 构造工具列表：内置工具 + 用户扩展工具
-  const baseTools = ccRuntime.getAllBaseTools()
-  const extensionTools = (toolExtensions ?? []).map(adaptToolExtension)
-  const allTools: Tools = [...baseTools, ...extensionTools]
+	// 构造工具列表：内置工具 + 用户扩展工具
+	const baseTools = ccRuntime.getAllBaseTools()
+	const extensionTools = (toolExtensions ?? []).map(adaptToolExtension)
+	const allTools: Tools = [...baseTools, ...extensionTools]
 
-  // canUseTool 实现：根据权限配置决定是否使用 CC 原始权限检查
-  const delegate = config.permissions?.delegate
-  let canUseTool: CanUseToolFn
-  if (config.permissions?.bypassPermissions || config.allowDangerouslySkipPermissions) {
-    // bypass 模式：允许所有工具
-    canUseTool = async () => ({ behavior: 'allow' as const })
-  } else if (delegate) {
-    // delegate 模式：使用自定义权限策略
-    canUseTool = async (
-      tool: Tool,
-      input: Record<string, unknown>,
-      toolUseContext: ToolUseContext,
-      assistantMessage: AssistantMessage,
-      toolUseID: string,
-    ) => {
-      const decision = await delegate.onToolAccess(
-        (tool as { name?: string }).name ?? 'unknown',
-        input as Record<string, unknown>,
-      )
-      if (decision === 'allow') return { behavior: 'allow' as const }
-      if (decision === 'deny') {
-        return {
-          behavior: 'deny' as const,
-          message: `Permission denied by delegate for tool: ${(tool as { name?: string }).name ?? 'unknown'}`,
-          decisionReason: { type: 'other' as const, reason: 'Denied by PermissionDelegate' },
-        }
-      }
-      // 'ask' — 回退到 CC 原始权限检查
-      return ccRuntime.hasPermissionsToUseTool(tool, input, toolUseContext, assistantMessage, toolUseID) as Promise<ReturnType<CanUseToolFn>>
-    }
-  } else {
-    // 默认：使用 CC 原始权限检查
-    canUseTool = async (
-      tool: Tool,
-      input: Record<string, unknown>,
-      toolUseContext: ToolUseContext,
-      assistantMessage: AssistantMessage,
-      toolUseID: string,
-    ) => {
-      return ccRuntime.hasPermissionsToUseTool(tool, input, toolUseContext, assistantMessage, toolUseID) as Promise<ReturnType<CanUseToolFn>>
-    }
-  }
+	// canUseTool 实现：根据权限配置决定是否使用 CC 原始权限检查
+	const delegate = config.permissions?.delegate
+	let canUseTool: CanUseToolFn
+	if (config.permissions?.bypassPermissions || config.allowDangerouslySkipPermissions) {
+		// bypass 模式：允许所有工具
+		canUseTool = async () => ({behavior: 'allow' as const})
+	} else if (delegate) {
+		// delegate 模式：使用自定义权限策略
+		canUseTool = async (
+			tool: Tool,
+			input: Record<string, unknown>,
+			toolUseContext: ToolUseContext,
+			assistantMessage: AssistantMessage,
+			toolUseID: string,
+		) => {
+			const decision = await delegate.onToolAccess(
+				(tool as { name?: string }).name ?? 'unknown',
+				input as Record<string, unknown>,
+			)
+			if (decision === 'allow') return {behavior: 'allow' as const}
+			if (decision === 'deny') {
+				return {
+					behavior: 'deny' as const,
+					message: `Permission denied by delegate for tool: ${(tool as { name?: string }).name ?? 'unknown'}`,
+					decisionReason: {type: 'other' as const, reason: 'Denied by PermissionDelegate'},
+				}
+			}
+			// 'ask' — 回退到 CC 原始权限检查
+			return ccRuntime.hasPermissionsToUseTool(tool, input, toolUseContext, assistantMessage, toolUseID) as Promise<ReturnType<CanUseToolFn>>
+		}
+	} else {
+		// 默认：使用 CC 原始权限检查
+		canUseTool = async (
+			tool: Tool,
+			input: Record<string, unknown>,
+			toolUseContext: ToolUseContext,
+			assistantMessage: AssistantMessage,
+			toolUseID: string,
+		) => {
+			return ccRuntime.hasPermissionsToUseTool(tool, input, toolUseContext, assistantMessage, toolUseID) as Promise<ReturnType<CanUseToolFn>>
+		}
+	}
 
-  // 解析 systemPrompt
-  const customSystemPrompt = typeof systemPrompt === 'string' ? systemPrompt : undefined
+	// 解析 systemPrompt
+	const customSystemPrompt = typeof systemPrompt === 'string' ? systemPrompt : undefined
 
-  // 构造 readFileCache（通过 CCRuntime）
-  const readFileCache = ccRuntime.createFileStateCache({ maxEntries: 100, maxSizeBytes: 25 * 1024 * 1024 })
+	// 构造 readFileCache（通过 CCRuntime）
+	const readFileCache = ccRuntime.createFileStateCache({maxEntries: 100, maxSizeBytes: 25 * 1024 * 1024})
 
-  // 构造 AbortController
-  const abortController = new AbortController()
+	// 构造 AbortController
+	const abortController = new AbortController()
 
-  // 如果指定了 provider.type，创建 ProviderAdapter 包装的 callModel
-  // T7 完成：集成 CircuitBreaker、executeWithRetry 和自定义 Provider 注入
-  // T6 完成：支持从 provider.config 传入 API Key、BaseURL 等配置
-  let customDeps: QueryDeps | undefined
-  if (provider?.type) {
-    // T7: 传入 providerRegistry 以支持自定义 Provider 注入
-    const providerAdapter = await createProviderWithConfig(
-      provider.type,
-      provider.config,
-      { providerRegistry: config.providerRegistry }
-    )
-    if (providerAdapter) {
-      const originalDeps = productionDeps()
+	// 如果指定了 provider.type，创建 ProviderAdapter 包装的 callModel
+	// T7 完成：集成 CircuitBreaker、executeWithRetry 和自定义 Provider 注入
+	// T6 完成：支持从 provider.config 传入 API Key、BaseURL 等配置
+	let customDeps: QueryDeps | undefined
+	if (provider?.type) {
+		// T7: 传入 providerRegistry 以支持自定义 Provider 注入
+		const providerAdapter = await createProviderWithConfig(
+			provider.type,
+			provider.config,
+			{providerRegistry: config.providerRegistry}
+		)
+		if (providerAdapter) {
+			const originalDeps = productionDeps()
 
-      // 获取 Provider 的 CircuitBreaker（通过 unknown 中间类型避免类型错误）
-      // ProviderAdapter 实现类（如 BaseProvider）有 circuitBreaker 属性
-      const baseProvider = providerAdapter as unknown as { circuitBreaker: {
-        canExecute: () => boolean
-        recordSuccess: () => void
-        recordFailure: () => void
-      } }
+			// 获取 Provider 的 CircuitBreaker（通过 unknown 中间类型避免类型错误）
+			// ProviderAdapter 实现类（如 BaseProvider）有 circuitBreaker 属性
+			const baseProvider = providerAdapter as unknown as {
+				circuitBreaker: {
+					canExecute: () => boolean
+					recordSuccess: () => void
+					recordFailure: () => void
+				}
+			}
 
-      customDeps = {
-        ...originalDeps,
-        // 使用 CircuitBreaker 包装 callModel（async generator 匹配 queryModelWithStreaming 返回类型）
-        callModel: async function*(params) {
-          // 检查熔断器状态
-          if (!baseProvider.circuitBreaker.canExecute()) {
-            throw new EngineError(
-              EngineErrorCode.CIRCUIT_OPEN,
-              `Provider "${provider.type}" circuit breaker is open, request rejected`
-            )
-          }
+			customDeps = {
+				...originalDeps,
+				// 使用 CircuitBreaker 包装 callModel（async generator 匹配 queryModelWithStreaming 返回类型）
+				callModel: async function* (params) {
+					// 关键日志：LLM API 调用入口
+					const msgTypes = (params as any).messages?.map((m: any) => m.type || m.role) ?? []
+					const sysLen = Array.isArray((params as any).systemPrompt)
+						? (params as any).systemPrompt.join('').length
+						: String((params as any).systemPrompt ?? '').length
+					log.info('LLM API call', {
+						provider: provider.type,
+						messagesCount: msgTypes.length,
+						messageRoles: msgTypes,
+						systemPromptLength: sysLen,
+						toolsCount: (params as any).tools?.length ?? 0,
+					})
 
-          try {
-            // 委托原始 callModel（AsyncGenerator），透传所有流式事件
-            yield* originalDeps.callModel(params)
-            // 成功时记录
-            baseProvider.circuitBreaker.recordSuccess()
-          } catch (error) {
-            // 检查是否是 AUTH_ERROR（401/403），认证错误不应触发熔断
-            const errorObj = error as { status?: number; code?: string }
-            const isAuthError =
-              errorObj.status === 401 ||
-              errorObj.status === 403 ||
-              errorObj.code === 'AUTH_ERROR'
+					// 检查熔断器状态
+					if (!baseProvider.circuitBreaker.canExecute()) {
+						throw new EngineError(
+							EngineErrorCode.CIRCUIT_OPEN,
+							`Provider "${provider.type}" circuit breaker is open, request rejected`
+						)
+					}
 
-            if (!isAuthError) {
-              // 非 AUTH_ERROR 才记录失败
-              baseProvider.circuitBreaker.recordFailure()
-            }
-            throw error
-          }
-        },
-      }
-    }
-  }
+					try {
+						// 委托原始 callModel（AsyncGenerator），透传所有流式事件
+						yield* originalDeps.callModel(params)
+						// 成功时记录
+						baseProvider.circuitBreaker.recordSuccess()
+					} catch (error) {
+						// 检查是否是 AUTH_ERROR（401/403），认证错误不应触发熔断
+						const errorObj = error as { status?: number; code?: string }
+						const isAuthError =
+							errorObj.status === 401 ||
+							errorObj.status === 403 ||
+							errorObj.code === 'AUTH_ERROR'
 
-  // 类型安全的 QueryEngineConfig 构造
-  // 注意：getAppState/setAppState 和 readFileCache 桥接到 CC 内部 AppState 类型，
-  // 运行时兼容但编译期类型不同。
-  //
-  // 保留 as unknown as 的原因：
-  // - QueryEngineConfig 期望的 AppState 类型与 engine/ 的 CoreAppState 不同
-  // - CC 原始 AppState 包含 CLI 特定字段（如 messages、permissions）
-  // - engine/ 的 CoreAppState 是精简的 SDK 版本，只包含核心状态
-  // - 未来可通过统一 AppState 类型或创建适配器来消除此断言
-  const queryEngineConfig = {
-    cwd,
-    tools: allTools,
-    commands: [] as Command[],
-    mcpClients: [],
-    agents: [],
-    canUseTool,
-    getAppState: getAppState as unknown as QueryEngineConfig['getAppState'],
-    setAppState: setAppState as unknown as QueryEngineConfig['setAppState'],
-    readFileCache: readFileCache as unknown as QueryEngineConfig['readFileCache'],
-    customSystemPrompt,
-    verbose: config.verbose ?? false,
-    abortController,
-    // 启用部分消息流式输出（用于 SSE 流式打印）
-    includePartialMessages: true,
-    // Provider 配置透传：通过 provider.config.model 设置 userSpecifiedModel
-    ...(provider?.config?.model ? { userSpecifiedModel: provider.config.model as string } : {}),
-    // fallbackModel
-    ...(config.fallbackModel ? { fallbackModel: config.fallbackModel } : {}),
-    // 注入 customDeps（Provider 运行时接入）
-    ...(customDeps ? { customDeps } : {}),
-  }
+						if (!isAuthError) {
+							// 非 AUTH_ERROR 才记录失败
+							baseProvider.circuitBreaker.recordFailure()
+						}
+						throw error
+					}
+				},
+			}
+		}
+	}
 
-  return queryEngineConfig
+	// 类型安全的 QueryEngineConfig 构造
+	// 注意：getAppState/setAppState 和 readFileCache 桥接到 CC 内部 AppState 类型，
+	// 运行时兼容但编译期类型不同。
+	//
+	// 保留 as unknown as 的原因：
+	// - QueryEngineConfig 期望的 AppState 类型与 engine/ 的 CoreAppState 不同
+	// - CC 原始 AppState 包含 CLI 特定字段（如 messages、permissions）
+	// - engine/ 的 CoreAppState 是精简的 SDK 版本，只包含核心状态
+	// - 未来可通过统一 AppState 类型或创建适配器来消除此断言
+	const queryEngineConfig = {
+		cwd,
+		tools: allTools,
+		commands: [] as Command[],
+		mcpClients: [],
+		agents: [],
+		canUseTool,
+		getAppState: getAppState as unknown as QueryEngineConfig['getAppState'],
+		setAppState: setAppState as unknown as QueryEngineConfig['setAppState'],
+		readFileCache: readFileCache as unknown as QueryEngineConfig['readFileCache'],
+		customSystemPrompt,
+		verbose: config.verbose ?? false,
+		abortController,
+		// 启用部分消息流式输出（用于 SSE 流式打印）
+		includePartialMessages: true,
+		// Provider 配置透传：通过 provider.config.model 设置 userSpecifiedModel
+		...(provider?.config?.model ? {userSpecifiedModel: provider.config.model as string} : {}),
+		// fallbackModel
+		...(config.fallbackModel ? {fallbackModel: config.fallbackModel} : {}),
+		// 注入 customDeps（Provider 运行时接入）
+		...(customDeps ? {customDeps} : {}),
+	}
+
+	return queryEngineConfig
 }
 
 /**
@@ -386,29 +403,29 @@ export async function buildQueryEngineConfig(config: UnifiedConfig, runtime?: CC
  * @param runtime CCRuntime 实例（默认使用全局单例）
  */
 export async function buildQueryEngineConfigFromOptions(options: BridgeOptions, runtime?: CCRuntime): Promise<QueryEngineConfig> {
-  // 转换 BridgeOptions 到 UnifiedConfig
-  const unifiedConfig: UnifiedConfig = {
-    cwd: options.cwd,
-    systemPrompt: options.systemPrompt,
-    toolExtensions: options.tools,
-    permissions: options.permissions,
-    provider: options.provider ? {
-      type: options.provider.type as NonNullable<UnifiedConfig['provider']>['type'],
-      config: options.provider.config,
-    } : undefined,
-    verbose: false,
-  }
+	// 转换 BridgeOptions 到 UnifiedConfig
+	const unifiedConfig: UnifiedConfig = {
+		cwd: options.cwd,
+		systemPrompt: options.systemPrompt,
+		toolExtensions: options.tools,
+		permissions: options.permissions,
+		provider: options.provider ? {
+			type: options.provider.type as NonNullable<UnifiedConfig['provider']>['type'],
+			config: options.provider.config,
+		} : undefined,
+		verbose: false,
+	}
 
-  const queryEngineConfig = await buildQueryEngineConfig(unifiedConfig, runtime)
+	const queryEngineConfig = await buildQueryEngineConfig(unifiedConfig, runtime)
 
-  // BridgeOptions 特有的字段：initialMessages（会话恢复）
-  // UnifiedConfig 不包含此字段，需要单独处理
-  // 类型转换：BridgeOptions 使用 Record<string, unknown>[] 以保持向后兼容
-  if (options.initialMessages) {
-    return { ...queryEngineConfig, initialMessages: options.initialMessages as Message[] }
-  }
+	// BridgeOptions 特有的字段：initialMessages（会话恢复）
+	// UnifiedConfig 不包含此字段，需要单独处理
+	// 类型转换：BridgeOptions 使用 Record<string, unknown>[] 以保持向后兼容
+	if (options.initialMessages) {
+		return {...queryEngineConfig, initialMessages: options.initialMessages as Message[]}
+	}
 
-  return queryEngineConfig
+	return queryEngineConfig
 }
 
 // ============================================================
@@ -427,36 +444,40 @@ export async function buildQueryEngineConfigFromOptions(options: BridgeOptions, 
  * - 未来可通过创建 ToolAdapter 包装器来消除此断言，但当前阶段保留实现
  */
 export function adaptToolExtension(ext: ToolExtension): Tool {
-  // 构造 JSON Schema 供 API 层直接使用（跳过 zodToJsonSchema）
-  const jsonSchema: ToolInputJSONSchema = {
-    type: 'object' as const,
-    properties: ext.inputSchema.properties,
-  }
+	// 构造 JSON Schema 供 API 层直接使用（跳过 zodToJsonSchema）
+	const jsonSchema: ToolInputJSONSchema = {
+		type: 'object' as const,
+		properties: ext.inputSchema.properties,
+	}
 
-  const sdkTool: SDKTool = {
-    name: ext.name,
-    // Zod schema — 用 z.record 作为宽松 fallback，避免 zodToJsonSchema 崩溃
-    inputSchema: z.record(z.string(), z.unknown()),
-    // JSON Schema — API 层优先使用此字段，不走 zodToJsonSchema
-    inputJSONSchema: jsonSchema,
-    isEnabled: () => true,
-    isReadOnly: () => false,
-    isConcurrencySafe: () => true,
-    userFacingName: () => ext.name,
-    async prompt() { return ext.description },
-    async description() { return ext.description },
-    async call(input: Record<string, unknown>) {
-      const result = await ext.execute(input)
-      return {
-        type: 'result' as const,
-        resultForAssistant: result.content,
-        data: result,
-      }
-    },
-  }
+	const sdkTool: SDKTool = {
+		name: ext.name,
+		// Zod schema — 用 z.record 作为宽松 fallback，避免 zodToJsonSchema 崩溃
+		inputSchema: z.record(z.string(), z.unknown()),
+		// JSON Schema — API 层优先使用此字段，不走 zodToJsonSchema
+		inputJSONSchema: jsonSchema,
+		isEnabled: () => true,
+		isReadOnly: () => false,
+		isConcurrencySafe: () => true,
+		userFacingName: () => ext.name,
+		async prompt() {
+			return ext.description
+		},
+		async description() {
+			return ext.description
+		},
+		async call(input: Record<string, unknown>) {
+			const result = await ext.execute(input)
+			return {
+				type: 'result' as const,
+				resultForAssistant: result.content,
+				data: result,
+			}
+		},
+	}
 
-  // 保留 as unknown as Tool：SDKTool 是 Tool 的子集，运行时兼容
-  return sdkTool as unknown as Tool
+	// 保留 as unknown as Tool：SDKTool 是 Tool 的子集，运行时兼容
+	return sdkTool as unknown as Tool
 }
 
 // ============================================================
@@ -465,8 +486,8 @@ export function adaptToolExtension(ext: ToolExtension): Tool {
 
 /** 仅用于测试：重置 runtimeInitialized 标志 */
 export function _resetRuntimeForTesting(runtime?: CCRuntime): void {
-  const ccRuntime = runtime ?? getGlobalCCRuntime()
-  if (ccRuntime.resetForTesting) {
-    ccRuntime.resetForTesting()
-  }
+	const ccRuntime = runtime ?? getGlobalCCRuntime()
+	if (ccRuntime.resetForTesting) {
+		ccRuntime.resetForTesting()
+	}
 }

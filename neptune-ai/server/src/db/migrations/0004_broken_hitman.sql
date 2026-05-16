@@ -1,1 +1,2 @@
-ALTER TABLE "agent_templates" ADD COLUMN "prompt_config" jsonb;
+ALTER TABLE "agent_templates"
+    ADD COLUMN "prompt_config" jsonb;

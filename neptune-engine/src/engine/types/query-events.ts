@@ -17,8 +17,8 @@ export type SDKMessage = { type: string; [key: string]: unknown }
  * 对应 SDKAssistantMessage，包含助手生成的文本内容
  */
 export interface AssistantTextEvent extends SDKMessage {
-  type: 'assistant'
-  content: string // 文本内容
+	type: 'assistant'
+	content: string // 文本内容
 }
 
 /**
@@ -26,10 +26,10 @@ export interface AssistantTextEvent extends SDKMessage {
  * 对应 assistant 发起的 tool_use 调用
  */
 export interface ToolUseEvent extends SDKMessage {
-  type: 'tool_use'
-  id: string
-  name: string
-  input: Record<string, unknown>
+	type: 'tool_use'
+	id: string
+	name: string
+	input: Record<string, unknown>
 }
 
 /**
@@ -37,10 +37,10 @@ export interface ToolUseEvent extends SDKMessage {
  * 对应 tool 执行完成后的结果返回
  */
 export interface ToolResultEvent extends SDKMessage {
-  type: 'tool_result'
-  toolUseId: string
-  content: unknown
-  isError?: boolean
+	type: 'tool_result'
+	toolUseId: string
+	content: unknown
+	isError?: boolean
 }
 
 /**
@@ -48,8 +48,8 @@ export interface ToolResultEvent extends SDKMessage {
  * 对应 SDKSystemMessage，包含系统级通知、状态变更等
  */
 export interface SystemEvent extends SDKMessage {
-  type: 'system'
-  content?: unknown
+	type: 'system'
+	content?: unknown
 }
 
 /**
@@ -57,8 +57,8 @@ export interface SystemEvent extends SDKMessage {
  * 对应 SDKAssistantErrorMessage 或其他错误类型
  */
 export interface ErrorEvent extends SDKMessage {
-  type: 'assistant_error' | 'error'
-  error: Error | string
+	type: 'assistant_error' | 'error'
+	error: Error | string
 }
 
 // ============================================================
@@ -72,11 +72,11 @@ export interface ErrorEvent extends SDKMessage {
  * 或 switch 语句处理不同事件。
  */
 export type QueryEvent =
-  | AssistantTextEvent
-  | ToolUseEvent
-  | ToolResultEvent
-  | SystemEvent
-  | ErrorEvent
+	| AssistantTextEvent
+	| ToolUseEvent
+	| ToolResultEvent
+	| SystemEvent
+	| ErrorEvent
 
 // ============================================================
 // 类型守卫（Type Guards）
@@ -86,35 +86,35 @@ export type QueryEvent =
  * 检查是否为 AssistantTextEvent
  */
 export function isAssistantTextEvent(event: SDKMessage): event is AssistantTextEvent {
-  return event.type === 'assistant'
+	return event.type === 'assistant'
 }
 
 /**
  * 检查是否为 ToolUseEvent
  */
 export function isToolUseEvent(event: SDKMessage): event is ToolUseEvent {
-  return event.type === 'tool_use'
+	return event.type === 'tool_use'
 }
 
 /**
  * 检查是否为 ToolResultEvent
  */
 export function isToolResultEvent(event: SDKMessage): event is ToolResultEvent {
-  return event.type === 'tool_result'
+	return event.type === 'tool_result'
 }
 
 /**
  * 检查是否为 SystemEvent
  */
 export function isSystemEvent(event: SDKMessage): event is SystemEvent {
-  return event.type === 'system'
+	return event.type === 'system'
 }
 
 /**
  * 检查是否为 ErrorEvent
  */
 export function isErrorEvent(event: SDKMessage): event is ErrorEvent {
-  return event.type === 'assistant_error' || event.type === 'error'
+	return event.type === 'assistant_error' || event.type === 'error'
 }
 
 // ============================================================
@@ -130,7 +130,7 @@ export type QueryEventType = QueryEvent['type']
  * QueryEvent 辅助信息（用于调试或日志）
  */
 export interface QueryEventMetadata {
-  type: QueryEventType
-  timestamp?: number
-  sessionId?: string
+	type: QueryEventType
+	timestamp?: number
+	sessionId?: string
 }

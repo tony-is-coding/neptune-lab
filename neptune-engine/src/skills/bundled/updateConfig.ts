@@ -1,15 +1,15 @@
-import { toJSONSchema } from 'zod/v4'
-import { SettingsSchema } from '../../utils/settings/types.js'
-import { jsonStringify } from '../../utils/slowOperations.js'
-import { registerBundledSkill } from '../bundledSkills.js'
+import {toJSONSchema} from 'zod/v4'
+import {SettingsSchema} from '../../utils/settings/types.js'
+import {jsonStringify} from '../../utils/slowOperations.js'
+import {registerBundledSkill} from '../bundledSkills.js'
 
 /**
  * Generate JSON Schema from the settings Zod schema.
  * This keeps the skill prompt in sync with the actual types.
  */
 function generateSettingsSchema(): string {
-  const jsonSchema = toJSONSchema(SettingsSchema(), { io: 'input' })
-  return jsonStringify(jsonSchema, null, 2)
+	const jsonSchema = toJSONSchema(SettingsSchema(), {io: 'input'})
+	return jsonStringify(jsonSchema, null, 2)
 }
 
 const SETTINGS_EXAMPLES_DOCS = `## Settings File Locations
@@ -443,33 +443,33 @@ If a hook isn't running:
 `
 
 export function registerUpdateConfigSkill(): void {
-  registerBundledSkill({
-    name: 'update-config',
-    description:
-      'Use this skill to configure the Claude Code harness via settings.json. Automated behaviors ("from now on when X", "each time X", "whenever X", "before/after X") require hooks configured in settings.json - the harness executes these, not Claude, so memory/preferences cannot fulfill them. Also use for: permissions ("allow X", "add permission", "move permission to"), env vars ("set X=Y"), hook troubleshooting, or any changes to settings.json/settings.local.json files. Examples: "allow npm commands", "add bq permission to global settings", "move permission to user settings", "set DEBUG=true", "when claude stops show X". For simple settings like theme/model, use Config tool.',
-    allowedTools: ['Read'],
-    userInvocable: true,
-    async getPromptForCommand(args) {
-      if (args.startsWith('[hooks-only]')) {
-        const req = args.slice('[hooks-only]'.length).trim()
-        let prompt = HOOKS_DOCS + '\n\n' + HOOK_VERIFICATION_FLOW
-        if (req) {
-          prompt += `\n\n## Task\n\n${req}`
-        }
-        return [{ type: 'text', text: prompt }]
-      }
+	registerBundledSkill({
+		name: 'update-config',
+		description:
+			'Use this skill to configure the Claude Code harness via settings.json. Automated behaviors ("from now on when X", "each time X", "whenever X", "before/after X") require hooks configured in settings.json - the harness executes these, not Claude, so memory/preferences cannot fulfill them. Also use for: permissions ("allow X", "add permission", "move permission to"), env vars ("set X=Y"), hook troubleshooting, or any changes to settings.json/settings.local.json files. Examples: "allow npm commands", "add bq permission to global settings", "move permission to user settings", "set DEBUG=true", "when claude stops show X". For simple settings like theme/model, use Config tool.',
+		allowedTools: ['Read'],
+		userInvocable: true,
+		async getPromptForCommand(args) {
+			if (args.startsWith('[hooks-only]')) {
+				const req = args.slice('[hooks-only]'.length).trim()
+				let prompt = HOOKS_DOCS + '\n\n' + HOOK_VERIFICATION_FLOW
+				if (req) {
+					prompt += `\n\n## Task\n\n${req}`
+				}
+				return [{type: 'text', text: prompt}]
+			}
 
-      // Generate schema dynamically to stay in sync with types
-      const jsonSchema = generateSettingsSchema()
+			// Generate schema dynamically to stay in sync with types
+			const jsonSchema = generateSettingsSchema()
 
-      let prompt = UPDATE_CONFIG_PROMPT
-      prompt += `\n\n## Full Settings JSON Schema\n\n\`\`\`json\n${jsonSchema}\n\`\`\``
+			let prompt = UPDATE_CONFIG_PROMPT
+			prompt += `\n\n## Full Settings JSON Schema\n\n\`\`\`json\n${jsonSchema}\n\`\`\``
 
-      if (args) {
-        prompt += `\n\n## User Request\n\n${args}`
-      }
+			if (args) {
+				prompt += `\n\n## User Request\n\n${args}`
+			}
 
-      return [{ type: 'text', text: prompt }]
-    },
-  })
+			return [{type: 'text', text: prompt}]
+		},
+	})
 }

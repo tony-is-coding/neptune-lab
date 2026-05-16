@@ -7,7 +7,7 @@
  * - 支持多种指标类型
  */
 
-import type { Counter, Gauge, Histogram, Timer } from './types'
+import type {Counter, Gauge, Histogram, Timer} from './types'
 
 /**
  * Metrics Provider 接口
@@ -15,36 +15,36 @@ import type { Counter, Gauge, Histogram, Timer } from './types'
  * 负责创建和管理各种类型的指标。
  */
 export interface IMetricsProvider {
-  /**
-   * 创建或获取一个计数器
-   * @param name 指标名称
-   * @returns Counter 实例
-   */
-  counter(name: string): Counter
+	/**
+	 * 创建或获取一个计数器
+	 * @param name 指标名称
+	 * @returns Counter 实例
+	 */
+	counter(name: string): Counter
 
-  /**
-   * 创建或获取一个仪表
-   * @param name 指标名称
-   * @returns Gauge 实例
-   */
-  gauge(name: string): Gauge
+	/**
+	 * 创建或获取一个仪表
+	 * @param name 指标名称
+	 * @returns Gauge 实例
+	 */
+	gauge(name: string): Gauge
 
-  /**
-   * 创建或获取一个直方图
-   * @param name 指标名称
-   * @returns Histogram 实例
-   */
-  histogram(name: string): Histogram
+	/**
+	 * 创建或获取一个直方图
+	 * @param name 指标名称
+	 * @returns Histogram 实例
+	 */
+	histogram(name: string): Histogram
 
-  /**
-   * 创建或获取一个计时器
-   * @param name 指标名称
-   * @returns Timer 实例
-   */
-  timer(name: string): Timer
+	/**
+	 * 创建或获取一个计时器
+	 * @param name 指标名称
+	 * @returns Timer 实例
+	 */
+	timer(name: string): Timer
 
-  /**
-   * 释放资源（可选）
-   */
-  dispose?(): void
+	/**
+	 * 释放资源（可选）
+	 */
+	dispose?(): void
 }

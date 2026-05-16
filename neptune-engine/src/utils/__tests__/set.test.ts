@@ -1,5 +1,5 @@
-import { describe, expect, test } from "bun:test";
-import { difference, every, intersects, union } from "../set";
+import {describe, expect, test} from "bun:test";
+import {difference, every, intersects, union} from "../set";
 
 describe("difference", () => {
 	test("returns elements in a but not in b", () => {

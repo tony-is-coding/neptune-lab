@@ -12,17 +12,17 @@
  * - StandardLogFormatter 单行输出
  */
 
-import { LogUtil, MDC } from 'claude-code-best/engine';
-import type { LogLevel } from 'claude-code-best/engine';
+import {LogUtil, MDC} from 'claude-code-best/engine';
+import type {LogLevel} from 'claude-code-best/engine';
 
 /**
  * 初始化全局日志（应用启动时调用一次）
  */
 export function initLogger(level?: LogLevel): void {
-  LogUtil.initialize({
-    level: (level || process.env.LOG_LEVEL || 'info') as LogLevel,
-    includeCallSite: false,
-  });
+    LogUtil.initialize({
+        level: (level || process.env.LOG_LEVEL || 'info') as LogLevel,
+        includeCallSite: false,
+    });
 }
 
 /**
@@ -36,8 +36,8 @@ export function initLogger(level?: LogLevel): void {
  *   const reqLog = log.child('dispatch');
  */
 export function createLogger(module: string): LogUtil {
-  return LogUtil.getInstance().child(module);
+    return LogUtil.getInstance().child(module);
 }
 
-export { LogUtil, MDC };
-export type { LogLevel };
+export {LogUtil, MDC};
+export type {LogLevel};

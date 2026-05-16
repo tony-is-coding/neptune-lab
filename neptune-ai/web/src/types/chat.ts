@@ -115,6 +115,13 @@ export type MessageBlock =
   | { type: 'tool_result'; toolUseId: string; output?: Record<string, unknown>; isError?: boolean }
   | { type: 'artifact'; id: string; title: string; fileType: string; content: string }
   | { type: 'ask_user'; id: string; questions: AskUserQuestion[]; answered?: boolean; answers?: Record<string, string> }
+  | { type: 'plan'; id: string; todos: PlanTodo[] }
+
+export interface PlanTodo {
+  content: string
+  status: 'pending' | 'in_progress' | 'completed'
+  activeForm?: string
+}
 
 export interface AskUserQuestion {
   question: string

@@ -2,17 +2,17 @@
 // feature flags (dream.ts is behind a feature()-gated require).
 
 import {
-  DIR_EXISTS_GUIDANCE,
-  ENTRYPOINT_NAME,
-  MAX_ENTRYPOINT_LINES,
+	DIR_EXISTS_GUIDANCE,
+	ENTRYPOINT_NAME,
+	MAX_ENTRYPOINT_LINES,
 } from '../../memdir/memdir.js'
 
 export function buildConsolidationPrompt(
-  memoryRoot: string,
-  transcriptDir: string,
-  extra: string,
+	memoryRoot: string,
+	transcriptDir: string,
+	extra: string,
 ): string {
-  return `# Dream: Memory Consolidation
+	return `# Dream: Memory Consolidation
 
 You are performing a dream — a reflective pass over your memory files. Synthesize what you've learned recently into durable, well-organized memories so that future sessions can orient quickly.
 

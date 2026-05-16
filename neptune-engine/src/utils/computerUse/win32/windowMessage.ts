@@ -10,7 +10,7 @@
  * Both paths support full Unicode (Chinese, emoji, etc.) without IME involvement.
  */
 
-import { validateHwnd, runPs, VK_MAP, MODIFIER_KEYS } from './shared.js'
+import {validateHwnd, runPs, VK_MAP, MODIFIER_KEYS} from './shared.js'
 
 /** Character count above which we switch to clipboard paste */
 const CLIPBOARD_THRESHOLD = 32
@@ -20,11 +20,11 @@ const editChildCache = new Map<string, string | null>()
 
 /** Clear cached edit-child mappings. Call on unbind. */
 export function clearEditChildCache(hwnd?: string): void {
-  if (hwnd) {
-    editChildCache.delete(hwnd)
-  } else {
-    editChildCache.clear()
-  }
+	if (hwnd) {
+		editChildCache.delete(hwnd)
+	} else {
+		editChildCache.clear()
+	}
 }
 
 /**
@@ -33,8 +33,8 @@ export function clearEditChildCache(hwnd?: string): void {
  * For traditional Win32 apps, returns the edit control or the original HWND.
  */
 export function resolveInputHwnd(hwnd: string): string {
-  hwnd = validateHwnd(hwnd)
-  return findEditChild(hwnd) ?? hwnd
+	hwnd = validateHwnd(hwnd)
+	return findEditChild(hwnd) ?? hwnd
 }
 
 const WINMSG_TYPE = `
@@ -104,15 +104,15 @@ public class WinMsg {
 
 // Edit class names in priority order
 const EDIT_CLASSES = [
-  'Windows.UI.Input.InputSite.WindowClass', // WinUI 3 input bridge (Windows Terminal, etc.)
-  'RichEditD2DPT', // Win11 Notepad (WinUI 3)
-  'RichEdit20W', // WordPad
-  'Edit', // Classic edit controls
-  'Scintilla', // Scintilla-based editors (Notepad++, etc.)
-  'Chrome_RenderWidgetHostHWND', // Chrome/Electron
-  'TextBox', // WPF TextBox
-  'RichTextBox', // WPF RichTextBox
-  'Windows.UI.Core.CoreWindow', // UWP CoreWindow (input target for some UWP apps)
+	'Windows.UI.Input.InputSite.WindowClass', // WinUI 3 input bridge (Windows Terminal, etc.)
+	'RichEditD2DPT', // Win11 Notepad (WinUI 3)
+	'RichEdit20W', // WordPad
+	'Edit', // Classic edit controls
+	'Scintilla', // Scintilla-based editors (Notepad++, etc.)
+	'Chrome_RenderWidgetHostHWND', // Chrome/Electron
+	'TextBox', // WPF TextBox
+	'RichTextBox', // WPF RichTextBox
+	'Windows.UI.Core.CoreWindow', // UWP CoreWindow (input target for some UWP apps)
 ]
 
 /**
@@ -127,48 +127,48 @@ const EDIT_CLASSES = [
  * inside ApplicationFrameHost). UI Automation crosses process boundaries.
  */
 export function findEditChild(parentHwnd: string): string | null {
-  parentHwnd = validateHwnd(parentHwnd)
+	parentHwnd = validateHwnd(parentHwnd)
 
-  // Cache hit
-  if (editChildCache.has(parentHwnd)) {
-    return editChildCache.get(parentHwnd)!
-  }
+	// Cache hit
+	if (editChildCache.has(parentHwnd)) {
+		return editChildCache.get(parentHwnd)!
+	}
 
-  // Strategy 1: EnumChildWindows (fast, works for Win32 apps)
-  const script = `${WINMSG_TYPE}
+	// Strategy 1: EnumChildWindows (fast, works for Win32 apps)
+	const script = `${WINMSG_TYPE}
 [WinMsg]::FindChildren([IntPtr]::new([long]${parentHwnd}))
 [WinMsg]::childResults | ForEach-Object { $_ }
 `
-  const raw = runPs(script)
-  if (raw) {
-    const children = raw
-      .split('\n')
-      .filter(Boolean)
-      .map(line => {
-        const trimmed = line.trim()
-        const pipe = trimmed.indexOf('|')
-        if (pipe === -1) return null
-        return {
-          hwnd: trimmed.slice(0, pipe),
-          className: trimmed.slice(pipe + 1),
-        }
-      })
-      .filter(
-        (item): item is { hwnd: string; className: string } => item !== null,
-      )
+	const raw = runPs(script)
+	if (raw) {
+		const children = raw
+			.split('\n')
+			.filter(Boolean)
+			.map(line => {
+				const trimmed = line.trim()
+				const pipe = trimmed.indexOf('|')
+				if (pipe === -1) return null
+				return {
+					hwnd: trimmed.slice(0, pipe),
+					className: trimmed.slice(pipe + 1),
+				}
+			})
+			.filter(
+				(item): item is { hwnd: string; className: string } => item !== null,
+			)
 
-    // Search in priority order
-    for (const editClass of EDIT_CLASSES) {
-      const match = children.find(c => c.className === editClass)
-      if (match) {
-        editChildCache.set(parentHwnd, match.hwnd)
-        return match.hwnd
-      }
-    }
-  }
+		// Search in priority order
+		for (const editClass of EDIT_CLASSES) {
+			const match = children.find(c => c.className === editClass)
+			if (match) {
+				editChildCache.set(parentHwnd, match.hwnd)
+				return match.hwnd
+			}
+		}
+	}
 
-  // Strategy 2: UI Automation (crosses process boundaries, finds UWP edit controls)
-  const uiaScript = `
+	// Strategy 2: UI Automation (crosses process boundaries, finds UWP edit controls)
+	const uiaScript = `
 Add-Type -AssemblyName UIAutomationClient
 Add-Type -AssemblyName UIAutomationTypes
 Add-Type @'
@@ -205,17 +205,17 @@ try {
     Write-Output 'NONE'
 }
 `
-  const uiaResult = runPs(uiaScript)
-  if (uiaResult && uiaResult !== 'NONE') {
-    const hwnd = uiaResult.trim()
-    if (hwnd && hwnd !== '0') {
-      editChildCache.set(parentHwnd, hwnd)
-      return hwnd
-    }
-  }
+	const uiaResult = runPs(uiaScript)
+	if (uiaResult && uiaResult !== 'NONE') {
+		const hwnd = uiaResult.trim()
+		if (hwnd && hwnd !== '0') {
+			editChildCache.set(parentHwnd, hwnd)
+			return hwnd
+		}
+	}
 
-  editChildCache.set(parentHwnd, null)
-  return null
+	editChildCache.set(parentHwnd, null)
+	return null
 }
 
 /**
@@ -223,29 +223,29 @@ try {
  * Handles surrogate pairs for characters outside BMP (emoji, rare CJK, etc.).
  */
 export function sendChar(hwnd: string, char: string): boolean {
-  hwnd = validateHwnd(hwnd)
-  const codePoint = char.codePointAt(0)
-  if (codePoint === undefined) return false
+	hwnd = validateHwnd(hwnd)
+	const codePoint = char.codePointAt(0)
+	if (codePoint === undefined) return false
 
-  const hwndExpr = `[IntPtr]::new([long]${hwnd})`
+	const hwndExpr = `[IntPtr]::new([long]${hwnd})`
 
-  // BMP character (U+0000 to U+FFFF): single WM_CHAR
-  if (codePoint <= 0xffff) {
-    const script = `${WINMSG_TYPE}
+	// BMP character (U+0000 to U+FFFF): single WM_CHAR
+	if (codePoint <= 0xffff) {
+		const script = `${WINMSG_TYPE}
 [WinMsg]::SendMessage(${hwndExpr}, [WinMsg]::WM_CHAR, [IntPtr]${codePoint}, [IntPtr]0)
 `
-    return runPs(script) !== null
-  }
+		return runPs(script) !== null
+	}
 
-  // Supplementary character (U+10000+): send as UTF-16 surrogate pair
-  // Windows processes surrogate pairs as two sequential WM_CHAR messages
-  const hi = Math.floor((codePoint - 0x10000) / 0x400) + 0xd800
-  const lo = ((codePoint - 0x10000) % 0x400) + 0xdc00
-  const script = `${WINMSG_TYPE}
+	// Supplementary character (U+10000+): send as UTF-16 surrogate pair
+	// Windows processes surrogate pairs as two sequential WM_CHAR messages
+	const hi = Math.floor((codePoint - 0x10000) / 0x400) + 0xd800
+	const lo = ((codePoint - 0x10000) % 0x400) + 0xdc00
+	const script = `${WINMSG_TYPE}
 [WinMsg]::SendMessage(${hwndExpr}, [WinMsg]::WM_CHAR, [IntPtr]${hi}, [IntPtr]0)
 [WinMsg]::SendMessage(${hwndExpr}, [WinMsg]::WM_CHAR, [IntPtr]${lo}, [IntPtr]0)
 `
-  return runPs(script) !== null
+	return runPs(script) !== null
 }
 
 /**
@@ -253,26 +253,26 @@ export function sendChar(hwnd: string, char: string): boolean {
  * Handles surrogate pairs for supplementary characters.
  */
 function buildWmCharLines(hwnd: string, text: string): string[] {
-  const hwndExpr = `[IntPtr]::new([long]${hwnd})`
-  const lines: string[] = []
-  for (const ch of text) {
-    const cp = ch.codePointAt(0)!
-    if (cp <= 0xffff) {
-      lines.push(
-        `[WinMsg]::SendMessage(${hwndExpr}, [WinMsg]::WM_CHAR, [IntPtr]${cp}, [IntPtr]0)`,
-      )
-    } else {
-      const hi = Math.floor((cp - 0x10000) / 0x400) + 0xd800
-      const lo = ((cp - 0x10000) % 0x400) + 0xdc00
-      lines.push(
-        `[WinMsg]::SendMessage(${hwndExpr}, [WinMsg]::WM_CHAR, [IntPtr]${hi}, [IntPtr]0)`,
-      )
-      lines.push(
-        `[WinMsg]::SendMessage(${hwndExpr}, [WinMsg]::WM_CHAR, [IntPtr]${lo}, [IntPtr]0)`,
-      )
-    }
-  }
-  return lines
+	const hwndExpr = `[IntPtr]::new([long]${hwnd})`
+	const lines: string[] = []
+	for (const ch of text) {
+		const cp = ch.codePointAt(0)!
+		if (cp <= 0xffff) {
+			lines.push(
+				`[WinMsg]::SendMessage(${hwndExpr}, [WinMsg]::WM_CHAR, [IntPtr]${cp}, [IntPtr]0)`,
+			)
+		} else {
+			const hi = Math.floor((cp - 0x10000) / 0x400) + 0xd800
+			const lo = ((cp - 0x10000) % 0x400) + 0xdc00
+			lines.push(
+				`[WinMsg]::SendMessage(${hwndExpr}, [WinMsg]::WM_CHAR, [IntPtr]${hi}, [IntPtr]0)`,
+			)
+			lines.push(
+				`[WinMsg]::SendMessage(${hwndExpr}, [WinMsg]::WM_CHAR, [IntPtr]${lo}, [IntPtr]0)`,
+			)
+		}
+	}
+	return lines
 }
 
 /**
@@ -281,10 +281,10 @@ function buildWmCharLines(hwnd: string, text: string): string[] {
  * NO global APIs (SendInput/keybd_event/SendKeys) — only window-targeted messages.
  */
 function pasteViaClipboard(hwnd: string, text: string): boolean {
-  // Escape single quotes for PowerShell string literal
-  const escaped = text.replace(/'/g, "''")
-  const hwndExpr = `[IntPtr]::new([long]${hwnd})`
-  const script = `${WINMSG_TYPE}
+	// Escape single quotes for PowerShell string literal
+	const escaped = text.replace(/'/g, "''")
+	const hwndExpr = `[IntPtr]::new([long]${hwnd})`
+	const script = `${WINMSG_TYPE}
 Add-Type -AssemblyName System.Windows.Forms
 
 # Save current clipboard
@@ -312,7 +312,7 @@ if ($saved -ne $null -and $saved -ne '') {
 }
 Write-Output 'OK'
 `
-  return runPs(script) === 'OK'
+	return runPs(script) === 'OK'
 }
 
 /**
@@ -322,12 +322,12 @@ Write-Output 'OK'
  * Window-targeted, no global input APIs.
  */
 export function sendText(hwnd: string, text: string): boolean {
-  const targetHwnd = resolveInputHwnd(hwnd)
-  const charLines = buildWmCharLines(targetHwnd, text)
-  const script = `${WINMSG_TYPE}
+	const targetHwnd = resolveInputHwnd(hwnd)
+	const charLines = buildWmCharLines(targetHwnd, text)
+	const script = `${WINMSG_TYPE}
 ${charLines.join('\n')}
 `
-  return runPs(script) !== null
+	return runPs(script) !== null
 }
 
 /**
@@ -337,17 +337,17 @@ ${charLines.join('\n')}
  * lParam includes the correct scan code via MapVirtualKeyW.
  */
 export function sendKey(
-  hwnd: string,
-  vk: number,
-  action: 'down' | 'up',
+	hwnd: string,
+	vk: number,
+	action: 'down' | 'up',
 ): boolean {
-  hwnd = validateHwnd(hwnd)
-  const msg = action === 'down' ? '0x0100' : '0x0101'
-  const lParamFn = action === 'down' ? 'KeyDownLParam' : 'KeyUpLParam'
-  const script = `${WINMSG_TYPE}
+	hwnd = validateHwnd(hwnd)
+	const msg = action === 'down' ? '0x0100' : '0x0101'
+	const lParamFn = action === 'down' ? 'KeyDownLParam' : 'KeyUpLParam'
+	const script = `${WINMSG_TYPE}
 [WinMsg]::PostMessage([IntPtr]::new([long]${hwnd}), ${msg}, [IntPtr]${vk}, [WinMsg]::${lParamFn}(${vk}))
 `
-  return runPs(script) !== null
+	return runPs(script) !== null
 }
 
 /**
@@ -356,57 +356,57 @@ export function sendKey(
  * All via SendMessageW — no global APIs.
  */
 export function sendKeys(hwnd: string, combo: string[]): boolean {
-  hwnd = resolveInputHwnd(hwnd)
-  if (combo.length === 0) return false
+	hwnd = resolveInputHwnd(hwnd)
+	if (combo.length === 0) return false
 
-  const modifiers: number[] = []
-  let mainKey: number | undefined
+	const modifiers: number[] = []
+	let mainKey: number | undefined
 
-  for (const key of combo) {
-    const lower = key.toLowerCase()
-    const vk = VK_MAP[lower]
-    if (vk !== undefined) {
-      if (MODIFIER_KEYS.has(lower)) {
-        modifiers.push(vk)
-      } else {
-        mainKey = vk
-      }
-    } else if (lower.length === 1) {
-      // Single character — use its uppercase VK code
-      mainKey = lower.toUpperCase().charCodeAt(0)
-    } else {
-      return false
-    }
-  }
+	for (const key of combo) {
+		const lower = key.toLowerCase()
+		const vk = VK_MAP[lower]
+		if (vk !== undefined) {
+			if (MODIFIER_KEYS.has(lower)) {
+				modifiers.push(vk)
+			} else {
+				mainKey = vk
+			}
+		} else if (lower.length === 1) {
+			// Single character — use its uppercase VK code
+			mainKey = lower.toUpperCase().charCodeAt(0)
+		} else {
+			return false
+		}
+	}
 
-  if (mainKey === undefined) return false
+	if (mainKey === undefined) return false
 
-  // Build script: modifiers down, key down, key up, modifiers up (reverse)
-  // Uses PostMessage (async) + correct lParam (scan code) — required for
-  // Windows Terminal / ConPTY to correctly translate key events.
-  const hwndExpr = `[IntPtr]::new([long]${hwnd})`
-  const lines: string[] = []
-  for (const mod of modifiers) {
-    lines.push(
-      `[WinMsg]::PostMessage(${hwndExpr}, [WinMsg]::WM_KEYDOWN, [IntPtr]${mod}, [WinMsg]::KeyDownLParam(${mod}))`,
-    )
-  }
-  lines.push(
-    `[WinMsg]::PostMessage(${hwndExpr}, [WinMsg]::WM_KEYDOWN, [IntPtr]${mainKey}, [WinMsg]::KeyDownLParam(${mainKey}))`,
-  )
-  lines.push(
-    `[WinMsg]::PostMessage(${hwndExpr}, [WinMsg]::WM_KEYUP, [IntPtr]${mainKey}, [WinMsg]::KeyUpLParam(${mainKey}))`,
-  )
-  for (const mod of [...modifiers].reverse()) {
-    lines.push(
-      `[WinMsg]::PostMessage(${hwndExpr}, [WinMsg]::WM_KEYUP, [IntPtr]${mod}, [WinMsg]::KeyUpLParam(${mod}))`,
-    )
-  }
+	// Build script: modifiers down, key down, key up, modifiers up (reverse)
+	// Uses PostMessage (async) + correct lParam (scan code) — required for
+	// Windows Terminal / ConPTY to correctly translate key events.
+	const hwndExpr = `[IntPtr]::new([long]${hwnd})`
+	const lines: string[] = []
+	for (const mod of modifiers) {
+		lines.push(
+			`[WinMsg]::PostMessage(${hwndExpr}, [WinMsg]::WM_KEYDOWN, [IntPtr]${mod}, [WinMsg]::KeyDownLParam(${mod}))`,
+		)
+	}
+	lines.push(
+		`[WinMsg]::PostMessage(${hwndExpr}, [WinMsg]::WM_KEYDOWN, [IntPtr]${mainKey}, [WinMsg]::KeyDownLParam(${mainKey}))`,
+	)
+	lines.push(
+		`[WinMsg]::PostMessage(${hwndExpr}, [WinMsg]::WM_KEYUP, [IntPtr]${mainKey}, [WinMsg]::KeyUpLParam(${mainKey}))`,
+	)
+	for (const mod of [...modifiers].reverse()) {
+		lines.push(
+			`[WinMsg]::PostMessage(${hwndExpr}, [WinMsg]::WM_KEYUP, [IntPtr]${mod}, [WinMsg]::KeyUpLParam(${mod}))`,
+		)
+	}
 
-  const script = `${WINMSG_TYPE}
+	const script = `${WINMSG_TYPE}
 ${lines.join('\n')}
 `
-  return runPs(script) !== null
+	return runPs(script) !== null
 }
 
 // ── Console Input Buffer (WriteConsoleInput) ─────────────────────────
@@ -552,16 +552,16 @@ public class ConsoleInput {
  * This is required for terminal apps like Claude Code REPL that read stdin in raw mode.
  */
 export function consoleKey(
-  hwnd: string,
-  vk: number,
-  ch: string = '\0',
+	hwnd: string,
+	vk: number,
+	ch: string = '\0',
 ): boolean {
-  hwnd = validateHwnd(hwnd)
-  const charCode = ch.charCodeAt(0)
-  const script = `${CONSOLE_INPUT_TYPE}
+	hwnd = validateHwnd(hwnd)
+	const charCode = ch.charCodeAt(0)
+	const script = `${CONSOLE_INPUT_TYPE}
 [ConsoleInput]::SendKeyToConsole([IntPtr]::new([long]${hwnd}), ${vk}, [char]${charCode})
 `
-  return runPs(script) !== null
+	return runPs(script) !== null
 }
 
 /**
@@ -569,13 +569,13 @@ export function consoleKey(
  * Directly injects into the Console Input Buffer — works for raw-mode stdin.
  */
 export function consoleText(hwnd: string, text: string): boolean {
-  hwnd = validateHwnd(hwnd)
-  // Escape single quotes for PowerShell
-  const escaped = text.replace(/'/g, "''")
-  const script = `${CONSOLE_INPUT_TYPE}
+	hwnd = validateHwnd(hwnd)
+	// Escape single quotes for PowerShell
+	const escaped = text.replace(/'/g, "''")
+	const script = `${CONSOLE_INPUT_TYPE}
 [ConsoleInput]::SendTextToConsole([IntPtr]::new([long]${hwnd}), '${escaped}')
 `
-  return runPs(script) !== null
+	return runPs(script) !== null
 }
 
 /**
@@ -583,22 +583,22 @@ export function consoleText(hwnd: string, text: string): boolean {
  * Via SendMessageW — window-targeted, no cursor movement.
  */
 export function sendClick(
-  hwnd: string,
-  x: number,
-  y: number,
-  button: 'left' | 'right',
+	hwnd: string,
+	x: number,
+	y: number,
+	button: 'left' | 'right',
 ): boolean {
-  hwnd = resolveInputHwnd(hwnd)
-  const downMsg = button === 'left' ? '0x0201' : '0x0204'
-  const upMsg = button === 'left' ? '0x0202' : '0x0205'
-  const hwndExpr = `[IntPtr]::new([long]${hwnd})`
+	hwnd = resolveInputHwnd(hwnd)
+	const downMsg = button === 'left' ? '0x0201' : '0x0204'
+	const upMsg = button === 'left' ? '0x0202' : '0x0205'
+	const hwndExpr = `[IntPtr]::new([long]${hwnd})`
 
-  const script = `${WINMSG_TYPE}
+	const script = `${WINMSG_TYPE}
 $lp = [WinMsg]::MakeLParam(${x}, ${y})
 [WinMsg]::SendMessage(${hwndExpr}, ${downMsg}, [IntPtr]0, $lp)
 [WinMsg]::SendMessage(${hwndExpr}, ${upMsg}, [IntPtr]0, $lp)
 `
-  return runPs(script) !== null
+	return runPs(script) !== null
 }
 
 /**
@@ -606,12 +606,12 @@ $lp = [WinMsg]::MakeLParam(${x}, ${y})
  * Via SendMessageW(WM_LBUTTONDOWN) — window-targeted, no cursor movement.
  */
 export function sendMouseDown(hwnd: string, x: number, y: number): boolean {
-  hwnd = resolveInputHwnd(hwnd)
-  const script = `${WINMSG_TYPE}
+	hwnd = resolveInputHwnd(hwnd)
+	const script = `${WINMSG_TYPE}
 $lp = [WinMsg]::MakeLParam(${x}, ${y})
 [WinMsg]::SendMessage([IntPtr]::new([long]${hwnd}), [WinMsg]::WM_LBUTTONDOWN, [IntPtr]1, $lp)
 `
-  return runPs(script) !== null
+	return runPs(script) !== null
 }
 
 /**
@@ -619,12 +619,12 @@ $lp = [WinMsg]::MakeLParam(${x}, ${y})
  * Via SendMessageW(WM_LBUTTONUP) — window-targeted, no cursor movement.
  */
 export function sendMouseUp(hwnd: string, x: number, y: number): boolean {
-  hwnd = resolveInputHwnd(hwnd)
-  const script = `${WINMSG_TYPE}
+	hwnd = resolveInputHwnd(hwnd)
+	const script = `${WINMSG_TYPE}
 $lp = [WinMsg]::MakeLParam(${x}, ${y})
 [WinMsg]::SendMessage([IntPtr]::new([long]${hwnd}), [WinMsg]::WM_LBUTTONUP, [IntPtr]0, $lp)
 `
-  return runPs(script) !== null
+	return runPs(script) !== null
 }
 
 /**
@@ -632,12 +632,12 @@ $lp = [WinMsg]::MakeLParam(${x}, ${y})
  * Used during drag operations. Via SendMessageW — window-targeted.
  */
 export function sendMouseMove(hwnd: string, x: number, y: number): boolean {
-  hwnd = resolveInputHwnd(hwnd)
-  const script = `${WINMSG_TYPE}
+	hwnd = resolveInputHwnd(hwnd)
+	const script = `${WINMSG_TYPE}
 $lp = [WinMsg]::MakeLParam(${x}, ${y})
 [WinMsg]::SendMessage([IntPtr]::new([long]${hwnd}), 0x0200, [IntPtr]1, $lp)
 `
-  return runPs(script) !== null
+	return runPs(script) !== null
 }
 
 /**
@@ -654,21 +654,21 @@ $lp = [WinMsg]::MakeLParam(${x}, ${y})
  * which only work on traditional scrollbar controls.
  */
 export function sendMouseWheel(
-  hwnd: string,
-  x: number,
-  y: number,
-  delta: number,
-  horizontal: boolean = false,
+	hwnd: string,
+	x: number,
+	y: number,
+	delta: number,
+	horizontal: boolean = false,
 ): boolean {
-  hwnd = resolveInputHwnd(hwnd)
-  // WM_MOUSEWHEEL = 0x020A, WM_MOUSEHWHEEL = 0x020E
-  const msg = horizontal ? '0x020E' : '0x020A'
-  // wParam: high word = wheel delta (signed short), low word = modifier keys (0)
-  // delta is in units of WHEEL_DELTA (120). Positive = up/right, negative = down/left.
-  const wheelDelta = Math.round(delta) * 120
-  // Pack delta into high word of wParam: (delta << 16) as signed
-  // lParam: screen coordinates packed as MAKELPARAM(screenX, screenY)
-  const script = `${WINMSG_TYPE}
+	hwnd = resolveInputHwnd(hwnd)
+	// WM_MOUSEWHEEL = 0x020A, WM_MOUSEHWHEEL = 0x020E
+	const msg = horizontal ? '0x020E' : '0x020A'
+	// wParam: high word = wheel delta (signed short), low word = modifier keys (0)
+	// delta is in units of WHEEL_DELTA (120). Positive = up/right, negative = down/left.
+	const wheelDelta = Math.round(delta) * 120
+	// Pack delta into high word of wParam: (delta << 16) as signed
+	// lParam: screen coordinates packed as MAKELPARAM(screenX, screenY)
+	const script = `${WINMSG_TYPE}
 # WM_MOUSEWHEEL/WM_MOUSEHWHEEL require screen coords in lParam
 # and wheel delta in high word of wParam
 Add-Type @'
@@ -692,5 +692,5 @@ public class WheelHelper {
 '@
 [WheelHelper]::Scroll([IntPtr]::new([long]${hwnd}), ${x}, ${y}, ${wheelDelta}, ${msg})
 `
-  return runPs(script) !== null
+	return runPs(script) !== null
 }

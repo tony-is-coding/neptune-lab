@@ -27,9 +27,12 @@ const TOOL_LABELS: Record<string, string> = {
   Glob: '搜索文件',
   Grep: '搜索内容',
   Agent: '调用子代理',
+  Skill: '执行技能',
   AskUserQuestion: '等待用户回答',
   TaskCreate: '创建任务',
   TaskUpdate: '更新任务',
+  TaskList: '查看任务列表',
+  TodoWrite: '更新计划',
   NotebookEdit: '编辑笔记本',
 };
 
@@ -68,6 +71,10 @@ function getInputSummary(name: string, input?: Record<string, unknown>): string 
   if (name === 'Grep' && input.pattern) return String(input.pattern);
   // Glob: show pattern
   if (name === 'Glob' && input.pattern) return String(input.pattern);
+  // Skill: show skill name + args
+  if (name === 'Skill' && input.skill) return String(input.skill) + (input.args ? ` ${String(input.args).substring(0, 30)}` : '');
+  // TodoWrite: show first todo subject
+  if (name === 'TodoWrite' && input.todos) return '更新任务列表';
 
   // Generic: try common fields
   if (input.query) return String(input.query).substring(0, 60);

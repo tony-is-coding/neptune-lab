@@ -24,7 +24,7 @@
  * ```
  */
 
-import { LogUtil } from '../log/LogUtil.js'
+import {LogUtil} from '../log/LogUtil.js'
 
 /**
  * 检查是否启用 debug 模式
@@ -71,7 +71,8 @@ export class ConfigDiagnostics {
 	constructor(
 		private readonly key: string,
 		private readonly debug: boolean = isDebugEnabled(),
-	) {}
+	) {
+	}
 
 	/**
 	 * 记录一个配置决策
@@ -88,7 +89,7 @@ export class ConfigDiagnostics {
 			this.decisions[this.decisions.length - 1].overridden = true
 		}
 
-		this.decisions.push({ source, value, overridden })
+		this.decisions.push({source, value, overridden})
 	}
 
 	/**
@@ -177,7 +178,7 @@ export class ConfigSummary {
 	 * @param source 配置来源
 	 */
 	add(key: string, value: string, source: ConfigSourceType): void {
-		this.entries.set(key, { key, value, source })
+		this.entries.set(key, {key, value, source})
 	}
 
 	/**

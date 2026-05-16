@@ -9,7 +9,7 @@
  * - 零 React 依赖（通过动态 require 延迟加载）
  * - 向后兼容
  */
-import type { HookContext, HookResult, HookExecutor } from './HookContext.js'
+import type {HookContext, HookResult, HookExecutor} from './HookContext.js'
 
 /**
  * 创建 HookCore 实例
@@ -33,52 +33,52 @@ import type { HookContext, HookResult, HookExecutor } from './HookContext.js'
  * ```
  */
 export function createHookCore(_ctx: HookContext): HookExecutor {
-  // 动态 require 确保 HookCore 模块本身零 React 依赖
-  // 实际调用时通过 require 委托到原始 hooks.ts
-  const loadHooks = () => {
-    return require('../../utils/hooks.js') as typeof import('../../utils/hooks.js')
-  }
+	// 动态 require 确保 HookCore 模块本身零 React 依赖
+	// 实际调用时通过 require 委托到原始 hooks.ts
+	const loadHooks = () => {
+		return require('../../utils/hooks.js') as typeof import('../../utils/hooks.js')
+	}
 
-  return {
-    async executeNotificationHooks(data) {
-      const hooks = loadHooks()
-      await hooks.executeNotificationHooks(data)
-    },
+	return {
+		async executeNotificationHooks(data) {
+			const hooks = loadHooks()
+			await hooks.executeNotificationHooks(data)
+		},
 
-    async executeConfigChangeHooks(source, filePath, timeoutMs) {
-      const hooks = loadHooks()
-      const results = await hooks.executeConfigChangeHooks(
-        source as any,
-        filePath,
-        timeoutMs,
-      )
-      return results.map(mapResult)
-    },
+		async executeConfigChangeHooks(source, filePath, timeoutMs) {
+			const hooks = loadHooks()
+			const results = await hooks.executeConfigChangeHooks(
+				source as any,
+				filePath,
+				timeoutMs,
+			)
+			return results.map(mapResult)
+		},
 
-    async executeSessionEndHooks(reason, options) {
-      const hooks = loadHooks()
-      await hooks.executeSessionEndHooks(
-        reason as any,
-        options as any,
-      )
-    },
-  }
+		async executeSessionEndHooks(reason, options) {
+			const hooks = loadHooks()
+			await hooks.executeSessionEndHooks(
+				reason as any,
+				options as any,
+			)
+		},
+	}
 }
 
 /**
  * 将原始 HookOutsideReplResult 映射为 HookResult
  */
 function mapResult(result: {
-  succeeded: boolean
-  output?: string
-  command?: string
+	succeeded: boolean
+	output?: string
+	command?: string
 }): HookResult {
-  return {
-    succeeded: result.succeeded,
-    output: result.output,
-    command: result.command,
-  }
+	return {
+		succeeded: result.succeeded,
+		output: result.output,
+		command: result.command,
+	}
 }
 
-export { buildBaseHookInput } from './HookContext.js'
-export type { HookContext, HookResult, HookExecutor }
+export {buildBaseHookInput} from './HookContext.js'
+export type {HookContext, HookResult, HookExecutor}

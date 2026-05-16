@@ -30,7 +30,7 @@
  * ```
  */
 
-import type { IConfigProvider, ConfigEntry, ConfigSource } from './IConfigProvider.js'
+import type {IConfigProvider, ConfigEntry, ConfigSource} from './IConfigProvider.js'
 
 /**
  * No-Op 配置提供者

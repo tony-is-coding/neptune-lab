@@ -5,6 +5,7 @@
 ## 场景
 
 创建一个命令行脚本，能够：
+
 1. 回答问题
 2. 读取文件
 3. 写入文件
@@ -222,11 +223,13 @@ export ANTHROPIC_API_KEY=your-api-key
 ### 3. 运行
 
 **交互模式**：
+
 ```bash
 bun run examples/embedded-agent.ts
 ```
 
 **单次查询模式**：
+
 ```bash
 bun run examples/embedded-agent.ts "帮我分析当前目录的文件结构"
 ```

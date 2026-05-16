@@ -12,9 +12,9 @@
  * - 继承 BaseProvider，只保留 query() 方法的特定实现
  */
 
-import type { ProviderQueryParams, ProviderMessage } from '../ProviderAdapter.js'
-import { BaseProvider, type BaseProviderConfig } from './BaseProvider.js'
-import type { FoundryProviderConfig } from '../types/ProviderConfigs.js'
+import type {ProviderQueryParams, ProviderMessage} from '../ProviderAdapter.js'
+import {BaseProvider, type BaseProviderConfig} from './BaseProvider.js'
+import type {FoundryProviderConfig} from '../types/ProviderConfigs.js'
 
 // ============================================================
 // FoundryProvider 实现
@@ -27,47 +27,47 @@ import type { FoundryProviderConfig } from '../types/ProviderConfigs.js'
  * 通过环境变量 CLAUDE_CODE_USE_FOUNDRY=1 启用 Foundry 模式。
  */
 export class FoundryProvider extends BaseProvider<FoundryProviderConfig> {
-  readonly type = 'foundry' as const
+	readonly type = 'foundry' as const
 
-  /**
-   * 流式查询方法
-   *
-   * Foundry 底层使用 Anthropic Foundry SDK，委托给 CC 的 queryModelWithStreaming。
-   * 需要确保 CLAUDE_CODE_USE_FOUNDRY 环境变量已设置。
-   *
-   * @param params 查询参数
-   * @returns 异步生成器，产出 ProviderMessage
-   */
-  async *query(params: ProviderQueryParams): AsyncGenerator<ProviderMessage> {
-    const { queryModelWithStreaming } = await import('../../../services/api/claude.js')
-    const { asSystemPrompt } = await import('../../../utils/systemPromptType.js')
+	/**
+	 * 流式查询方法
+	 *
+	 * Foundry 底层使用 Anthropic Foundry SDK，委托给 CC 的 queryModelWithStreaming。
+	 * 需要确保 CLAUDE_CODE_USE_FOUNDRY 环境变量已设置。
+	 *
+	 * @param params 查询参数
+	 * @returns 异步生成器，产出 ProviderMessage
+	 */
+	async* query(params: ProviderQueryParams): AsyncGenerator<ProviderMessage> {
+		const {queryModelWithStreaming} = await import('../../../services/api/claude.js')
+		const {asSystemPrompt} = await import('../../../utils/systemPromptType.js')
 
-    try {
-      const systemPrompt = asSystemPrompt(params.systemPrompt ? [params.systemPrompt] : [])
-      const options = this.buildOptions(params)
+		try {
+			const systemPrompt = asSystemPrompt(params.systemPrompt ? [params.systemPrompt] : [])
+			const options = this.buildOptions(params)
 
-      const stream = queryModelWithStreaming({
-        messages: params.messages,
-        systemPrompt,
-        thinkingConfig: { type: 'disabled' },
-        tools: params.tools ?? [],
-        signal: params.signal || new AbortController().signal,
-        options,
-      })
+			const stream = queryModelWithStreaming({
+				messages: params.messages,
+				systemPrompt,
+				thinkingConfig: {type: 'disabled'},
+				tools: params.tools ?? [],
+				signal: params.signal || new AbortController().signal,
+				options,
+			})
 
-      try {
-        for await (const event of stream) {
-          yield this.convertToProviderMessage(event)
-        }
-      } finally {
-        // 确保在提前退出/中断/超时场景下清理 stream
-        const iterator = stream[Symbol.asyncIterator]()
-        if (typeof iterator.return === 'function') {
-          await iterator.return()
-        }
-      }
-    } catch (error) {
-      yield this.createErrorResponse(error)
-    }
-  }
+			try {
+				for await (const event of stream) {
+					yield this.convertToProviderMessage(event)
+				}
+			} finally {
+				// 确保在提前退出/中断/超时场景下清理 stream
+				const iterator = stream[Symbol.asyncIterator]()
+				if (typeof iterator.return === 'function') {
+					await iterator.return()
+				}
+			}
+		} catch (error) {
+			yield this.createErrorResponse(error)
+		}
+	}
 }

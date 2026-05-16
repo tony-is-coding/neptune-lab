@@ -2,31 +2,32 @@
 
 ## 概述
 
-本文档描述 Provider 适配器的设计和实现策略。**T10 已完成**：AnthropicProvider 现在包装 CC 的 `queryModelWithStreaming`，实现真实的 LLM 调用。
+本文档描述 Provider 适配器的设计和实现策略。**T10 已完成**：AnthropicProvider 现在包装 CC 的 `queryModelWithStreaming`
+，实现真实的 LLM 调用。
 
 ## 当前架构状态
 
 ### 已完成组件
 
 1. **ProviderAdapter 接口** (`ProviderAdapter.ts`)
-   - 定义统一的 Provider 查询接口
-   - 支持流式输出 (`AsyncGenerator<ProviderMessage>`)
-   - 定义标准化的参数和消息类型
+	- 定义统一的 Provider 查询接口
+	- 支持流式输出 (`AsyncGenerator<ProviderMessage>`)
+	- 定义标准化的参数和消息类型
 
 2. **ProviderRegistry** (`ProviderRegistry.ts`)
-   - 单例注册表，管理多个 Provider 实例
-   - 支持注册、注销、查询 Provider
-   - 默认注册 AnthropicProvider
+	- 单例注册表，管理多个 Provider 实例
+	- 支持注册、注销、查询 Provider
+	- 默认注册 AnthropicProvider
 
 3. **AnthropicProvider** (`adapters/AnthropicProvider.ts`) ✅ **T10 已完成**
-   - 实现 `query()` 方法，包装 `queryModelWithStreaming()`
-   - 参数转换：`ProviderQueryParams` → CC 所需格式
-   - 响应转换：CC 流事件 → `ProviderMessage`
-   - 错误处理：包装为标准 `ProviderMessage`
+	- 实现 `query()` 方法，包装 `queryModelWithStreaming()`
+	- 参数转换：`ProviderQueryParams` → CC 所需格式
+	- 响应转换：CC 流事件 → `ProviderMessage`
+	- 错误处理：包装为标准 `ProviderMessage`
 
 4. **AgentEngine 集成**
-   - 支持 per-session Provider 配置
-   - `sessionProviders` Map 存储会话级覆盖
+	- 支持 per-session Provider 配置
+	- `sessionProviders` Map 存储会话级覆盖
 
 ### T10 实现细节
 
@@ -58,15 +59,15 @@ async *query(params: ProviderQueryParams): AsyncGenerator<ProviderMessage> {
 
 #### 参数转换策略
 
-| ProviderQueryParams | CC 格式 | 转换方法 |
-|---------------------|---------|----------|
-| `model` | `Options.model` | 直接映射 |
-| `messages` | `Message[]` | 规范化 |
-| `systemPrompt` | `SystemPrompt` | `asSystemPrompt()` |
-| `tools` | `Tools` | 直接透传（简化） |
-| `maxTokens` | `Options.maxOutputTokensOverride` | 映射 |
-| `signal` | `AbortSignal` | 直接透传 |
-| `extra` | `Options` | 暂未使用 |
+| ProviderQueryParams | CC 格式                             | 转换方法               |
+|---------------------|-----------------------------------|--------------------|
+| `model`             | `Options.model`                   | 直接映射               |
+| `messages`          | `Message[]`                       | 规范化                |
+| `systemPrompt`      | `SystemPrompt`                    | `asSystemPrompt()` |
+| `tools`             | `Tools`                           | 直接透传（简化）           |
+| `maxTokens`         | `Options.maxOutputTokensOverride` | 映射                 |
+| `signal`            | `AbortSignal`                     | 直接透传               |
+| `extra`             | `Options`                         | 暂未使用               |
 
 #### 响应转换策略
 
@@ -95,14 +96,14 @@ convertToProviderMessage(event: any): ProviderMessage {
 
 ### Provider 列表
 
-| Provider | 类型标识 | SDK | 状态 |
-|----------|----------|-----|------|
-| Bedrock | `bedrock` | `@anthropic-ai/bedrock-sdk` | T11 待实现 |
-| Vertex | `vertex` | `@anthropic-ai/vertex-sdk` | T11 待实现 |
-| Foundry | `foundry` | `@anthropic-ai/foundry-sdk` | T11 待实现 |
-| OpenAI | `openai` | 原生实现 | T11 待实现 |
-| Gemini | `gemini` | 原生实现 | T11 待实现 |
-| Grok | `grok` | 原生实现 | T11 待实现 |
+| Provider | 类型标识      | SDK                         | 状态      |
+|----------|-----------|-----------------------------|---------|
+| Bedrock  | `bedrock` | `@anthropic-ai/bedrock-sdk` | T11 待实现 |
+| Vertex   | `vertex`  | `@anthropic-ai/vertex-sdk`  | T11 待实现 |
+| Foundry  | `foundry` | `@anthropic-ai/foundry-sdk` | T11 待实现 |
+| OpenAI   | `openai`  | 原生实现                        | T11 待实现 |
+| Gemini   | `gemini`  | 原生实现                        | T11 待实现 |
+| Grok     | `grok`    | 原生实现                        | T11 待实现 |
 
 ### 实现模式（参考 AnthropicProvider）
 
@@ -129,12 +130,12 @@ export class {Provider}Provider implements ProviderAdapter {
 
 ### 消息格式转换挑战
 
-| Provider | 消息格式 | 工具格式 | 流式响应 |
-|----------|----------|----------|----------|
-| Anthropic | 标准化 | 标准化 | BetaRawMessageStreamEvent ✅ |
-| OpenAI | Chat Completions | Functions | Server-Sent Events |
-| Gemini | GenerateContent | Tools | Server-Sent Events |
-| Grok | Chat Completions | Tools | Server-Sent Events |
+| Provider  | 消息格式             | 工具格式      | 流式响应                        |
+|-----------|------------------|-----------|-----------------------------|
+| Anthropic | 标准化              | 标准化       | BetaRawMessageStreamEvent ✅ |
+| OpenAI    | Chat Completions | Functions | Server-Sent Events          |
+| Gemini    | GenerateContent  | Tools     | Server-Sent Events          |
+| Grok      | Chat Completions | Tools     | Server-Sent Events          |
 
 ## 测试策略
 

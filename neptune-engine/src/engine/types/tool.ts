@@ -25,4 +25,4 @@ export type {
 } from '../../Tool.js'
 
 // 重新导出函数
-export { findToolByName, toolMatchesName, filterToolProgressMessages, getEmptyToolPermissionContext } from '../../Tool.js'
+export {findToolByName, toolMatchesName, filterToolProgressMessages, getEmptyToolPermissionContext} from '../../Tool.js'

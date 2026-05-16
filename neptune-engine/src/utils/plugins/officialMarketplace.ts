@@ -6,15 +6,15 @@
  * to install and identify this marketplace.
  */
 
-import type { MarketplaceSource } from './schemas.js'
+import type {MarketplaceSource} from './schemas.js'
 
 /**
  * Source configuration for the official Anthropic plugins marketplace.
  * Used when auto-installing the marketplace on startup.
  */
 export const OFFICIAL_MARKETPLACE_SOURCE = {
-  source: 'github',
-  repo: 'anthropics/claude-plugins-official',
+	source: 'github',
+	repo: 'anthropics/claude-plugins-official',
 } as const satisfies MarketplaceSource
 
 /**

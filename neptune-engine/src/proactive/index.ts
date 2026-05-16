@@ -23,13 +23,13 @@ let activationSource: string | undefined
 const listeners = new Set<() => void>()
 
 function notify(): void {
-  for (const cb of listeners) {
-    try {
-      cb()
-    } catch {
-      // subscriber errors must not break the notifier
-    }
-  }
+	for (const cb of listeners) {
+		try {
+			cb()
+		} catch {
+			// subscriber errors must not break the notifier
+		}
+	}
 }
 
 // ---------------------------------------------------------------------------
@@ -37,43 +37,43 @@ function notify(): void {
 // ---------------------------------------------------------------------------
 
 export function isProactiveActive(): boolean {
-  return active
+	return active
 }
 
 export function activateProactive(source?: string): void {
-  if (active) return
-  active = true
-  paused = false
-  contextBlocked = false
-  activationSource = source
-  notify()
+	if (active) return
+	active = true
+	paused = false
+	contextBlocked = false
+	activationSource = source
+	notify()
 }
 
 export function deactivateProactive(): void {
-  if (!active) return
-  active = false
-  paused = false
-  contextBlocked = false
-  nextTickAt = null
-  activationSource = undefined
-  notify()
+	if (!active) return
+	active = false
+	paused = false
+	contextBlocked = false
+	nextTickAt = null
+	activationSource = undefined
+	notify()
 }
 
 export function isProactivePaused(): boolean {
-  return paused
+	return paused
 }
 
 export function pauseProactive(): void {
-  if (!active || paused) return
-  paused = true
-  nextTickAt = null
-  notify()
+	if (!active || paused) return
+	paused = true
+	nextTickAt = null
+	notify()
 }
 
 export function resumeProactive(): void {
-  if (!active || !paused) return
-  paused = false
-  notify()
+	if (!active || !paused) return
+	paused = false
+	notify()
 }
 
 /**
@@ -83,16 +83,16 @@ export function resumeProactive(): void {
  * Cleared on successful response or after compaction.
  */
 export function setContextBlocked(blocked: boolean): void {
-  if (contextBlocked === blocked) return
-  contextBlocked = blocked
-  if (blocked) {
-    nextTickAt = null
-  }
-  notify()
+	if (contextBlocked === blocked) return
+	contextBlocked = blocked
+	if (blocked) {
+		nextTickAt = null
+	}
+	notify()
 }
 
 export function isContextBlocked(): boolean {
-  return contextBlocked
+	return contextBlocked
 }
 
 /**
@@ -100,8 +100,8 @@ export function isContextBlocked(): boolean {
  * Called by useProactive after submitting a tick.
  */
 export function setNextTickAt(ts: number | null): void {
-  nextTickAt = ts
-  notify()
+	nextTickAt = ts
+	notify()
 }
 
 /**
@@ -109,12 +109,12 @@ export function setNextTickAt(ts: number | null): void {
  * Used by PromptInputFooterLeftSide to render a countdown.
  */
 export function getNextTickAt(): number | null {
-  if (!active || paused || contextBlocked) return null
-  return nextTickAt
+	if (!active || paused || contextBlocked) return null
+	return nextTickAt
 }
 
 export function getActivationSource(): string | undefined {
-  return activationSource
+	return activationSource
 }
 
 /**
@@ -122,10 +122,10 @@ export function getActivationSource(): string | undefined {
  * Returns an unsubscribe function.
  */
 export function subscribeToProactiveChanges(cb: () => void): () => void {
-  listeners.add(cb)
-  return () => {
-    listeners.delete(cb)
-  }
+	listeners.add(cb)
+	return () => {
+		listeners.delete(cb)
+	}
 }
 
 /**
@@ -133,5 +133,5 @@ export function subscribeToProactiveChanges(cb: () => void): () => void {
  * Convenience predicate combining all blocking conditions.
  */
 export function shouldTick(): boolean {
-  return active && !paused && !contextBlocked
+	return active && !paused && !contextBlocked
 }

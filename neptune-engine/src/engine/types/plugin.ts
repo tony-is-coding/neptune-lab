@@ -7,16 +7,16 @@
 
 // 重新导出插件类型
 export type {
-  PluginRepository,
-  PluginConfig,
-  LoadedPlugin,
-  PluginComponent,
-  PluginError,
-  PluginLoadResult,
-  BuiltinPluginDefinition,
+	PluginRepository,
+	PluginConfig,
+	LoadedPlugin,
+	PluginComponent,
+	PluginError,
+	PluginLoadResult,
+	BuiltinPluginDefinition,
 } from '../../types/plugin.js'
 
 // 重新导出辅助函数
 export {
-  getPluginErrorMessage,
+	getPluginErrorMessage,
 } from '../../types/plugin.js'

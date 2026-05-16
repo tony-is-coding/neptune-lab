@@ -1,7 +1,9 @@
 export const TungstenTool = {
-  name: 'TungstenTool',
-  isEnabled: () => false,
+	name: 'TungstenTool',
+	isEnabled: () => false,
 }
 
-export const clearSessionsWithTungstenUsage = () => {}
-export const resetInitializationState = () => {}
+export const clearSessionsWithTungstenUsage = () => {
+}
+export const resetInitializationState = () => {
+}

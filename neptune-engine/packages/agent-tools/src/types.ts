@@ -1,7 +1,7 @@
 // agent-tools — Core Tool interface definitions
 // Protocol-level types, independent of any host framework
 
-import type { z } from 'zod/v4'
+import type {z} from 'zod/v4'
 
 // ============================================================================
 // Schema types
@@ -18,11 +18,11 @@ export type AnyObject = z.ZodType<{ [key: string]: unknown }>
  * MCP servers provide this directly instead of Zod schemas.
  */
 export type ToolInputJSONSchema = {
-  [x: string]: unknown
-  type: 'object'
-  properties?: {
-    [x: string]: unknown
-  }
+	[x: string]: unknown
+	type: 'object'
+	properties?: {
+		[x: string]: unknown
+	}
 }
 
 // ============================================================================
@@ -39,15 +39,15 @@ export type ToolProgressData = any
  * A progress event from a tool execution.
  */
 export type ToolProgress<P extends ToolProgressData = ToolProgressData> = {
-  toolUseID: string
-  data: P
+	toolUseID: string
+	data: P
 }
 
 /**
  * Callback for receiving progress updates during tool execution.
  */
 export type ToolCallProgress<P extends ToolProgressData = ToolProgressData> = (
-  progress: ToolProgress<P>,
+	progress: ToolProgress<P>,
 ) => void
 
 // ============================================================================
@@ -60,14 +60,14 @@ export type ToolCallProgress<P extends ToolProgressData = ToolProgressData> = (
  * @template Message - The message type (host-specific, defaults to unknown)
  */
 export type ToolResult<T, Message = unknown> = {
-  data: T
-  newMessages?: Message[]
-  contextModifier?: (context: any) => any
-  /** MCP protocol metadata (structuredContent, _meta) */
-  mcpMeta?: {
-    _meta?: Record<string, unknown>
-    structuredContent?: Record<string, unknown>
-  }
+	data: T
+	newMessages?: Message[]
+	contextModifier?: (context: any) => any
+	/** MCP protocol metadata (structuredContent, _meta) */
+	mcpMeta?: {
+		_meta?: Record<string, unknown>
+		structuredContent?: Record<string, unknown>
+	}
 }
 
 // ============================================================================
@@ -78,16 +78,16 @@ export type ToolResult<T, Message = unknown> = {
  * Result of tool input validation.
  */
 export type ValidationResult =
-  | { result: true }
-  | { result: false; message: string; errorCode: number }
+	| { result: true }
+	| { result: false; message: string; errorCode: number }
 
 /**
  * Result of a permission check for a tool invocation.
  */
 export type PermissionResult =
-  | { behavior: 'allow'; updatedInput: Record<string, unknown> }
-  | { behavior: 'deny'; message: string }
-  | { behavior: 'passthrough' }
+	| { behavior: 'allow'; updatedInput: Record<string, unknown> }
+	| { behavior: 'deny'; message: string }
+	| { behavior: 'passthrough' }
 
 // ============================================================================
 // Core Tool interface
@@ -109,100 +109,115 @@ export type PermissionResult =
  * @template Context - Tool execution context type (host-specific)
  */
 export interface CoreTool<
-  Input extends AnyObject = AnyObject,
-  Output = unknown,
-  P extends ToolProgressData = ToolProgressData,
-  Context = unknown,
+	Input extends AnyObject = AnyObject,
+	Output = unknown,
+	P extends ToolProgressData = ToolProgressData,
+	Context = unknown,
 > {
-  // ── Identity ──
-  readonly name: string
-  aliases?: string[]
-  searchHint?: string
+	// ── Identity ──
+	readonly name: string
+	aliases?: string[]
+	searchHint?: string
 
-  // ── Schema ──
-  readonly inputSchema: Input
-  readonly inputJSONSchema?: ToolInputJSONSchema
-  outputSchema?: z.ZodType<unknown>
+	// ── Schema ──
+	readonly inputSchema: Input
+	readonly inputJSONSchema?: ToolInputJSONSchema
+	outputSchema?: z.ZodType<unknown>
 
-  // ── Execution ──
-  call(
-    args: z.infer<Input>,
-    context: Context,
-    canUseTool: (...args: any[]) => Promise<any>,
-    parentMessage: any,
-    onProgress?: ToolCallProgress<P>,
-  ): Promise<ToolResult<Output>>
+	// ── Execution ──
+	call(
+		args: z.infer<Input>,
+		context: Context,
+		canUseTool: (...args: any[]) => Promise<any>,
+		parentMessage: any,
+		onProgress?: ToolCallProgress<P>,
+	): Promise<ToolResult<Output>>
 
-  // ── Description ──
-  description(
-    input: z.infer<Input>,
-    options: {
-      isNonInteractiveSession: boolean
-      toolPermissionContext: any
-      tools: readonly CoreTool[]
-    },
-  ): Promise<string>
+	// ── Description ──
+	description(
+		input: z.infer<Input>,
+		options: {
+			isNonInteractiveSession: boolean
+			toolPermissionContext: any
+			tools: readonly CoreTool[]
+		},
+	): Promise<string>
 
-  prompt(options: {
-    getToolPermissionContext: () => Promise<any>
-    tools: readonly CoreTool[]
-    agents: any[]
-    allowedAgentTypes?: string[]
-  }): Promise<string>
+	prompt(options: {
+		getToolPermissionContext: () => Promise<any>
+		tools: readonly CoreTool[]
+		agents: any[]
+		allowedAgentTypes?: string[]
+	}): Promise<string>
 
-  // ── Behavioral properties ──
-  isConcurrencySafe(input: z.infer<Input>): boolean
-  isEnabled(): boolean
-  isReadOnly(input: z.infer<Input>): boolean
-  isDestructive?(input: z.infer<Input>): boolean
-  isOpenWorld?(input: z.infer<Input>): boolean
-  interruptBehavior?(): 'cancel' | 'block'
-  requiresUserInteraction?(): boolean
+	// ── Behavioral properties ──
+	isConcurrencySafe(input: z.infer<Input>): boolean
 
-  // ── MCP markers ──
-  isMcp?: boolean
-  isLsp?: boolean
-  readonly shouldDefer?: boolean
-  readonly alwaysLoad?: boolean
-  mcpInfo?: { serverName: string; toolName: string }
+	isEnabled(): boolean
 
-  // ── Permissions ──
-  validateInput?(
-    input: z.infer<Input>,
-    context: Context,
-  ): Promise<ValidationResult>
+	isReadOnly(input: z.infer<Input>): boolean
 
-  checkPermissions(
-    input: z.infer<Input>,
-    context: Context,
-  ): Promise<PermissionResult>
+	isDestructive?(input: z.infer<Input>): boolean
 
-  // ── Utility ──
-  inputsEquivalent?(a: z.infer<Input>, b: z.infer<Input>): boolean
-  getPath?(input: z.infer<Input>): string
-  toAutoClassifierInput(input: z.infer<Input>): unknown
-  backfillObservableInput?(input: Record<string, unknown>): void
+	isOpenWorld?(input: z.infer<Input>): boolean
 
-  // ── Output ──
-  maxResultSizeChars: number
-  userFacingName(input: Partial<z.infer<Input>> | undefined): string
-  mapToolResultToToolResultBlockParam(
-    content: Output,
-    toolUseID: string,
-  ): any
+	interruptBehavior?(): 'cancel' | 'block'
 
-  // ── Optional output helpers ──
-  isResultTruncated?(output: Output): boolean
-  getToolUseSummary?(input: Partial<z.infer<Input>> | undefined): string | null
-  getActivityDescription?(
-    input: Partial<z.infer<Input>> | undefined,
-  ): string | null
-  isTransparentWrapper?(): boolean
-  isSearchOrReadCommand?(input: z.infer<Input>): {
-    isSearch: boolean
-    isRead: boolean
-    isList?: boolean
-  }
+	requiresUserInteraction?(): boolean
+
+	// ── MCP markers ──
+	isMcp?: boolean
+	isLsp?: boolean
+	readonly shouldDefer?: boolean
+	readonly alwaysLoad?: boolean
+	mcpInfo?: { serverName: string; toolName: string }
+
+	// ── Permissions ──
+	validateInput?(
+		input: z.infer<Input>,
+		context: Context,
+	): Promise<ValidationResult>
+
+	checkPermissions(
+		input: z.infer<Input>,
+		context: Context,
+	): Promise<PermissionResult>
+
+	// ── Utility ──
+	inputsEquivalent?(a: z.infer<Input>, b: z.infer<Input>): boolean
+
+	getPath?(input: z.infer<Input>): string
+
+	toAutoClassifierInput(input: z.infer<Input>): unknown
+
+	backfillObservableInput?(input: Record<string, unknown>): void
+
+	// ── Output ──
+	maxResultSizeChars: number
+
+	userFacingName(input: Partial<z.infer<Input>> | undefined): string
+
+	mapToolResultToToolResultBlockParam(
+		content: Output,
+		toolUseID: string,
+	): any
+
+	// ── Optional output helpers ──
+	isResultTruncated?(output: Output): boolean
+
+	getToolUseSummary?(input: Partial<z.infer<Input>> | undefined): string | null
+
+	getActivityDescription?(
+		input: Partial<z.infer<Input>> | undefined,
+	): string | null
+
+	isTransparentWrapper?(): boolean
+
+	isSearchOrReadCommand?(input: z.infer<Input>): {
+		isSearch: boolean
+		isRead: boolean
+		isList?: boolean
+	}
 }
 
 /**
@@ -210,9 +225,9 @@ export interface CoreTool<
  * This is the default export — hosts can specify their own Context type.
  */
 export type Tool<
-  Input extends AnyObject = AnyObject,
-  Output = unknown,
-  P extends ToolProgressData = ToolProgressData,
+	Input extends AnyObject = AnyObject,
+	Output = unknown,
+	P extends ToolProgressData = ToolProgressData,
 > = CoreTool<Input, Output, P>
 
 /**

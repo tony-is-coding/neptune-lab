@@ -9,7 +9,7 @@
  * binary (as opposed to user-authored ones in .claude/workflows/).
  */
 export function initBundledWorkflows(): void {
-  // Bundled workflows are registered here at startup.
-  // Currently a no-op — all workflows are user-authored in .claude/workflows/.
-  // This function exists as the extension point for future built-in workflows.
+	// Bundled workflows are registered here at startup.
+	// Currently a no-op — all workflows are user-authored in .claude/workflows/.
+	// This function exists as the extension point for future built-in workflows.
 }

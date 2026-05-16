@@ -2,13 +2,13 @@
 // Do NOT add imports to this file - it must remain dependency-free.
 
 export const NOTIFICATION_CHANNELS = [
-  'auto',
-  'iterm2',
-  'iterm2_with_bell',
-  'terminal_bell',
-  'kitty',
-  'ghostty',
-  'notifications_disabled',
+	'auto',
+	'iterm2',
+	'iterm2_with_bell',
+	'terminal_bell',
+	'kitty',
+	'ghostty',
+	'notifications_disabled',
 ] as const
 
 // Valid editor modes (excludes deprecated 'emacs' which is auto-migrated to 'normal')

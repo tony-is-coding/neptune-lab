@@ -1,19 +1,19 @@
 import z from 'zod/v4'
 // Types extracted to src/types/permissions.ts to break import cycles
 import type {
-  PermissionBehavior,
-  PermissionRule,
-  PermissionRuleSource,
-  PermissionRuleValue,
+	PermissionBehavior,
+	PermissionRule,
+	PermissionRuleSource,
+	PermissionRuleValue,
 } from '../../types/permissions.js'
-import { lazySchema } from '../lazySchema.js'
+import {lazySchema} from '../lazySchema.js'
 
 // Re-export for backwards compatibility
 export type {
-  PermissionBehavior,
-  PermissionRule,
-  PermissionRuleSource,
-  PermissionRuleValue,
+	PermissionBehavior,
+	PermissionRule,
+	PermissionRuleSource,
+	PermissionRuleValue,
 }
 
 /**
@@ -23,7 +23,7 @@ export type {
  * 'ask' means the rule forces a prompt to be shown to the user.
  */
 export const permissionBehaviorSchema = lazySchema(() =>
-  z.enum(['allow', 'deny', 'ask']),
+	z.enum(['allow', 'deny', 'ask']),
 )
 
 /**
@@ -33,8 +33,8 @@ export const permissionBehaviorSchema = lazySchema(() =>
  *   Each tool may implement custom handling in `checkPermissions()`
  */
 export const permissionRuleValueSchema = lazySchema(() =>
-  z.object({
-    toolName: z.string(),
-    ruleContent: z.string().optional(),
-  }),
+	z.object({
+		toolName: z.string(),
+		ruleContent: z.string().optional(),
+	}),
 )

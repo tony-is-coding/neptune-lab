@@ -16,136 +16,136 @@
  * - 错误处理和重试
  */
 
-import { describe, test, expect, beforeEach } from 'bun:test'
-import { AnthropicProvider } from '../AnthropicProvider.js'
-import type { ProviderQueryParams, ProviderMessage } from '../../ProviderAdapter.js'
+import {describe, test, expect, beforeEach} from 'bun:test'
+import {AnthropicProvider} from '../AnthropicProvider.js'
+import type {ProviderQueryParams, ProviderMessage} from '../../ProviderAdapter.js'
 
 describe('AnthropicProvider', () => {
-  let provider: AnthropicProvider
+	let provider: AnthropicProvider
 
-  beforeEach(() => {
-    provider = new AnthropicProvider()
-  })
+	beforeEach(() => {
+		provider = new AnthropicProvider()
+	})
 
-  describe('基本属性', () => {
-    test('type 应该是 "anthropic"', () => {
-      expect(provider.type).toBe('anthropic')
-    })
+	describe('基本属性', () => {
+		test('type 应该是 "anthropic"', () => {
+			expect(provider.type).toBe('anthropic')
+		})
 
-    test('getConfig 应该返回空配置（当前阶段）', () => {
-      const config = provider.getConfig()
-      expect(config).toEqual({})
-    })
+		test('getConfig 应该返回空配置（当前阶段）', () => {
+			const config = provider.getConfig()
+			expect(config).toEqual({})
+		})
 
-    test('应该支持自定义配置', () => {
-      const customProvider = new AnthropicProvider({ custom: 'value' })
-      const config = customProvider.getConfig()
-      expect(config).toEqual({ custom: 'value' })
-    })
-  })
+		test('应该支持自定义配置', () => {
+			const customProvider = new AnthropicProvider({custom: 'value'})
+			const config = customProvider.getConfig()
+			expect(config).toEqual({custom: 'value'})
+		})
+	})
 
-  describe('query 方法（包装 queryModelWithStreaming）', () => {
-    test('query 方法应该返回 AsyncGenerator', async () => {
-      const params: ProviderQueryParams = {
-        model: 'claude-sonnet-4-20250514',
-        messages: [],
-      }
+	describe('query 方法（包装 queryModelWithStreaming）', () => {
+		test('query 方法应该返回 AsyncGenerator', async () => {
+			const params: ProviderQueryParams = {
+				model: 'claude-sonnet-4-20250514',
+				messages: [],
+			}
 
-      const gen = provider.query(params)
-      expect(gen).toBeDefined()
-      expect(typeof gen[Symbol.asyncIterator]).toBe('function')
-    })
+			const gen = provider.query(params)
+			expect(gen).toBeDefined()
+			expect(typeof gen[Symbol.asyncIterator]).toBe('function')
+		})
 
-    test('query 方法应该包装 CC 的 queryModelWithStreaming', async () => {
-      const params: ProviderQueryParams = {
-        model: 'claude-sonnet-4-20250514',
-        messages: [],
-        systemPrompt: 'test',
-        maxTokens: 4096,
-      }
+		test('query 方法应该包装 CC 的 queryModelWithStreaming', async () => {
+			const params: ProviderQueryParams = {
+				model: 'claude-sonnet-4-20250514',
+				messages: [],
+				systemPrompt: 'test',
+				maxTokens: 4096,
+			}
 
-      const gen = provider.query(params)
-      expect(gen).toBeDefined()
+			const gen = provider.query(params)
+			expect(gen).toBeDefined()
 
-      // 注意：实际调用会尝试连接 API，在单元测试中我们不执行
-      // 这里只验证方法存在并返回正确的类型
-    })
-  })
+			// 注意：实际调用会尝试连接 API，在单元测试中我们不执行
+			// 这里只验证方法存在并返回正确的类型
+		})
+	})
 
-  describe('ProviderAdapter 接口符合性', () => {
-    test('应该实现 ProviderAdapter 接口', () => {
-      // TypeScript 编译时验证：AnthropicProvider 实现 ProviderAdapter
-      const adapter: AnthropicProvider = provider
-      expect(adapter).toBeDefined()
-      expect(adapter.type).toBe('anthropic')
-      expect(typeof adapter.query).toBe('function')
-      expect(typeof adapter.getConfig).toBe('function')
-    })
+	describe('ProviderAdapter 接口符合性', () => {
+		test('应该实现 ProviderAdapter 接口', () => {
+			// TypeScript 编译时验证：AnthropicProvider 实现 ProviderAdapter
+			const adapter: AnthropicProvider = provider
+			expect(adapter).toBeDefined()
+			expect(adapter.type).toBe('anthropic')
+			expect(typeof adapter.query).toBe('function')
+			expect(typeof adapter.getConfig).toBe('function')
+		})
 
-    test('query 方法应该返回 AsyncGenerator', async () => {
-      const params: ProviderQueryParams = {
-        model: 'claude-sonnet-4-20250514',
-        messages: [],
-      }
+		test('query 方法应该返回 AsyncGenerator', async () => {
+			const params: ProviderQueryParams = {
+				model: 'claude-sonnet-4-20250514',
+				messages: [],
+			}
 
-      const gen = provider.query(params)
-      expect(gen).toBeDefined()
-      expect(typeof gen[Symbol.asyncIterator]).toBe('function')
+			const gen = provider.query(params)
+			expect(gen).toBeDefined()
+			expect(typeof gen[Symbol.asyncIterator]).toBe('function')
 
-      // 注意：实际执行会调用 CC 的 queryModelWithStreaming，需要 mock 环境
-      // 这里只验证接口符合性
-    })
-  })
+			// 注意：实际执行会调用 CC 的 queryModelWithStreaming，需要 mock 环境
+			// 这里只验证接口符合性
+		})
+	})
 
-  describe('类型安全', () => {
-    test('ProviderQueryParams 类型应该接受各种参数', () => {
-      const params1: ProviderQueryParams = {
-        model: 'claude-sonnet-4-20250514',
-        messages: [],
-      }
+	describe('类型安全', () => {
+		test('ProviderQueryParams 类型应该接受各种参数', () => {
+			const params1: ProviderQueryParams = {
+				model: 'claude-sonnet-4-20250514',
+				messages: [],
+			}
 
-      const params2: ProviderQueryParams = {
-        model: 'claude-opus-4-20250514',
-        messages: [],
-        tools: [],
-        systemPrompt: 'test',
-        maxTokens: 4096,
-        signal: new AbortController().signal,
-        extra: { custom: 'value' },
-      }
+			const params2: ProviderQueryParams = {
+				model: 'claude-opus-4-20250514',
+				messages: [],
+				tools: [],
+				systemPrompt: 'test',
+				maxTokens: 4096,
+				signal: new AbortController().signal,
+				extra: {custom: 'value'},
+			}
 
-      expect(params1.model).toBeDefined()
-      expect(params2.tools).toBeDefined()
-      expect(params2.signal).toBeDefined()
-    })
+			expect(params1.model).toBeDefined()
+			expect(params2.tools).toBeDefined()
+			expect(params2.signal).toBeDefined()
+		})
 
-    test('ProviderMessage 类型应该支持标准格式', () => {
-      const msg1: ProviderMessage = {
-        type: 'text',
-        content: 'test',
-      }
+		test('ProviderMessage 类型应该支持标准格式', () => {
+			const msg1: ProviderMessage = {
+				type: 'text',
+				content: 'test',
+			}
 
-      const msg2: ProviderMessage = {
-        type: 'tool_use',
-        content: { name: 'test', input: {} },
-      }
+			const msg2: ProviderMessage = {
+				type: 'tool_use',
+				content: {name: 'test', input: {}},
+			}
 
-      const msg3: ProviderMessage = {
-        type: 'tool_result',
-        content: { result: 'success' },
-      }
+			const msg3: ProviderMessage = {
+				type: 'tool_result',
+				content: {result: 'success'},
+			}
 
-      const msg4: ProviderMessage = {
-        type: 'message',
-        content: { role: 'assistant', content: [] },
-      }
+			const msg4: ProviderMessage = {
+				type: 'message',
+				content: {role: 'assistant', content: []},
+			}
 
-      expect(msg1.type).toBe('text')
-      expect(msg2.type).toBe('tool_use')
-      expect(msg3.type).toBe('tool_result')
-      expect(msg4.type).toBe('message')
-    })
-  })
+			expect(msg1.type).toBe('text')
+			expect(msg2.type).toBe('tool_use')
+			expect(msg3.type).toBe('tool_result')
+			expect(msg4.type).toBe('message')
+		})
+	})
 })
 
 /**

@@ -125,6 +125,20 @@ export async function getThreadHistory(
   return res.json()
 }
 
+/** 获取 Thread 的任务列表 */
+export async function getThreadTasks(
+  agentId: string,
+  threadId: string,
+): Promise<{ data: Array<{ id: string; subject: string; status: string; activeForm?: string }> }> {
+  const res = await fetch(
+    `${API_BASE}/agents/${agentId}/threads/${threadId}/tasks`,
+    { headers: getAuthHeaders() },
+  )
+  if (res.status === 401) { handleUnauthorized(res); throw new Error('Unauthorized'); }
+  if (!res.ok) throw new Error(`getThreadTasks failed: ${res.status}`)
+  return res.json()
+}
+
 /** 回复 AskUserQuestion（用户选择答案后调用） */
 export async function replyToQuestion(
   agentId: string,

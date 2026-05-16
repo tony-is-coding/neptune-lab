@@ -12,67 +12,69 @@
  * CRITICAL: All screenshots output JPEG (ImageFormat::Jpeg), not PNG.
  */
 
-import type { Platform } from './index.js'
+import type {Platform} from './index.js'
 import type {
-  InputPlatform,
-  ScreenshotPlatform,
-  DisplayPlatform,
-  AppsPlatform,
-  WindowHandle,
-  ScreenshotResult,
-  DisplayInfo,
-  InstalledApp,
-  FrontmostAppInfo,
+	InputPlatform,
+	ScreenshotPlatform,
+	DisplayPlatform,
+	AppsPlatform,
+	WindowHandle,
+	ScreenshotResult,
+	DisplayInfo,
+	InstalledApp,
+	FrontmostAppInfo,
 } from './types.js'
-import { listWindows } from '../win32/windowEnum.js'
-import { detectAppType, openWithController } from '../win32/appDispatcher.js'
+import {listWindows} from '../win32/windowEnum.js'
+import {detectAppType, openWithController} from '../win32/appDispatcher.js'
 import {
-  markBound,
-  unmarkBound,
-  cleanupAllBorders,
+	markBound,
+	unmarkBound,
+	cleanupAllBorders,
 } from '../win32/windowBorder.js'
 import {
-  showVirtualCursor,
-  hideVirtualCursor,
-  moveVirtualCursor,
+	showVirtualCursor,
+	hideVirtualCursor,
+	moveVirtualCursor,
 } from '../win32/virtualCursor.js'
-import { showIndicator, hideIndicator } from '../win32/inputIndicator.js'
+import {showIndicator, hideIndicator} from '../win32/inputIndicator.js'
 import {
-  ps,
-  psAsync,
-  validateHwnd,
-  VK_MAP,
-  MODIFIER_KEYS,
+	ps,
+	psAsync,
+	validateHwnd,
+	VK_MAP,
+	MODIFIER_KEYS,
 } from '../win32/shared.js'
-import { logForDebugging } from '../../debug.js'
+import {logForDebugging} from '../../debug.js'
 
 // ---------------------------------------------------------------------------
 // Python Bridge (lazy-loaded, preferred over PowerShell for screenshots)
 // ---------------------------------------------------------------------------
 
 let _bridge: typeof import('../win32/bridgeClient.js') | undefined
+
 function getBridge() {
-  if (!_bridge) {
-    try {
-      _bridge =
-        require('../win32/bridgeClient.js') as typeof import('../win32/bridgeClient.js')
-    } catch {}
-  }
-  return _bridge
+	if (!_bridge) {
+		try {
+			_bridge =
+				require('../win32/bridgeClient.js') as typeof import('../win32/bridgeClient.js')
+		} catch {
+		}
+	}
+	return _bridge
 }
 
 /** Try a bridge call, return null on failure (caller falls back to PS) */
 function bridgeCallSync<T>(
-  method: string,
-  params: Record<string, unknown> = {},
+	method: string,
+	params: Record<string, unknown> = {},
 ): T | null {
-  try {
-    const b = getBridge()
-    if (!b) return null
-    return b.callSync<T>(method, params)
-  } catch {
-    return null
-  }
+	try {
+		const b = getBridge()
+		if (!b) return null
+		return b.callSync<T>(method, params)
+	} catch {
+		return null
+	}
 }
 
 // validateHwnd, ps, psAsync, VK_MAP, MODIFIER_KEYS imported from '../win32/shared.js'
@@ -145,32 +147,32 @@ let boundFilePath: string | null = null
 
 /** Get the bound HWND, or null if not bound */
 export function getBoundHwnd(): string | null {
-  return boundHwnd
+	return boundHwnd
 }
 
 /** Get the bound app type */
 export function getBoundAppType(): string | null {
-  return boundAppType
+	return boundAppType
 }
 
 /** Bind to a window HWND — all subsequent input/screenshot operations target this handle */
 export function bindWindow(hwnd: string, pid?: number): void {
-  hwnd = validateHwnd(hwnd)
-  // Clean up previous binding
-  if (boundHwnd) {
-    unmarkBound(boundHwnd)
-    hideVirtualCursor()
-    hideIndicator()
-  }
-  boundHwnd = hwnd
-  boundPid = pid ?? null
-  boundAppType = 'generic'
-  boundFilePath = null
+	hwnd = validateHwnd(hwnd)
+	// Clean up previous binding
+	if (boundHwnd) {
+		unmarkBound(boundHwnd)
+		hideVirtualCursor()
+		hideIndicator()
+	}
+	boundHwnd = hwnd
+	boundPid = pid ?? null
+	boundAppType = 'generic'
+	boundFilePath = null
 
-  // 1. Brief activation: set the window to accept input, then restore user's focus.
-  //    Some apps (UWP/Electron) don't process SendMessage when never-activated.
-  //    Save current foreground → activate target → restore original foreground.
-  const activateScript = `
+	// 1. Brief activation: set the window to accept input, then restore user's focus.
+	//    Some apps (UWP/Electron) don't process SendMessage when never-activated.
+	//    Save current foreground → activate target → restore original foreground.
+	const activateScript = `
 Add-Type @'
 using System;
 using System.Runtime.InteropServices;
@@ -190,36 +192,36 @@ if ($prev -ne [IntPtr]::Zero -and $prev -ne $target) {
     [CuActivate]::SetForegroundWindow($prev) | Out-Null
 }
 `
-  ps(activateScript)
+	ps(activateScript)
 
-  // 2. Visual indicators
-  markBound(hwnd)
-  showVirtualCursor(hwnd)
-  showIndicator(hwnd)
+	// 2. Visual indicators
+	markBound(hwnd)
+	showVirtualCursor(hwnd)
+	showIndicator(hwnd)
 }
 
 /** Bind to a COM-controlled file (Excel/Word — no window needed) */
 export function bindFile(
-  filePath: string,
-  appType: import('../win32/appDispatcher.js').AppType,
+	filePath: string,
+	appType: import('../win32/appDispatcher.js').AppType,
 ): void {
-  boundHwnd = null
-  boundPid = null
-  boundAppType = appType
-  boundFilePath = filePath
+	boundHwnd = null
+	boundPid = null
+	boundAppType = appType
+	boundFilePath = filePath
 }
 
 /** Unbind — revert to global mode, remove overlays */
 export function unbindWindow(): void {
-  if (boundHwnd) unmarkBound(boundHwnd)
-  hideVirtualCursor()
-  hideIndicator()
-  // Clear cached edit-child / InputSite mappings
-  getWm().clearEditChildCache()
-  boundHwnd = null
-  boundPid = null
-  boundAppType = null
-  boundFilePath = null
+	if (boundHwnd) unmarkBound(boundHwnd)
+	hideVirtualCursor()
+	hideIndicator()
+	// Clear cached edit-child / InputSite mappings
+	getWm().clearEditChildCache()
+	boundHwnd = null
+	boundPid = null
+	boundAppType = null
+	boundFilePath = null
 }
 
 // ---------------------------------------------------------------------------
@@ -227,10 +229,11 @@ export function unbindWindow(): void {
 // ---------------------------------------------------------------------------
 
 let _wm: typeof import('../win32/windowMessage.js') | undefined
+
 function getWm() {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  return (_wm ??=
-    require('../win32/windowMessage.js') as typeof import('../win32/windowMessage.js'))
+	// eslint-disable-next-line @typescript-eslint/no-require-imports
+	return (_wm ??=
+		require('../win32/windowMessage.js') as typeof import('../win32/windowMessage.js'))
 }
 
 // ---------------------------------------------------------------------------
@@ -245,105 +248,105 @@ function getWm() {
 // ---------------------------------------------------------------------------
 
 const input: InputPlatform = {
-  async moveMouse(x, y) {
-    if (boundHwnd) {
-      // Bound mode: move virtual cursor (visual only), no real cursor movement
-      moveVirtualCursor(Math.round(x), Math.round(y))
-      return
-    }
-    ps(
-      `${WIN32_TYPES}; [CuWin32]::SetCursorPos(${Math.round(x)}, ${Math.round(y)}) | Out-Null`,
-    )
-  },
+	async moveMouse(x, y) {
+		if (boundHwnd) {
+			// Bound mode: move virtual cursor (visual only), no real cursor movement
+			moveVirtualCursor(Math.round(x), Math.round(y))
+			return
+		}
+		ps(
+			`${WIN32_TYPES}; [CuWin32]::SetCursorPos(${Math.round(x)}, ${Math.round(y)}) | Out-Null`,
+		)
+	},
 
-  async click(x, y, button) {
-    if (boundHwnd) {
-      moveVirtualCursor(Math.round(x), Math.round(y), true)
-      // Find the deepest child window at these client coords and click on it.
-      const editHwnd = getWm().findEditChild(boundHwnd)
-      const targetHwnd = editHwnd ?? boundHwnd
-      const ok = getWm().sendClick(
-        targetHwnd,
-        Math.round(x),
-        Math.round(y),
-        button as 'left' | 'right',
-      )
-      if (!ok) {
-        getWm().sendClick(boundHwnd, Math.round(x), Math.round(y), button as 'left' | 'right')
-      }
-      return
-    }
-    const downFlag =
-      button === 'left'
-        ? 'MOUSEEVENTF_LEFTDOWN'
-        : button === 'right'
-          ? 'MOUSEEVENTF_RIGHTDOWN'
-          : 'MOUSEEVENTF_MIDDLEDOWN'
-    const upFlag =
-      button === 'left'
-        ? 'MOUSEEVENTF_LEFTUP'
-        : button === 'right'
-          ? 'MOUSEEVENTF_RIGHTUP'
-          : 'MOUSEEVENTF_MIDDLEUP'
-    ps(
-      `${WIN32_TYPES}; [CuWin32]::SetCursorPos(${Math.round(x)}, ${Math.round(y)}) | Out-Null; $i = New-Object CuWin32+INPUT; $i.type=[CuWin32]::INPUT_MOUSE; $i.mi.dwFlags=[CuWin32]::${downFlag}; [CuWin32]::SendInput(1, @($i), [Runtime.InteropServices.Marshal]::SizeOf($i)) | Out-Null; $i.mi.dwFlags=[CuWin32]::${upFlag}; [CuWin32]::SendInput(1, @($i), [Runtime.InteropServices.Marshal]::SizeOf($i)) | Out-Null`,
-    )
-  },
+	async click(x, y, button) {
+		if (boundHwnd) {
+			moveVirtualCursor(Math.round(x), Math.round(y), true)
+			// Find the deepest child window at these client coords and click on it.
+			const editHwnd = getWm().findEditChild(boundHwnd)
+			const targetHwnd = editHwnd ?? boundHwnd
+			const ok = getWm().sendClick(
+				targetHwnd,
+				Math.round(x),
+				Math.round(y),
+				button as 'left' | 'right',
+			)
+			if (!ok) {
+				getWm().sendClick(boundHwnd, Math.round(x), Math.round(y), button as 'left' | 'right')
+			}
+			return
+		}
+		const downFlag =
+			button === 'left'
+				? 'MOUSEEVENTF_LEFTDOWN'
+				: button === 'right'
+					? 'MOUSEEVENTF_RIGHTDOWN'
+					: 'MOUSEEVENTF_MIDDLEDOWN'
+		const upFlag =
+			button === 'left'
+				? 'MOUSEEVENTF_LEFTUP'
+				: button === 'right'
+					? 'MOUSEEVENTF_RIGHTUP'
+					: 'MOUSEEVENTF_MIDDLEUP'
+		ps(
+			`${WIN32_TYPES}; [CuWin32]::SetCursorPos(${Math.round(x)}, ${Math.round(y)}) | Out-Null; $i = New-Object CuWin32+INPUT; $i.type=[CuWin32]::INPUT_MOUSE; $i.mi.dwFlags=[CuWin32]::${downFlag}; [CuWin32]::SendInput(1, @($i), [Runtime.InteropServices.Marshal]::SizeOf($i)) | Out-Null; $i.mi.dwFlags=[CuWin32]::${upFlag}; [CuWin32]::SendInput(1, @($i), [Runtime.InteropServices.Marshal]::SizeOf($i)) | Out-Null`,
+		)
+	},
 
-  async typeText(text) {
-    // COM-controlled apps: write directly via COM API
-    if (boundAppType === 'word' && boundFilePath) {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const { appendText } =
-        require('../win32/comWord.js') as typeof import('../win32/comWord.js')
-      appendText(boundFilePath, text)
-      return
-    }
-    // HWND-bound apps: SendMessageW(WM_CHAR) or clipboard paste
-    if (boundHwnd) {
-      const ok = getWm().sendText(boundHwnd, text)
-      if (!ok) {
-        throw new Error(
-          `typeText failed: SendMessage to HWND ${boundHwnd} returned false. ` +
-            `The edit control may not have been found (findEditChild returned null).`,
-        )
-      }
-      return
-    }
-    throw new Error(
-      'typeText requires a bound window or file. Call open() first.',
-    )
-  },
+	async typeText(text) {
+		// COM-controlled apps: write directly via COM API
+		if (boundAppType === 'word' && boundFilePath) {
+			// eslint-disable-next-line @typescript-eslint/no-require-imports
+			const {appendText} =
+				require('../win32/comWord.js') as typeof import('../win32/comWord.js')
+			appendText(boundFilePath, text)
+			return
+		}
+		// HWND-bound apps: SendMessageW(WM_CHAR) or clipboard paste
+		if (boundHwnd) {
+			const ok = getWm().sendText(boundHwnd, text)
+			if (!ok) {
+				throw new Error(
+					`typeText failed: SendMessage to HWND ${boundHwnd} returned false. ` +
+					`The edit control may not have been found (findEditChild returned null).`,
+				)
+			}
+			return
+		}
+		throw new Error(
+			'typeText requires a bound window or file. Call open() first.',
+		)
+	},
 
-  async key(name, action) {
-    if (boundHwnd) {
-      const lower = name.toLowerCase()
-      const vk = VK_MAP[lower] ?? (name.length === 1 ? name.charCodeAt(0) : 0)
-      if (vk)
-        getWm().sendKey(boundHwnd, vk, action === 'release' ? 'up' : 'down')
-      return
-    }
-    throw new Error('key requires a bound window HWND. Call open() first.')
-  },
+	async key(name, action) {
+		if (boundHwnd) {
+			const lower = name.toLowerCase()
+			const vk = VK_MAP[lower] ?? (name.length === 1 ? name.charCodeAt(0) : 0)
+			if (vk)
+				getWm().sendKey(boundHwnd, vk, action === 'release' ? 'up' : 'down')
+			return
+		}
+		throw new Error('key requires a bound window HWND. Call open() first.')
+	},
 
-  async keys(parts) {
-    if (boundHwnd) {
-      const ok = getWm().sendKeys(boundHwnd, parts)
-      if (!ok) {
-        throw new Error(`keys [${parts.join('+')}] failed on HWND ${boundHwnd}`)
-      }
-      return
-    }
-    throw new Error('keys requires a bound window HWND. Call open() first.')
-  },
+	async keys(parts) {
+		if (boundHwnd) {
+			const ok = getWm().sendKeys(boundHwnd, parts)
+			if (!ok) {
+				throw new Error(`keys [${parts.join('+')}] failed on HWND ${boundHwnd}`)
+			}
+			return
+		}
+		throw new Error('keys requires a bound window HWND. Call open() first.')
+	},
 
-  async scroll(amount, direction) {
-    if (boundHwnd) {
-      // WM_VSCROLL / WM_HSCROLL for window-bound scrolling
-      const msg = direction === 'vertical' ? '0x0115' : '0x0114' // WM_VSCROLL / WM_HSCROLL
-      const wParam = amount > 0 ? '1' : '0' // SB_LINEDOWN=1 (positive=down) / SB_LINEUP=0 (negative=up)
-      const n = Math.abs(Math.round(amount))
-      let script = `
+	async scroll(amount, direction) {
+		if (boundHwnd) {
+			// WM_VSCROLL / WM_HSCROLL for window-bound scrolling
+			const msg = direction === 'vertical' ? '0x0115' : '0x0114' // WM_VSCROLL / WM_HSCROLL
+			const wParam = amount > 0 ? '1' : '0' // SB_LINEDOWN=1 (positive=down) / SB_LINEUP=0 (negative=up)
+			const n = Math.abs(Math.round(amount))
+			let script = `
 Add-Type @'
 using System;
 using System.Runtime.InteropServices;
@@ -353,40 +356,40 @@ public class WScroll {
 }
 '@
 `
-      for (let i = 0; i < n; i++) {
-        script += `[WScroll]::SendMessage([IntPtr]::new([long]${boundHwnd}), ${msg}, [IntPtr]${wParam}, [IntPtr]::Zero) | Out-Null; `
-      }
-      ps(script)
-      return
-    }
-    const flag =
-      direction === 'vertical' ? 'MOUSEEVENTF_WHEEL' : 'MOUSEEVENTF_HWHEEL'
-    ps(
-      `${WIN32_TYPES}; $i = New-Object CuWin32+INPUT; $i.type=[CuWin32]::INPUT_MOUSE; $i.mi.dwFlags=[CuWin32]::${flag}; $i.mi.mouseData=${amount * 120}; [CuWin32]::SendInput(1, @($i), [Runtime.InteropServices.Marshal]::SizeOf($i)) | Out-Null`,
-    )
-  },
+			for (let i = 0; i < n; i++) {
+				script += `[WScroll]::SendMessage([IntPtr]::new([long]${boundHwnd}), ${msg}, [IntPtr]${wParam}, [IntPtr]::Zero) | Out-Null; `
+			}
+			ps(script)
+			return
+		}
+		const flag =
+			direction === 'vertical' ? 'MOUSEEVENTF_WHEEL' : 'MOUSEEVENTF_HWHEEL'
+		ps(
+			`${WIN32_TYPES}; $i = New-Object CuWin32+INPUT; $i.type=[CuWin32]::INPUT_MOUSE; $i.mi.dwFlags=[CuWin32]::${flag}; $i.mi.mouseData=${amount * 120}; [CuWin32]::SendInput(1, @($i), [Runtime.InteropServices.Marshal]::SizeOf($i)) | Out-Null`,
+		)
+	},
 
-  async mouseLocation() {
-    // Always returns real cursor position (informational, doesn't move it)
-    const out = ps(
-      `${WIN32_TYPES}; $p = New-Object CuWin32+POINT; [CuWin32]::GetCursorPos([ref]$p) | Out-Null; "$($p.X),$($p.Y)"`,
-    )
-    const [xStr, yStr] = out.split(',')
-    return { x: Number(xStr), y: Number(yStr) }
-  },
+	async mouseLocation() {
+		// Always returns real cursor position (informational, doesn't move it)
+		const out = ps(
+			`${WIN32_TYPES}; $p = New-Object CuWin32+POINT; [CuWin32]::GetCursorPos([ref]$p) | Out-Null; "$($p.X),$($p.Y)"`,
+		)
+		const [xStr, yStr] = out.split(',')
+		return {x: Number(xStr), y: Number(yStr)}
+	},
 
-  async sendChar(hwnd, char) {
-    getWm().sendChar(String(hwnd), char)
-  },
-  async sendKey(hwnd, vk, action) {
-    getWm().sendKey(String(hwnd), vk, action)
-  },
-  async sendClick(hwnd, x, y, button) {
-    getWm().sendClick(String(hwnd), x, y, button)
-  },
-  async sendText(hwnd, text) {
-    getWm().sendText(String(hwnd), text)
-  },
+	async sendChar(hwnd, char) {
+		getWm().sendChar(String(hwnd), char)
+	},
+	async sendKey(hwnd, vk, action) {
+		getWm().sendKey(String(hwnd), vk, action)
+	},
+	async sendClick(hwnd, x, y, button) {
+		getWm().sendClick(String(hwnd), x, y, button)
+	},
+	async sendText(hwnd, text) {
+		getWm().sendText(String(hwnd), text)
+	},
 }
 
 // ---------------------------------------------------------------------------
@@ -394,49 +397,49 @@ public class WScroll {
 // ---------------------------------------------------------------------------
 
 const screenshot: ScreenshotPlatform = {
-  async captureScreen(displayId): Promise<ScreenshotResult> {
-    // If HWND is bound, capture that specific window
-    if (boundHwnd) {
-      const result = await this.captureWindow?.(String(boundHwnd))
-      if (result) return result
-    }
+	async captureScreen(displayId): Promise<ScreenshotResult> {
+		// If HWND is bound, capture that specific window
+		if (boundHwnd) {
+			const result = await this.captureWindow?.(String(boundHwnd))
+			if (result) return result
+		}
 
-    // Python Bridge (mss + Pillow, ~300ms)
-    const bridgeResult = bridgeCallSync<ScreenshotResult>('screenshot', {
-      display_id: displayId ?? 0,
-    })
-    if (bridgeResult && bridgeResult.base64) {
-      return bridgeResult
-    }
+		// Python Bridge (mss + Pillow, ~300ms)
+		const bridgeResult = bridgeCallSync<ScreenshotResult>('screenshot', {
+			display_id: displayId ?? 0,
+		})
+		if (bridgeResult && bridgeResult.base64) {
+			return bridgeResult
+		}
 
-    throw new Error(
-      '[computer-use] Screenshot failed: Python bridge returned no data. ' +
-        'Ensure python3 + mss + Pillow are installed (pip install mss Pillow).',
-    )
-  },
+		throw new Error(
+			'[computer-use] Screenshot failed: Python bridge returned no data. ' +
+			'Ensure python3 + mss + Pillow are installed (pip install mss Pillow).',
+		)
+	},
 
-  async captureRegion(x, y, w, h): Promise<ScreenshotResult> {
-    // When HWND is bound, the window IS the region (matches macOS behavior)
-    if (boundHwnd) {
-      const result = await this.captureWindow?.(String(boundHwnd))
-      if (result) return result
-    }
-    return this.captureScreen()
-  },
+	async captureRegion(x, y, w, h): Promise<ScreenshotResult> {
+		// When HWND is bound, the window IS the region (matches macOS behavior)
+		if (boundHwnd) {
+			const result = await this.captureWindow?.(String(boundHwnd))
+			if (result) return result
+		}
+		return this.captureScreen()
+	},
 
-  async captureWindow(hwnd) {
-    // Python Bridge (ctypes PrintWindow + GDI → Pillow JPEG, ~300ms)
-    const bridgeResult = bridgeCallSync<ScreenshotResult>('screenshot_window', {
-      hwnd: String(hwnd),
-    })
-    if (bridgeResult && bridgeResult.base64) {
-      return bridgeResult
-    }
+	async captureWindow(hwnd) {
+		// Python Bridge (ctypes PrintWindow + GDI → Pillow JPEG, ~300ms)
+		const bridgeResult = bridgeCallSync<ScreenshotResult>('screenshot_window', {
+			hwnd: String(hwnd),
+		})
+		if (bridgeResult && bridgeResult.base64) {
+			return bridgeResult
+		}
 
-    throw new Error(
-      `[computer-use] Window screenshot failed for HWND ${hwnd}: Python bridge returned no data.`,
-    )
-  },
+		throw new Error(
+			`[computer-use] Window screenshot failed for HWND ${hwnd}: Python bridge returned no data.`,
+		)
+	},
 }
 
 // ---------------------------------------------------------------------------
@@ -444,9 +447,9 @@ const screenshot: ScreenshotPlatform = {
 // ---------------------------------------------------------------------------
 
 const display: DisplayPlatform = {
-  listAll(): DisplayInfo[] {
-    try {
-      const raw = ps(`
+	listAll(): DisplayInfo[] {
+		try {
+			const raw = ps(`
 Add-Type -AssemblyName System.Windows.Forms
 $result = @()
 $idx = 0
@@ -456,31 +459,31 @@ foreach ($s in [System.Windows.Forms.Screen]::AllScreens) {
 }
 $result -join "|"
 `)
-      return raw
-        .split('|')
-        .filter(Boolean)
-        .map(entry => {
-          const [w, h, id] = entry.split(',')
-          return {
-            width: Number(w),
-            height: Number(h),
-            scaleFactor: 1,
-            displayId: Number(id),
-          }
-        })
-    } catch {
-      return [{ width: 1920, height: 1080, scaleFactor: 1, displayId: 0 }]
-    }
-  },
+			return raw
+				.split('|')
+				.filter(Boolean)
+				.map(entry => {
+					const [w, h, id] = entry.split(',')
+					return {
+						width: Number(w),
+						height: Number(h),
+						scaleFactor: 1,
+						displayId: Number(id),
+					}
+				})
+		} catch {
+			return [{width: 1920, height: 1080, scaleFactor: 1, displayId: 0}]
+		}
+	},
 
-  getSize(displayId): DisplayInfo {
-    const all = this.listAll()
-    if (displayId !== undefined) {
-      const found = all.find(d => d.displayId === displayId)
-      if (found) return found
-    }
-    return all[0] ?? { width: 1920, height: 1080, scaleFactor: 1, displayId: 0 }
-  },
+	getSize(displayId): DisplayInfo {
+		const all = this.listAll()
+		if (displayId !== undefined) {
+			const found = all.find(d => d.displayId === displayId)
+			if (found) return found
+		}
+		return all[0] ?? {width: 1920, height: 1080, scaleFactor: 1, displayId: 0}
+	},
 }
 
 // ---------------------------------------------------------------------------
@@ -488,18 +491,18 @@ $result -join "|"
 // ---------------------------------------------------------------------------
 
 function findExistingWindow(
-  hint: string,
+	hint: string,
 ): { hwnd: string; pid: number } | null {
-  const windows = listWindows()
-  const lower = hint.toLowerCase()
-  // Match by window title containing the hint
-  for (const w of windows) {
-    const titleLower = (w.title ?? '').toLowerCase()
-    if (titleLower.includes(lower)) {
-      return { hwnd: w.hwnd, pid: w.pid }
-    }
-  }
-  return null
+	const windows = listWindows()
+	const lower = hint.toLowerCase()
+	// Match by window title containing the hint
+	for (const w of windows) {
+		const titleLower = (w.title ?? '').toLowerCase()
+		if (titleLower.includes(lower)) {
+			return {hwnd: w.hwnd, pid: w.pid}
+		}
+	}
+	return null
 }
 
 // ---------------------------------------------------------------------------
@@ -507,18 +510,18 @@ function findExistingWindow(
 // ---------------------------------------------------------------------------
 
 const apps: AppsPlatform = {
-  listRunning(): WindowHandle[] {
-    const windows = listWindows()
-    return windows.map(w => ({
-      id: String(w.hwnd),
-      pid: w.pid,
-      title: w.title,
-    }))
-  },
+	listRunning(): WindowHandle[] {
+		const windows = listWindows()
+		return windows.map(w => ({
+			id: String(w.hwnd),
+			pid: w.pid,
+			title: w.title,
+		}))
+	},
 
-  async listInstalled(): Promise<InstalledApp[]> {
-    try {
-      const raw = await psAsync(`
+	async listInstalled(): Promise<InstalledApp[]> {
+		try {
+			const raw = await psAsync(`
 $apps = @()
 
 # Traditional Win32 apps from registry
@@ -541,58 +544,58 @@ Get-AppxPackage -ErrorAction SilentlyContinue | Where-Object { $_.IsFramework -e
 
 $apps | Select-Object -Unique | Select-Object -First 300
 `)
-      return raw
-        .split('\n')
-        .filter(Boolean)
-        .map(line => {
-          const [name, path, id] = line.trim().split('|', 3)
-          return {
-            id: (id ?? name ?? '').trim(),
-            displayName: (name ?? '').trim(),
-            path: (path ?? '').trim(),
-          }
-        })
-    } catch {
-      return []
-    }
-  },
+			return raw
+				.split('\n')
+				.filter(Boolean)
+				.map(line => {
+					const [name, path, id] = line.trim().split('|', 3)
+					return {
+						id: (id ?? name ?? '').trim(),
+						displayName: (name ?? '').trim(),
+						path: (path ?? '').trim(),
+					}
+				})
+		} catch {
+			return []
+		}
+	},
 
-  async open(name) {
-    // Detect app type and route to appropriate controller
-    const appType = detectAppType(name)
+	async open(name) {
+		// Detect app type and route to appropriate controller
+		const appType = detectAppType(name)
 
-    // Excel/Word → COM automation (no window, no HWND)
-    if (appType === 'excel' || appType === 'word') {
-      const result = await openWithController(name)
-      if (result.filePath) {
-        bindFile(result.filePath, result.type)
-      }
-      return
-    }
+		// Excel/Word → COM automation (no window, no HWND)
+		if (appType === 'excel' || appType === 'word') {
+			const result = await openWithController(name)
+			if (result.filePath) {
+				bindFile(result.filePath, result.type)
+			}
+			return
+		}
 
-    // Text/Browser/Generic → exe launch + HWND bind (offscreen)
-    // If name is a UWP PackageFamilyName (e.g. Microsoft.WindowsNotepad_8wekyb3d8bbwe),
-    // extract the app name and try as exe. This avoids launching through UWP shell.
-    let launchName = name
-    if (name.includes('_') && name.includes('.')) {
-      // Microsoft.WindowsNotepad_xxx → Notepad
-      // Microsoft.WindowsCalculator_xxx → Calculator
-      // Microsoft.WindowsTerminal_xxx → Terminal
-      const parts = name.split('_')[0]?.split('.') ?? []
-      const appPart = parts[parts.length - 1] ?? name
-      // Strip "Windows" prefix: WindowsNotepad → Notepad
-      launchName = appPart.replace(/^Windows/, '') || appPart
-    }
+		// Text/Browser/Generic → exe launch + HWND bind (offscreen)
+		// If name is a UWP PackageFamilyName (e.g. Microsoft.WindowsNotepad_8wekyb3d8bbwe),
+		// extract the app name and try as exe. This avoids launching through UWP shell.
+		let launchName = name
+		if (name.includes('_') && name.includes('.')) {
+			// Microsoft.WindowsNotepad_xxx → Notepad
+			// Microsoft.WindowsCalculator_xxx → Calculator
+			// Microsoft.WindowsTerminal_xxx → Terminal
+			const parts = name.split('_')[0]?.split('.') ?? []
+			const appPart = parts[parts.length - 1] ?? name
+			// Strip "Windows" prefix: WindowsNotepad → Notepad
+			launchName = appPart.replace(/^Windows/, '') || appPart
+		}
 
-    // --- Try to find an EXISTING window first (by process name or title) ---
-    // If found, auto-bind to it. Use bind_window tool to switch later.
-    const existingHwnd = findExistingWindow(launchName)
-    if (existingHwnd) {
-      bindWindow(existingHwnd.hwnd, existingHwnd.pid)
-      return
-    }
-    const escaped = launchName.replace(/'/g, "''")
-    const result = await psAsync(`
+		// --- Try to find an EXISTING window first (by process name or title) ---
+		// If found, auto-bind to it. Use bind_window tool to switch later.
+		const existingHwnd = findExistingWindow(launchName)
+		if (existingHwnd) {
+			bindWindow(existingHwnd.hwnd, existingHwnd.pid)
+			return
+		}
+		const escaped = launchName.replace(/'/g, "''")
+		const result = await psAsync(`
 ${WIN32_TYPES}
 Add-Type @'
 using System;
@@ -725,52 +728,52 @@ public class CuPos {
 [CuPos]::SetWindowPos([IntPtr]::new([long]$hwnd), [IntPtr]::Zero, -32000, -32000, 0, 0, [CuPos]::SWP_NOSIZE -bor [CuPos]::SWP_NOZORDER -bor [CuPos]::SWP_NOACTIVATE) | Out-Null
 Write-Host "$hwnd|$($proc.Id)"
 `)
-    if (!result) {
-      throw new Error(
-        `open(): failed to launch '${name}' — no output from launcher script`,
-      )
-    }
-    if (result.startsWith('LAUNCH_FAILED')) {
-      throw new Error(
-        `open(): failed to launch '${name}' — process did not start (${result})`,
-      )
-    }
-    if (result.startsWith('HWND_NOT_FOUND')) {
-      throw new Error(
-        `open(): launched '${name}' but could not find its window HWND (${result})`,
-      )
-    }
-    const parts = result.trim().split('|')
-    const hwnd = parts[0]!.trim()
-    const pid = Number(parts[1])
-    if (hwnd && hwnd !== '0') {
-      // Bind to the launched window — all subsequent operations target this HWND
-      bindWindow(hwnd, pid)
-    }
-  },
+		if (!result) {
+			throw new Error(
+				`open(): failed to launch '${name}' — no output from launcher script`,
+			)
+		}
+		if (result.startsWith('LAUNCH_FAILED')) {
+			throw new Error(
+				`open(): failed to launch '${name}' — process did not start (${result})`,
+			)
+		}
+		if (result.startsWith('HWND_NOT_FOUND')) {
+			throw new Error(
+				`open(): launched '${name}' but could not find its window HWND (${result})`,
+			)
+		}
+		const parts = result.trim().split('|')
+		const hwnd = parts[0]!.trim()
+		const pid = Number(parts[1])
+		if (hwnd && hwnd !== '0') {
+			// Bind to the launched window — all subsequent operations target this HWND
+			bindWindow(hwnd, pid)
+		}
+	},
 
-  getFrontmostApp(): FrontmostAppInfo | null {
-    try {
-      const out = ps(`${WIN32_TYPES}
+	getFrontmostApp(): FrontmostAppInfo | null {
+		try {
+			const out = ps(`${WIN32_TYPES}
 $hwnd = [CuWin32]::GetForegroundWindow()
 $procId = [uint32]0
 [CuWin32]::GetWindowThreadProcessId($hwnd, [ref]$procId) | Out-Null
 $proc = Get-Process -Id $procId -ErrorAction SilentlyContinue
 "$($proc.MainModule.FileName)|$($proc.ProcessName)"`)
-      if (!out || !out.includes('|')) return null
-      const [exePath, appName] = out.split('|', 2)
-      return { id: exePath!, appName: appName! }
-    } catch {
-      return null
-    }
-  },
+			if (!out || !out.includes('|')) return null
+			const [exePath, appName] = out.split('|', 2)
+			return {id: exePath!, appName: appName!}
+		} catch {
+			return null
+		}
+	},
 
-  findWindowByTitle(title): WindowHandle | null {
-    const windows = listWindows()
-    const found = windows.find(w => w.title.includes(title))
-    if (!found) return null
-    return { id: String(found.hwnd), pid: found.pid, title: found.title }
-  },
+	findWindowByTitle(title): WindowHandle | null {
+		const windows = listWindows()
+		const found = windows.find(w => w.title.includes(title))
+		if (!found) return null
+		return {id: String(found.hwnd), pid: found.pid, title: found.title}
+	},
 }
 
 // ---------------------------------------------------------------------------
@@ -840,46 +843,46 @@ public class CuWinMgmt {
 '@
 `
 
-import type { WindowManagementPlatform, WindowAction } from './types.js'
+import type {WindowManagementPlatform, WindowAction} from './types.js'
 
 const windowManagement: WindowManagementPlatform = {
-  manageWindow(action: WindowAction, opts?): boolean {
-    if (!boundHwnd) return false
-    const hwnd = boundHwnd
+	manageWindow(action: WindowAction, opts?): boolean {
+		if (!boundHwnd) return false
+		const hwnd = boundHwnd
 
-    switch (action) {
-      case 'minimize': {
-        // ShowWindow(SW_MINIMIZE) — targeted at HWND, not global
-        const r = ps(
-          `${WINDOW_MGMT_TYPES}; [CuWinMgmt]::ShowWindow([IntPtr]::new([long]${hwnd}), [CuWinMgmt]::SW_SHOWMINNOACTIVE)`,
-        )
-        return r !== ''
-      }
-      case 'maximize': {
-        const r = ps(
-          `${WINDOW_MGMT_TYPES}; [CuWinMgmt]::ShowWindow([IntPtr]::new([long]${hwnd}), [CuWinMgmt]::SW_MAXIMIZE)`,
-        )
-        return r !== ''
-      }
-      case 'restore': {
-        const r = ps(
-          `${WINDOW_MGMT_TYPES}; [CuWinMgmt]::ShowWindow([IntPtr]::new([long]${hwnd}), [CuWinMgmt]::SW_RESTORE)`,
-        )
-        return r !== ''
-      }
-      case 'close': {
-        // SendMessage(WM_CLOSE) — graceful close targeted at HWND
-        // Also clean up border overlay
-        unmarkBound(hwnd)
-        ps(
-          `${WINDOW_MGMT_TYPES}; [CuWinMgmt]::SendMessage([IntPtr]::new([long]${hwnd}), [CuWinMgmt]::WM_CLOSE, [IntPtr]::Zero, [IntPtr]::Zero)`,
-        )
-        unbindWindow()
-        return true
-      }
-      case 'focus': {
-        // Restore if minimized, then bring to front
-        ps(`${WINDOW_MGMT_TYPES}
+		switch (action) {
+			case 'minimize': {
+				// ShowWindow(SW_MINIMIZE) — targeted at HWND, not global
+				const r = ps(
+					`${WINDOW_MGMT_TYPES}; [CuWinMgmt]::ShowWindow([IntPtr]::new([long]${hwnd}), [CuWinMgmt]::SW_SHOWMINNOACTIVE)`,
+				)
+				return r !== ''
+			}
+			case 'maximize': {
+				const r = ps(
+					`${WINDOW_MGMT_TYPES}; [CuWinMgmt]::ShowWindow([IntPtr]::new([long]${hwnd}), [CuWinMgmt]::SW_MAXIMIZE)`,
+				)
+				return r !== ''
+			}
+			case 'restore': {
+				const r = ps(
+					`${WINDOW_MGMT_TYPES}; [CuWinMgmt]::ShowWindow([IntPtr]::new([long]${hwnd}), [CuWinMgmt]::SW_RESTORE)`,
+				)
+				return r !== ''
+			}
+			case 'close': {
+				// SendMessage(WM_CLOSE) — graceful close targeted at HWND
+				// Also clean up border overlay
+				unmarkBound(hwnd)
+				ps(
+					`${WINDOW_MGMT_TYPES}; [CuWinMgmt]::SendMessage([IntPtr]::new([long]${hwnd}), [CuWinMgmt]::WM_CLOSE, [IntPtr]::Zero, [IntPtr]::Zero)`,
+				)
+				unbindWindow()
+				return true
+			}
+			case 'focus': {
+				// Restore if minimized, then bring to front
+				ps(`${WINDOW_MGMT_TYPES}
 $h = [IntPtr]::new([long]${hwnd})
 if ([CuWinMgmt]::IsIconic($h)) {
     [CuWinMgmt]::ShowWindow($h, [CuWinMgmt]::SW_RESTORE) | Out-Null
@@ -887,63 +890,63 @@ if ([CuWinMgmt]::IsIconic($h)) {
 [CuWinMgmt]::SetForegroundWindow($h) | Out-Null
 [CuWinMgmt]::BringWindowToTop($h) | Out-Null
 `)
-        return true
-      }
-      case 'move_offscreen': {
-        // Move to -32000,-32000 — keeps window in restored state for SendMessage/PrintWindow
-        ps(
-          `${WINDOW_MGMT_TYPES}; [CuWinMgmt]::SetWindowPos([IntPtr]::new([long]${hwnd}), [IntPtr]::Zero, -32000, -32000, 0, 0, [CuWinMgmt]::SWP_NOSIZE -bor [CuWinMgmt]::SWP_NOZORDER -bor [CuWinMgmt]::SWP_NOACTIVATE)`,
-        )
-        return true
-      }
-      case 'move_resize': {
-        if (opts?.x !== undefined && opts?.y !== undefined) {
-          this.moveResize(opts.x, opts.y, opts.width, opts.height)
-        }
-        return true
-      }
-      case 'get_rect': {
-        // get_rect is handled separately by getWindowRect(), not through manageWindow
-        // Return true to indicate the action is recognized
-        return true
-      }
-      default:
-        return false
-    }
-  },
+				return true
+			}
+			case 'move_offscreen': {
+				// Move to -32000,-32000 — keeps window in restored state for SendMessage/PrintWindow
+				ps(
+					`${WINDOW_MGMT_TYPES}; [CuWinMgmt]::SetWindowPos([IntPtr]::new([long]${hwnd}), [IntPtr]::Zero, -32000, -32000, 0, 0, [CuWinMgmt]::SWP_NOSIZE -bor [CuWinMgmt]::SWP_NOZORDER -bor [CuWinMgmt]::SWP_NOACTIVATE)`,
+				)
+				return true
+			}
+			case 'move_resize': {
+				if (opts?.x !== undefined && opts?.y !== undefined) {
+					this.moveResize(opts.x, opts.y, opts.width, opts.height)
+				}
+				return true
+			}
+			case 'get_rect': {
+				// get_rect is handled separately by getWindowRect(), not through manageWindow
+				// Return true to indicate the action is recognized
+				return true
+			}
+			default:
+				return false
+		}
+	},
 
-  moveResize(x: number, y: number, width?: number, height?: number): boolean {
-    if (!boundHwnd) return false
-    const hwnd = boundHwnd
-    if (width !== undefined && height !== undefined) {
-      ps(
-        `${WINDOW_MGMT_TYPES}; [CuWinMgmt]::SetWindowPos([IntPtr]::new([long]${hwnd}), [IntPtr]::Zero, ${x}, ${y}, ${width}, ${height}, [CuWinMgmt]::SWP_NOZORDER -bor [CuWinMgmt]::SWP_NOACTIVATE)`,
-      )
-    } else {
-      ps(
-        `${WINDOW_MGMT_TYPES}; [CuWinMgmt]::SetWindowPos([IntPtr]::new([long]${hwnd}), [IntPtr]::Zero, ${x}, ${y}, 0, 0, [CuWinMgmt]::SWP_NOSIZE -bor [CuWinMgmt]::SWP_NOZORDER -bor [CuWinMgmt]::SWP_NOACTIVATE)`,
-      )
-    }
-    return true
-  },
+	moveResize(x: number, y: number, width?: number, height?: number): boolean {
+		if (!boundHwnd) return false
+		const hwnd = boundHwnd
+		if (width !== undefined && height !== undefined) {
+			ps(
+				`${WINDOW_MGMT_TYPES}; [CuWinMgmt]::SetWindowPos([IntPtr]::new([long]${hwnd}), [IntPtr]::Zero, ${x}, ${y}, ${width}, ${height}, [CuWinMgmt]::SWP_NOZORDER -bor [CuWinMgmt]::SWP_NOACTIVATE)`,
+			)
+		} else {
+			ps(
+				`${WINDOW_MGMT_TYPES}; [CuWinMgmt]::SetWindowPos([IntPtr]::new([long]${hwnd}), [IntPtr]::Zero, ${x}, ${y}, 0, 0, [CuWinMgmt]::SWP_NOSIZE -bor [CuWinMgmt]::SWP_NOZORDER -bor [CuWinMgmt]::SWP_NOACTIVATE)`,
+			)
+		}
+		return true
+	},
 
-  getWindowRect(): {
-    x: number
-    y: number
-    width: number
-    height: number
-  } | null {
-    if (!boundHwnd) return null
-    const out = ps(`${WINDOW_MGMT_TYPES}
+	getWindowRect(): {
+		x: number
+		y: number
+		width: number
+		height: number
+	} | null {
+		if (!boundHwnd) return null
+		const out = ps(`${WINDOW_MGMT_TYPES}
 $rect = New-Object CuWinMgmt+RECT
 if ([CuWinMgmt]::GetWindowRect([IntPtr]::new([long]${boundHwnd}), [ref]$rect)) {
     "$($rect.Left),$($rect.Top),$($rect.Right),$($rect.Bottom)"
 } else { "FAIL" }
 `)
-    if (!out || out === 'FAIL') return null
-    const [l, t, r, b] = out.split(',').map(Number)
-    return { x: l, y: t, width: r - l, height: b - t }
-  },
+		if (!out || out === 'FAIL') return null
+		const [l, t, r, b] = out.split(',').map(Number)
+		return {x: l, y: t, width: r - l, height: b - t}
+	},
 }
 
 // ---------------------------------------------------------------------------
@@ -952,28 +955,30 @@ if ([CuWinMgmt]::GetWindowRect([IntPtr]::new([long]${boundHwnd}), [ref]$rect)) {
 
 // Clean up all overlays on process exit
 function cleanupAll() {
-  cleanupAllBorders()
-  hideVirtualCursor()
-  hideIndicator()
-  // Stop the Python bridge subprocess if it was started
-  try {
-    getBridge()?.stopBridge()
-  } catch {}
+	cleanupAllBorders()
+	hideVirtualCursor()
+	hideIndicator()
+	// Stop the Python bridge subprocess if it was started
+	try {
+		getBridge()?.stopBridge()
+	} catch {
+	}
 }
+
 process.on('exit', cleanupAll)
 process.on('SIGINT', () => {
-  cleanupAll()
-  process.exit()
+	cleanupAll()
+	process.exit()
 })
 process.on('SIGTERM', () => {
-  cleanupAll()
-  process.exit()
+	cleanupAll()
+	process.exit()
 })
 
 export const platform: Platform = {
-  input,
-  screenshot,
-  display,
-  apps,
-  windowManagement,
+	input,
+	screenshot,
+	display,
+	apps,
+	windowManagement,
 }

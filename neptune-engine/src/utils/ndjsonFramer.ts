@@ -5,7 +5,7 @@
  * parsed JSON objects. Used by both pipeTransport (UDS+TCP) and
  * udsMessaging to avoid duplicating the same buffer logic.
  */
-import type { Socket } from 'net'
+import type {Socket} from 'net'
 
 /**
  * Attach an NDJSON framer to a socket. Calls `onMessage` for each
@@ -16,24 +16,24 @@ import type { Socket } from 'net'
  *                from slowOperations.
  */
 export function attachNdjsonFramer<T = unknown>(
-  socket: Socket,
-  onMessage: (msg: T) => void,
-  parse: (text: string) => T = text => JSON.parse(text) as T,
+	socket: Socket,
+	onMessage: (msg: T) => void,
+	parse: (text: string) => T = text => JSON.parse(text) as T,
 ): void {
-  let buffer = ''
+	let buffer = ''
 
-  socket.on('data', (chunk: Buffer) => {
-    buffer += chunk.toString()
-    const lines = buffer.split('\n')
-    buffer = lines.pop() ?? ''
+	socket.on('data', (chunk: Buffer) => {
+		buffer += chunk.toString()
+		const lines = buffer.split('\n')
+		buffer = lines.pop() ?? ''
 
-    for (const line of lines) {
-      if (!line.trim()) continue
-      try {
-        onMessage(parse(line))
-      } catch {
-        // Malformed JSON — skip
-      }
-    }
-  })
+		for (const line of lines) {
+			if (!line.trim()) continue
+			try {
+				onMessage(parse(line))
+			} catch {
+				// Malformed JSON — skip
+			}
+		}
+	})
 }

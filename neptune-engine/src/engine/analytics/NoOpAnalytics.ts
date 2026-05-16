@@ -7,7 +7,7 @@
  * 所有方法都是空操作，零性能开销。
  */
 
-import type { AnalyticsSink } from 'src/services/analytics/index.js'
+import type {AnalyticsSink} from 'src/services/analytics/index.js'
 
 /**
  * No-Op Analytics Sink
@@ -61,6 +61,6 @@ export const noOpAnalyticsSink = new NoOpAnalyticsSink()
  * ```
  */
 export function attachNoOpAnalytics(): void {
-	const { attachAnalyticsSink } = require('src/services/analytics/index.js')
+	const {attachAnalyticsSink} = require('src/services/analytics/index.js')
 	attachAnalyticsSink(noOpAnalyticsSink)
 }

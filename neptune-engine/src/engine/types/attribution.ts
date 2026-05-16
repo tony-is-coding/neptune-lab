@@ -17,4 +17,4 @@ export type {
 } from '../../utils/commitAttribution.js'
 
 // 重新导出函数
-export { getClientSurface, buildSurfaceKey } from '../../utils/commitAttribution.js'
+export {getClientSurface, buildSurfaceKey} from '../../utils/commitAttribution.js'

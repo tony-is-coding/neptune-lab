@@ -10,30 +10,30 @@
  * 以避免 engine/ 目录依赖 React。
  */
 
-import type { SystemMessage, SystemLocalCommandMessage, Message } from './message.js'
-import type { AppState } from '../state/AppStateStore.js'
-import type { FileStateCache } from '../utils/fileStateCache.js'
-import type { CanUseToolFn } from './permissions.js'
-import type { Command } from '../commands.js'
-import type { ThinkingConfig } from '../utils/thinking.js'
-import type { MCPServerConnection, ServerResource } from '../services/mcp/types.js'
-import type { AgentDefinitionsResult } from '@claude-code-best/builtin-tools/tools/AgentTool/loadAgentsDir.js'
-import type { QuerySource } from '../constants/querySource.js'
-import type { Tools } from './toolTypes.js'
-import type { ElicitRequestURLParams, ElicitResult } from '@modelcontextprotocol/sdk/types.js'
-import type { FileHistoryState } from '../utils/fileHistory.js'
-import type { AttributionState } from '../utils/commitAttribution.js'
-import type { AgentId } from './ids.js'
-import type { QueryChainTracking, SetToolJSXFn, CompactProgressEvent } from '../Tool.js'
-import type { DenialTrackingState } from '../utils/permissions/denialTracking.js'
-import type { ContentReplacementState } from '../utils/toolResultStorage.js'
-import type { Notification } from './notification.js'
-import type { SpinnerMode } from './spinner.js'
-import type { SDKStatus } from '../entrypoints/agentSdkTypes.js'
-import type { UUID } from 'crypto'
-import type { PromptRequest, PromptResponse } from './hooks.js'
-import type { LangfuseSpan } from '../services/langfuse/index.js'
-import type { SystemPrompt } from '../utils/systemPromptType.js'
+import type {SystemMessage, SystemLocalCommandMessage, Message} from './message.js'
+import type {AppState} from '../state/AppStateStore.js'
+import type {FileStateCache} from '../utils/fileStateCache.js'
+import type {CanUseToolFn} from './permissions.js'
+import type {Command} from '../commands.js'
+import type {ThinkingConfig} from '../utils/thinking.js'
+import type {MCPServerConnection, ServerResource} from '../services/mcp/types.js'
+import type {AgentDefinitionsResult} from '@claude-code-best/builtin-tools/tools/AgentTool/loadAgentsDir.js'
+import type {QuerySource} from '../constants/querySource.js'
+import type {Tools} from './toolTypes.js'
+import type {ElicitRequestURLParams, ElicitResult} from '@modelcontextprotocol/sdk/types.js'
+import type {FileHistoryState} from '../utils/fileHistory.js'
+import type {AttributionState} from '../utils/commitAttribution.js'
+import type {AgentId} from './ids.js'
+import type {QueryChainTracking, SetToolJSXFn, CompactProgressEvent} from '../Tool.js'
+import type {DenialTrackingState} from '../utils/permissions/denialTracking.js'
+import type {ContentReplacementState} from '../utils/toolResultStorage.js'
+import type {Notification} from './notification.js'
+import type {SpinnerMode} from './spinner.js'
+import type {SDKStatus} from '../entrypoints/agentSdkTypes.js'
+import type {UUID} from 'crypto'
+import type {PromptRequest, PromptResponse} from './hooks.js'
+import type {LangfuseSpan} from '../services/langfuse/index.js'
+import type {SystemPrompt} from '../utils/systemPromptType.js'
 
 // ============================================================
 // CoreToolContext — 核心上下文
@@ -46,64 +46,67 @@ import type { SystemPrompt } from '../utils/systemPromptType.js'
  * 可在 non-CLI 环境使用。
  */
 export interface CoreToolContext {
-  // ========== 工具选项 ==========
-  options: {
-    commands: Command[]
-    debug: boolean
-    mainLoopModel: string
-    tools: Tools
-    verbose: boolean
-    thinkingConfig: ThinkingConfig
-    mcpClients: MCPServerConnection[]
-    mcpResources: Record<string, ServerResource[]>
-    isNonInteractiveSession: boolean
-    agentDefinitions: AgentDefinitionsResult
-    maxBudgetUsd?: number
-    customSystemPrompt?: string
-    appendSystemPrompt?: string
-    querySource?: QuerySource
-    refreshTools?: () => Tools
-  }
+	// ========== 工具选项 ==========
+	options: {
+		commands: Command[]
+		debug: boolean
+		mainLoopModel: string
+		tools: Tools
+		verbose: boolean
+		thinkingConfig: ThinkingConfig
+		mcpClients: MCPServerConnection[]
+		mcpResources: Record<string, ServerResource[]>
+		isNonInteractiveSession: boolean
+		agentDefinitions: AgentDefinitionsResult
+		maxBudgetUsd?: number
+		customSystemPrompt?: string
+		appendSystemPrompt?: string
+		querySource?: QuerySource
+		refreshTools?: () => Tools
+	}
 
-  // ========== 核心状态 ==========
-  abortController: AbortController
-  readFileState: FileStateCache
-  getAppState(): AppState
-  setAppState(f: (prev: AppState) => AppState): void
-  setAppStateForTasks?: (f: (prev: AppState) => AppState) => void
+	// ========== 核心状态 ==========
+	abortController: AbortController
+	readFileState: FileStateCache
 
-  // ========== MCP Elicitation ==========
-  handleElicitation?: (
-    serverName: string,
-    params: ElicitRequestURLParams,
-    signal: AbortSignal,
-  ) => Promise<ElicitResult>
+	getAppState(): AppState
 
-  // ========== 消息 ==========
-  messages: Message[]
+	setAppState(f: (prev: AppState) => AppState): void
 
-  // ========== 状态更新 ==========
-  setInProgressToolUseIDs: (f: (prev: Set<string>) => Set<string>) => void
-  setResponseLength: (f: (prev: number) => number) => void
-  updateFileHistoryState: (
-    updater: (prev: FileHistoryState) => FileHistoryState,
-  ) => void
-  updateAttributionState: (
-    updater: (prev: AttributionState) => AttributionState,
-  ) => void
+	setAppStateForTasks?: (f: (prev: AppState) => AppState) => void
 
-  // ========== 工具执行状态 ==========
-  toolUseId?: string
+	// ========== MCP Elicitation ==========
+	handleElicitation?: (
+		serverName: string,
+		params: ElicitRequestURLParams,
+		signal: AbortSignal,
+	) => Promise<ElicitResult>
 
-  // ========== Agent 相关 ==========
-  agentId?: AgentId
-  agentType?: string
-  requireCanUseTool?: boolean
+	// ========== 消息 ==========
+	messages: Message[]
 
-  // ========== 追踪 ==========
-  queryTracking?: QueryChainTracking
-  localDenialTracking?: DenialTrackingState
-  contentReplacementState?: ContentReplacementState
+	// ========== 状态更新 ==========
+	setInProgressToolUseIDs: (f: (prev: Set<string>) => Set<string>) => void
+	setResponseLength: (f: (prev: number) => number) => void
+	updateFileHistoryState: (
+		updater: (prev: FileHistoryState) => FileHistoryState,
+	) => void
+	updateAttributionState: (
+		updater: (prev: AttributionState) => AttributionState,
+	) => void
+
+	// ========== 工具执行状态 ==========
+	toolUseId?: string
+
+	// ========== Agent 相关 ==========
+	agentId?: AgentId
+	agentType?: string
+	requireCanUseTool?: boolean
+
+	// ========== 追踪 ==========
+	queryTracking?: QueryChainTracking
+	localDenialTracking?: DenialTrackingState
+	contentReplacementState?: ContentReplacementState
 }
 
 // ============================================================
@@ -117,68 +120,68 @@ export interface CoreToolContext {
  * 仅 CLI 环境需要。
  */
 export interface UIToolContext extends CoreToolContext {
-  // ========== UI 回调 ==========
-  setToolJSX?: SetToolJSXFn
-  addNotification?: (notif: Notification | Record<string, unknown>) => void
-  appendSystemMessage?: (
-    msg: Exclude<SystemMessage, SystemLocalCommandMessage>,
-  ) => void
-  sendOSNotification?: (opts: {
-    message: string
-    notificationType: string
-  }) => void
+	// ========== UI 回调 ==========
+	setToolJSX?: SetToolJSXFn
+	addNotification?: (notif: Notification | Record<string, unknown>) => void
+	appendSystemMessage?: (
+		msg: Exclude<SystemMessage, SystemLocalCommandMessage>,
+	) => void
+	sendOSNotification?: (opts: {
+		message: string
+		notificationType: string
+	}) => void
 
-  // ========== 嵌套内存触发器 ==========
-  nestedMemoryAttachmentTriggers?: Set<string>
-  loadedNestedMemoryPaths?: Set<string>
-  dynamicSkillDirTriggers?: Set<string>
-  discoveredSkillNames?: Set<string>
-  userModified?: boolean
+	// ========== 嵌套内存触发器 ==========
+	nestedMemoryAttachmentTriggers?: Set<string>
+	loadedNestedMemoryPaths?: Set<string>
+	dynamicSkillDirTriggers?: Set<string>
+	discoveredSkillNames?: Set<string>
+	userModified?: boolean
 
-  // ========== 进度控制 ==========
-  setHasInterruptibleToolInProgress?: (v: boolean) => void
-  pushApiMetricsEntry?: (ttftMs: number) => void
-  setStreamMode?: (mode: SpinnerMode) => void
-  onCompactProgress?: (event: CompactProgressEvent) => void
-  setSDKStatus?: (status: SDKStatus) => void
-  openMessageSelector?: () => void
-  setConversationId?: (id: UUID) => void
+	// ========== 进度控制 ==========
+	setHasInterruptibleToolInProgress?: (v: boolean) => void
+	pushApiMetricsEntry?: (ttftMs: number) => void
+	setStreamMode?: (mode: SpinnerMode) => void
+	onCompactProgress?: (event: CompactProgressEvent) => void
+	setSDKStatus?: (status: SDKStatus) => void
+	openMessageSelector?: () => void
+	setConversationId?: (id: UUID) => void
 
-  // ========== 限制配置 ==========
-  fileReadingLimits?: {
-    maxTokens?: number
-    maxSizeBytes?: number
-  }
-  globLimits?: {
-    maxResults?: number
-  }
+	// ========== 限制配置 ==========
+	fileReadingLimits?: {
+		maxTokens?: number
+		maxSizeBytes?: number
+	}
+	globLimits?: {
+		maxResults?: number
+	}
 
-  // ========== 工具决策 ==========
-  toolDecisions?: Map<
-    string,
-    {
-      source: string
-      decision: 'accept' | 'reject'
-      timestamp: number
-    }
-  >
+	// ========== 工具决策 ==========
+	toolDecisions?: Map<
+		string,
+		{
+			source: string
+			decision: 'accept' | 'reject'
+			timestamp: number
+		}
+	>
 
-  // ========== 交互式提示 ==========
-  requestPrompt?: (
-    sourceName: string,
-    toolInputSummary?: string | null,
-  ) => (request: PromptRequest) => Promise<PromptResponse>
+	// ========== 交互式提示 ==========
+	requestPrompt?: (
+		sourceName: string,
+		toolInputSummary?: string | null,
+	) => (request: PromptRequest) => Promise<PromptResponse>
 
-  // ========== 实验性功能 ==========
-  criticalSystemReminder_EXPERIMENTAL?: string
+	// ========== 实验性功能 ==========
+	criticalSystemReminder_EXPERIMENTAL?: string
 
-  // ========== Langfuse 追踪 ==========
-  langfuseTrace?: LangfuseSpan | null
-  langfuseBatchSpan?: LangfuseSpan | null
+	// ========== Langfuse 追踪 ==========
+	langfuseTrace?: LangfuseSpan | null
+	langfuseBatchSpan?: LangfuseSpan | null
 
-  // ========== 子 Agent 相关 ==========
-  preserveToolUseResults?: boolean
-  renderedSystemPrompt?: SystemPrompt
+	// ========== 子 Agent 相关 ==========
+	preserveToolUseResults?: boolean
+	renderedSystemPrompt?: SystemPrompt
 }
 
 // ============================================================
@@ -186,10 +189,10 @@ export interface UIToolContext extends CoreToolContext {
 // ============================================================
 
 export interface MessageSelectorOptions {
-  messages?: unknown[]
-  onSelect?: (selected: unknown) => void
-  onCancel?: () => void
-  title?: string
+	messages?: unknown[]
+	onSelect?: (selected: unknown) => void
+	onCancel?: () => void
+	title?: string
 }
 
 // ============================================================
@@ -213,32 +216,36 @@ export type ToolUseContext = UIToolContext
  * 用于 non-CLI 环境的工具执行。
  */
 export function createCoreToolContext(options: {
-  cwd: string
-  signal?: AbortSignal
-  readFileCache: FileStateCache
-  getAppState: () => AppState
-  setAppState: (fn: (prev: AppState) => AppState) => void
-  canUseTool: CanUseToolFn
-  toolOptions: CoreToolContext['options']
-  messages: Message[]
+	cwd: string
+	signal?: AbortSignal
+	readFileCache: FileStateCache
+	getAppState: () => AppState
+	setAppState: (fn: (prev: AppState) => AppState) => void
+	canUseTool: CanUseToolFn
+	toolOptions: CoreToolContext['options']
+	messages: Message[]
 }): CoreToolContext {
-  const abortController = new globalThis.AbortController()
-  if (options.signal) {
-    options.signal.addEventListener('abort', () => abortController.abort())
-  }
+	const abortController = new globalThis.AbortController()
+	if (options.signal) {
+		options.signal.addEventListener('abort', () => abortController.abort())
+	}
 
-  return {
-    options: options.toolOptions,
-    abortController,
-    readFileState: options.readFileCache,
-    getAppState: options.getAppState,
-    setAppState: options.setAppState,
-    messages: options.messages,
-    setInProgressToolUseIDs: () => {},
-    setResponseLength: () => {},
-    updateFileHistoryState: () => {},
-    updateAttributionState: () => {},
-  }
+	return {
+		options: options.toolOptions,
+		abortController,
+		readFileState: options.readFileCache,
+		getAppState: options.getAppState,
+		setAppState: options.setAppState,
+		messages: options.messages,
+		setInProgressToolUseIDs: () => {
+		},
+		setResponseLength: () => {
+		},
+		updateFileHistoryState: () => {
+		},
+		updateAttributionState: () => {
+		},
+	}
 }
 
 /**
@@ -247,16 +254,16 @@ export function createCoreToolContext(options: {
  * 用于 CLI 环境的工具执行。
  */
 export function createUIToolContext(
-  coreContext: CoreToolContext,
-  uiOptions: {
-    setToolJSX?: SetToolJSXFn
-    appendSystemMessage?: (message: SystemMessage) => void
-    sendOSNotification?: (opts: { message: string; notificationType: string }) => void
-    verbose?: boolean
-  },
+	coreContext: CoreToolContext,
+	uiOptions: {
+		setToolJSX?: SetToolJSXFn
+		appendSystemMessage?: (message: SystemMessage) => void
+		sendOSNotification?: (opts: { message: string; notificationType: string }) => void
+		verbose?: boolean
+	},
 ): UIToolContext {
-  return {
-    ...coreContext,
-    ...uiOptions,
-  }
+	return {
+		...coreContext,
+		...uiOptions,
+	}
 }

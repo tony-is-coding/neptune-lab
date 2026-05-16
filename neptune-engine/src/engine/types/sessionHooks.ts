@@ -15,4 +15,4 @@ export type {
 } from '../../utils/hooks/sessionHooks.js'
 
 // 重新导出函数
-export { addSessionHook } from '../../utils/hooks/sessionHooks.js'
+export {addSessionHook} from '../../utils/hooks/sessionHooks.js'

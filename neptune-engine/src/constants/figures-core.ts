@@ -6,7 +6,7 @@
 // - LIGHTNING_BOLT: 快速模式标识需要
 // - DIAMOND_OPEN/FILLED: 任务状态显示需要
 
-import { env } from '../utils/env.js'
+import {env} from '../utils/env.js'
 
 // 通用图标常量（平台适配）
 export const BLACK_CIRCLE = env.platform === 'darwin' ? '⏺' : '●'

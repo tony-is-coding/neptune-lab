@@ -7,9 +7,9 @@
  * V18 优化：消除 value import 穿透，改为依赖注入。
  */
 
-import type { CoreAppState } from '../types/CoreAppState.js'
-import type { ToolPermissionContext } from '../../Tool.js'
-import type { AttributionState } from '../../utils/commitAttribution.js'
+import type {CoreAppState} from '../types/CoreAppState.js'
+import type {ToolPermissionContext} from '../../Tool.js'
+import type {AttributionState} from '../../utils/commitAttribution.js'
 
 /**
  * 创建空的 ToolPermissionContext 的函数类型

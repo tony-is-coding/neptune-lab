@@ -1,15 +1,15 @@
-import { randomUUID } from 'crypto'
-import type { ContentBlockParam } from '@anthropic-ai/sdk/resources/messages.mjs'
-import type { ToolUseConfirm } from '../types/permissionTypes.js'
+import {randomUUID} from 'crypto'
+import type {ContentBlockParam} from '@anthropic-ai/sdk/resources/messages.mjs'
+import type {ToolUseConfirm} from '../types/permissionTypes.js'
 import type {
-  PipeMessage,
-  PipePermissionRequestPayload,
-  PipePermissionResponsePayload,
+	PipeMessage,
+	PipePermissionRequestPayload,
+	PipePermissionResponsePayload,
 } from './pipeTransport.js'
-import type { PermissionUpdate } from './permissions/PermissionUpdateSchema.js'
+import type {PermissionUpdate} from './permissions/PermissionUpdateSchema.js'
 
 type PendingPipePermission = {
-  onResponse: (payload: PipePermissionResponsePayload) => void
+	onResponse: (payload: PipePermissionResponsePayload) => void
 }
 
 const pendingPipePermissions = new Map<string, PendingPipePermission>()
@@ -20,137 +20,137 @@ type PipeRelayFn = (message: PipeMessage) => void
 let _pipeRelay: PipeRelayFn | null = null
 
 export function setPipeRelay(fn: PipeRelayFn | null): void {
-  _pipeRelay = fn
+	_pipeRelay = fn
 }
 
 export function getPipeRelay(): PipeRelayFn | null {
-  return _pipeRelay
+	return _pipeRelay
 }
 
 function getPipeSender():
-  | ((message: PipeMessage) => void)
-  | null {
-  return _pipeRelay ?? null
+	| ((message: PipeMessage) => void)
+	| null {
+	return _pipeRelay ?? null
 }
 
 export function tryRelayPipePermissionRequest(
-  toolUseConfirm: ToolUseConfirm,
-  onResponse: (payload: PipePermissionResponsePayload) => void,
+	toolUseConfirm: ToolUseConfirm,
+	onResponse: (payload: PipePermissionResponsePayload) => void,
 ): string | null {
-  const send = getPipeSender()
-  if (!send) return null
+	const send = getPipeSender()
+	if (!send) return null
 
-  const requestId = randomUUID()
-  const payload: PipePermissionRequestPayload = {
-    requestId,
-    toolName: toolUseConfirm.tool.name,
-    toolUseID: toolUseConfirm.toolUseID,
-    description: toolUseConfirm.description,
-    input: toolUseConfirm.input as Record<string, unknown>,
-    permissionResult: toolUseConfirm.permissionResult,
-    permissionPromptStartTimeMs: toolUseConfirm.permissionPromptStartTimeMs,
-  }
+	const requestId = randomUUID()
+	const payload: PipePermissionRequestPayload = {
+		requestId,
+		toolName: toolUseConfirm.tool.name,
+		toolUseID: toolUseConfirm.toolUseID,
+		description: toolUseConfirm.description,
+		input: toolUseConfirm.input as Record<string, unknown>,
+		permissionResult: toolUseConfirm.permissionResult,
+		permissionPromptStartTimeMs: toolUseConfirm.permissionPromptStartTimeMs,
+	}
 
-  pendingPipePermissions.set(requestId, { onResponse })
-  send({ type: 'permission_request', data: JSON.stringify(payload) })
-  return requestId
+	pendingPipePermissions.set(requestId, {onResponse})
+	send({type: 'permission_request', data: JSON.stringify(payload)})
+	return requestId
 }
 
 export function resolvePipePermissionResponse(
-  payload: PipePermissionResponsePayload,
+	payload: PipePermissionResponsePayload,
 ): boolean {
-  const pending = pendingPipePermissions.get(payload.requestId)
-  if (!pending) return false
-  pendingPipePermissions.delete(payload.requestId)
-  pending.onResponse(payload)
-  return true
+	const pending = pendingPipePermissions.get(payload.requestId)
+	if (!pending) return false
+	pendingPipePermissions.delete(payload.requestId)
+	pending.onResponse(payload)
+	return true
 }
 
 export function cancelPipePermissionRequest(
-  requestId: string,
-  reason?: string,
+	requestId: string,
+	reason?: string,
 ): boolean {
-  const pending = pendingPipePermissions.get(requestId)
-  if (!pending) return false
-  pendingPipePermissions.delete(requestId)
-  pending.onResponse({
-    requestId,
-    behavior: 'deny',
-    feedback: reason ?? 'Permission request was cancelled by main.',
-  })
-  return true
+	const pending = pendingPipePermissions.get(requestId)
+	if (!pending) return false
+	pendingPipePermissions.delete(requestId)
+	pending.onResponse({
+		requestId,
+		behavior: 'deny',
+		feedback: reason ?? 'Permission request was cancelled by main.',
+	})
+	return true
 }
 
 export function forgetPipePermissionRequest(
-  requestId: string | null | undefined,
+	requestId: string | null | undefined,
 ): void {
-  if (!requestId) return
-  pendingPipePermissions.delete(requestId)
+	if (!requestId) return
+	pendingPipePermissions.delete(requestId)
 }
 
 export function notifyPipePermissionCancel(
-  requestId: string | null | undefined,
-  reason?: string,
+	requestId: string | null | undefined,
+	reason?: string,
 ): void {
-  if (!requestId) return
-  const send = getPipeSender()
-  if (!send) return
-  send({
-    type: 'permission_cancel',
-    data: JSON.stringify({ requestId, reason }),
-  })
+	if (!requestId) return
+	const send = getPipeSender()
+	if (!send) return
+	send({
+		type: 'permission_cancel',
+		data: JSON.stringify({requestId, reason}),
+	})
 }
 
 export function clearPendingPipePermissions(
-  reason = 'Pipe permission relay was disconnected.',
+	reason = 'Pipe permission relay was disconnected.',
 ): void {
-  for (const requestId of [...pendingPipePermissions.keys()]) {
-    cancelPipePermissionRequest(requestId, reason)
-  }
+	for (const requestId of [...pendingPipePermissions.keys()]) {
+		cancelPipePermissionRequest(requestId, reason)
+	}
 }
 
 export function makePipePermissionResponsePayload(
-  requestId: string,
-  behavior: 'allow',
-  updatedInput: Record<string, unknown>,
-  permissionUpdates: PermissionUpdate[],
-  feedback?: string,
-  contentBlocks?: ContentBlockParam[],
+	requestId: string,
+	behavior: 'allow',
+	updatedInput: Record<string, unknown>,
+	permissionUpdates: PermissionUpdate[],
+	feedback?: string,
+	contentBlocks?: ContentBlockParam[],
 ): PipePermissionResponsePayload
 export function makePipePermissionResponsePayload(
-  requestId: string,
-  behavior: 'deny',
-  feedback?: string,
-  contentBlocks?: ContentBlockParam[],
+	requestId: string,
+	behavior: 'deny',
+	feedback?: string,
+	contentBlocks?: ContentBlockParam[],
 ): PipePermissionResponsePayload
 export function makePipePermissionResponsePayload(
-  requestId: string,
-  behavior: 'allow' | 'deny',
-  updatedInputOrFeedback?: Record<string, unknown> | string,
-  permissionUpdatesOrContentBlocks?: PermissionUpdate[] | ContentBlockParam[],
-  feedback?: string,
-  contentBlocks?: ContentBlockParam[],
+	requestId: string,
+	behavior: 'allow' | 'deny',
+	updatedInputOrFeedback?: Record<string, unknown> | string,
+	permissionUpdatesOrContentBlocks?: PermissionUpdate[] | ContentBlockParam[],
+	feedback?: string,
+	contentBlocks?: ContentBlockParam[],
 ): PipePermissionResponsePayload {
-  if (behavior === 'allow') {
-    return {
-      requestId,
-      behavior,
-      updatedInput:
-        (updatedInputOrFeedback as Record<string, unknown> | undefined) ?? {},
-      permissionUpdates:
-        (permissionUpdatesOrContentBlocks as PermissionUpdate[] | undefined) ??
-        [],
-      feedback,
-      contentBlocks,
-    }
-  }
+	if (behavior === 'allow') {
+		return {
+			requestId,
+			behavior,
+			updatedInput:
+				(updatedInputOrFeedback as Record<string, unknown> | undefined) ?? {},
+			permissionUpdates:
+				(permissionUpdatesOrContentBlocks as PermissionUpdate[] | undefined) ??
+				[],
+			feedback,
+			contentBlocks,
+		}
+	}
 
-  return {
-    requestId,
-    behavior,
-    feedback: updatedInputOrFeedback as string | undefined,
-    contentBlocks: permissionUpdatesOrContentBlocks as
-      | ContentBlockParam[]
-      | undefined,
-  }
+	return {
+		requestId,
+		behavior,
+		feedback: updatedInputOrFeedback as string | undefined,
+		contentBlocks: permissionUpdatesOrContentBlocks as
+			| ContentBlockParam[]
+			| undefined,
+	}
 }

@@ -14,12 +14,12 @@ export const LOCAL_COMMAND_CAVEAT_TAG = 'local-command-caveat'
 
 // All terminal-related tags that indicate a message is terminal output, not a user prompt
 export const TERMINAL_OUTPUT_TAGS = [
-  BASH_INPUT_TAG,
-  BASH_STDOUT_TAG,
-  BASH_STDERR_TAG,
-  LOCAL_COMMAND_STDOUT_TAG,
-  LOCAL_COMMAND_STDERR_TAG,
-  LOCAL_COMMAND_CAVEAT_TAG,
+	BASH_INPUT_TAG,
+	BASH_STDOUT_TAG,
+	BASH_STDERR_TAG,
+	LOCAL_COMMAND_STDOUT_TAG,
+	LOCAL_COMMAND_STDERR_TAG,
+	LOCAL_COMMAND_CAVEAT_TAG,
 ] as const
 
 export const TICK_TAG = 'tick'
@@ -70,17 +70,17 @@ export const COMMON_HELP_ARGS = ['help', '-h', '--help']
 
 // Common argument patterns for slash commands that request current state/info
 export const COMMON_INFO_ARGS = [
-  'list',
-  'show',
-  'display',
-  'current',
-  'view',
-  'get',
-  'check',
-  'describe',
-  'print',
-  'version',
-  'about',
-  'status',
-  '?',
+	'list',
+	'show',
+	'display',
+	'current',
+	'view',
+	'get',
+	'check',
+	'describe',
+	'print',
+	'version',
+	'about',
+	'status',
+	'?',
 ]

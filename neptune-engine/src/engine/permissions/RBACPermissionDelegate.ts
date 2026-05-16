@@ -1,5 +1,5 @@
-import type { PermissionDecision } from './PermissionDecision.js'
-import type { PermissionDelegate } from './PermissionDelegate.js'
+import type {PermissionDecision} from './PermissionDecision.js'
+import type {PermissionDelegate} from './PermissionDelegate.js'
 
 /**
  * 工具权限规则
@@ -8,10 +8,10 @@ import type { PermissionDelegate } from './PermissionDelegate.js'
  * 优先级：deny > allow
  */
 export interface ToolPermissionRule {
-  /** 允许的工具列表（通配符 * 表示所有工具） */
-  allow?: string[]
-  /** 拒绝的工具列表（优先级高于 allow） */
-  deny?: string[]
+	/** 允许的工具列表（通配符 * 表示所有工具） */
+	allow?: string[]
+	/** 拒绝的工具列表（优先级高于 allow） */
+	deny?: string[]
 }
 
 /**
@@ -38,64 +38,64 @@ export type RolePermissionMap = Record<string, ToolPermissionRule>
  * ```
  */
 export class RBACPermissionDelegate implements PermissionDelegate {
-  private readonly roleMap: RolePermissionMap
-  private _currentRole: string
+	private readonly roleMap: RolePermissionMap
+	private _currentRole: string
 
-  constructor(roleMap: RolePermissionMap, currentRole: string) {
-    this.roleMap = roleMap
-    this._currentRole = currentRole
-  }
+	constructor(roleMap: RolePermissionMap, currentRole: string) {
+		this.roleMap = roleMap
+		this._currentRole = currentRole
+	}
 
-  async onToolAccess(toolName: string, _input: Record<string, unknown>): Promise<PermissionDecision> {
-    const rule = this.roleMap[this._currentRole]
+	async onToolAccess(toolName: string, _input: Record<string, unknown>): Promise<PermissionDecision> {
+		const rule = this.roleMap[this._currentRole]
 
-    // 如果角色不存在，默认 ask（回退到交互式确认）
-    if (!rule) {
-      return 'ask'
-    }
+		// 如果角色不存在，默认 ask（回退到交互式确认）
+		if (!rule) {
+			return 'ask'
+		}
 
-    // 检查 deny 列表（优先级最高）
-    if (rule.deny && this.matchTool(toolName, rule.deny)) {
-      return 'deny'
-    }
+		// 检查 deny 列表（优先级最高）
+		if (rule.deny && this.matchTool(toolName, rule.deny)) {
+			return 'deny'
+		}
 
-    // 检查 allow 列表
-    if (rule.allow && this.matchTool(toolName, rule.allow)) {
-      return 'allow'
-    }
+		// 检查 allow 列表
+		if (rule.allow && this.matchTool(toolName, rule.allow)) {
+			return 'allow'
+		}
 
-    // 默认 ask（回退到交互式确认）
-    return 'ask'
-  }
+		// 默认 ask（回退到交互式确认）
+		return 'ask'
+	}
 
-  /**
-   * 检查工具名是否匹配规则列表
-   * 支持精确匹配和通配符匹配
-   */
-  private matchTool(toolName: string, patterns: string[]): boolean {
-    return patterns.some(pattern => {
-      if (pattern === '*') {
-        return true
-      }
-      if (pattern.endsWith('*')) {
-        const prefix = pattern.slice(0, -1)
-        return toolName.startsWith(prefix)
-      }
-      return toolName === pattern
-    })
-  }
+	/**
+	 * 检查工具名是否匹配规则列表
+	 * 支持精确匹配和通配符匹配
+	 */
+	private matchTool(toolName: string, patterns: string[]): boolean {
+		return patterns.some(pattern => {
+			if (pattern === '*') {
+				return true
+			}
+			if (pattern.endsWith('*')) {
+				const prefix = pattern.slice(0, -1)
+				return toolName.startsWith(prefix)
+			}
+			return toolName === pattern
+		})
+	}
 
-  /**
-   * 切换当前角色
-   */
-  setRole(role: string): void {
-    this._currentRole = role
-  }
+	/**
+	 * 切换当前角色
+	 */
+	setRole(role: string): void {
+		this._currentRole = role
+	}
 
-  /**
-   * 获取当前角色
-   */
-  getRole(): string {
-    return this._currentRole
-  }
+	/**
+	 * 获取当前角色
+	 */
+	getRole(): string {
+		return this._currentRole
+	}
 }

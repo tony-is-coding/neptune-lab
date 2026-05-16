@@ -11,34 +11,34 @@
 
 /** Cross-platform window identifier */
 export interface WindowHandle {
-  id: string // macOS: bundleId, Windows: HWND string, Linux: window ID
-  pid: number
-  title: string
-  exePath?: string // Windows/Linux: process executable path
+	id: string // macOS: bundleId, Windows: HWND string, Linux: window ID
+	pid: number
+	title: string
+	exePath?: string // Windows/Linux: process executable path
 }
 
 export interface ScreenshotResult {
-  base64: string
-  width: number
-  height: number
+	base64: string
+	width: number
+	height: number
 }
 
 export interface DisplayInfo {
-  width: number
-  height: number
-  scaleFactor: number
-  displayId: number
+	width: number
+	height: number
+	scaleFactor: number
+	displayId: number
 }
 
 export interface InstalledApp {
-  id: string // macOS: bundleId, Windows: exe path or package family, Linux: .desktop name
-  displayName: string
-  path: string
+	id: string // macOS: bundleId, Windows: exe path or package family, Linux: .desktop name
+	displayName: string
+	path: string
 }
 
 export interface FrontmostAppInfo {
-  id: string
-  appName: string
+	id: string
+	appName: string
 }
 
 // ---------------------------------------------------------------------------
@@ -57,29 +57,38 @@ export interface FrontmostAppInfo {
  *   the cursor. Preferred when a target HWND is known.
  */
 export interface InputPlatform {
-  // --- Mode A: Global input (all platforms) ---
-  moveMouse(x: number, y: number): Promise<void>
-  click(
-    x: number,
-    y: number,
-    button: 'left' | 'right' | 'middle',
-  ): Promise<void>
-  typeText(text: string): Promise<void>
-  key(name: string, action: 'press' | 'release'): Promise<void>
-  keys(combo: string[]): Promise<void>
-  scroll(amount: number, direction: 'vertical' | 'horizontal'): Promise<void>
-  mouseLocation(): Promise<{ x: number; y: number }>
+	// --- Mode A: Global input (all platforms) ---
+	moveMouse(x: number, y: number): Promise<void>
 
-  // --- Mode B: Window-bound input (Windows only, optional) ---
-  sendChar?(hwnd: string, char: string): Promise<void>
-  sendKey?(hwnd: string, vk: number, action: 'down' | 'up'): Promise<void>
-  sendClick?(
-    hwnd: string,
-    x: number,
-    y: number,
-    button: 'left' | 'right',
-  ): Promise<void>
-  sendText?(hwnd: string, text: string): Promise<void>
+	click(
+		x: number,
+		y: number,
+		button: 'left' | 'right' | 'middle',
+	): Promise<void>
+
+	typeText(text: string): Promise<void>
+
+	key(name: string, action: 'press' | 'release'): Promise<void>
+
+	keys(combo: string[]): Promise<void>
+
+	scroll(amount: number, direction: 'vertical' | 'horizontal'): Promise<void>
+
+	mouseLocation(): Promise<{ x: number; y: number }>
+
+	// --- Mode B: Window-bound input (Windows only, optional) ---
+	sendChar?(hwnd: string, char: string): Promise<void>
+
+	sendKey?(hwnd: string, vk: number, action: 'down' | 'up'): Promise<void>
+
+	sendClick?(
+		hwnd: string,
+		x: number,
+		y: number,
+		button: 'left' | 'right',
+	): Promise<void>
+
+	sendText?(hwnd: string, text: string): Promise<void>
 }
 
 // ---------------------------------------------------------------------------
@@ -87,17 +96,19 @@ export interface InputPlatform {
 // ---------------------------------------------------------------------------
 
 export interface ScreenshotPlatform {
-  /** Full-screen capture. Returns JPEG base64. */
-  captureScreen(displayId?: number): Promise<ScreenshotResult>
-  /** Region capture. Returns JPEG base64. */
-  captureRegion(
-    x: number,
-    y: number,
-    w: number,
-    h: number,
-  ): Promise<ScreenshotResult>
-  /** Window capture (Windows: PrintWindow, macOS: SCContentFilter, Linux: xdotool+import). */
-  captureWindow?(hwnd: string): Promise<ScreenshotResult | null>
+	/** Full-screen capture. Returns JPEG base64. */
+	captureScreen(displayId?: number): Promise<ScreenshotResult>
+
+	/** Region capture. Returns JPEG base64. */
+	captureRegion(
+		x: number,
+		y: number,
+		w: number,
+		h: number,
+	): Promise<ScreenshotResult>
+
+	/** Window capture (Windows: PrintWindow, macOS: SCContentFilter, Linux: xdotool+import). */
+	captureWindow?(hwnd: string): Promise<ScreenshotResult | null>
 }
 
 // ---------------------------------------------------------------------------
@@ -105,8 +116,9 @@ export interface ScreenshotPlatform {
 // ---------------------------------------------------------------------------
 
 export interface DisplayPlatform {
-  listAll(): DisplayInfo[]
-  getSize(displayId?: number): DisplayInfo
+	listAll(): DisplayInfo[]
+
+	getSize(displayId?: number): DisplayInfo
 }
 
 // ---------------------------------------------------------------------------
@@ -114,11 +126,15 @@ export interface DisplayPlatform {
 // ---------------------------------------------------------------------------
 
 export interface AppsPlatform {
-  listRunning(): WindowHandle[]
-  listInstalled(): Promise<InstalledApp[]>
-  open(name: string): Promise<void>
-  getFrontmostApp(): FrontmostAppInfo | null
-  findWindowByTitle(title: string): WindowHandle | null
+	listRunning(): WindowHandle[]
+
+	listInstalled(): Promise<InstalledApp[]>
+
+	open(name: string): Promise<void>
+
+	getFrontmostApp(): FrontmostAppInfo | null
+
+	findWindowByTitle(title: string): WindowHandle | null
 }
 
 // ---------------------------------------------------------------------------
@@ -126,28 +142,30 @@ export interface AppsPlatform {
 // ---------------------------------------------------------------------------
 
 export type WindowAction =
-  | 'minimize'
-  | 'maximize'
-  | 'restore'
-  | 'close'
-  | 'focus'
-  | 'move_offscreen'
-  | 'move_resize'
-  | 'get_rect'
+	| 'minimize'
+	| 'maximize'
+	| 'restore'
+	| 'close'
+	| 'focus'
+	| 'move_offscreen'
+	| 'move_resize'
+	| 'get_rect'
 
 export interface WindowManagementPlatform {
-  /** Perform a window management action on the bound HWND. All via Win32 API, no global shortcuts. */
-  manageWindow(
-    action: WindowAction,
-    opts?: { x?: number; y?: number; width?: number; height?: number },
-  ): boolean
-  /** Move window to specific position and/or resize */
-  moveResize(x: number, y: number, width?: number, height?: number): boolean
-  /** Get current window rect */
-  getWindowRect(): {
-    x: number
-    y: number
-    width: number
-    height: number
-  } | null
+	/** Perform a window management action on the bound HWND. All via Win32 API, no global shortcuts. */
+	manageWindow(
+		action: WindowAction,
+		opts?: { x?: number; y?: number; width?: number; height?: number },
+	): boolean
+
+	/** Move window to specific position and/or resize */
+	moveResize(x: number, y: number, width?: number, height?: number): boolean
+
+	/** Get current window rect */
+	getWindowRect(): {
+		x: number
+		y: number
+		width: number
+		height: number
+	} | null
 }

@@ -146,6 +146,22 @@ export function useChatMessages() {
           }
         } else if (type === 'tool_use') {
           const { id: toolId, name, input } = data as { id: string; name: string; input: Record<string, unknown> };
+
+          // TodoWrite 特殊处理 — 转为 plan block
+          if (name === 'TodoWrite' && input.todos) {
+            const todos = input.todos as Array<{ content: string; status: string; activeForm?: string }>;
+            setBlocks(prev => {
+              // 更新已有的 plan block，或创建新的
+              const existingIdx = prev.findIndex(b => b.type === 'plan');
+              const planBlock = { type: 'plan' as const, id: toolId, todos: todos.map(t => ({ content: t.content, status: t.status as 'pending' | 'in_progress' | 'completed', activeForm: t.activeForm })) };
+              if (existingIdx >= 0) {
+                return [...prev.slice(0, existingIdx), planBlock, ...prev.slice(existingIdx + 1)];
+              }
+              return [...prev, planBlock];
+            });
+            return;
+          }
+
           setBlocks(prev => {
             // 如果已存在同 id 的 tool_use，更新其 input（流式中 input 可能延迟到达）
             const existing = prev.find(b => b.type === 'tool_use' && b.id === toolId);
@@ -229,6 +245,40 @@ export function useChatMessages() {
         } else if (type === 'ask_user') {
           const { id: askId, questions } = data as { id: string; questions: Array<{ question: string; header?: string; options: Array<{ label: string; description?: string }>; multiSelect?: boolean }> };
           setBlocks(prev => [...prev, { type: 'ask_user', id: askId, questions, answered: false }]);
+        } else if (type === 'plan_created') {
+          // Plan 创建：初始化任务列表
+          const { planId, title } = data as { planId: string; title: string };
+          setPlanTasksByThread(prev => ({ ...prev, [threadId]: [] }));
+        } else if (type === 'plan_step') {
+          // Plan 步骤更新
+          const step = data as { planId: string; stepId: string; stepNumber: number; subject: string; status: string; activeForm?: string };
+          setPlanTasksByThread(prev => {
+            const tasks = [...(prev[threadId] || [])];
+            const existingIdx = tasks.findIndex(t => t.id === step.stepId);
+            const task: PlanTask = {
+              id: step.stepId,
+              subject: step.subject,
+              description: '',
+              activeForm: step.activeForm,
+              status: step.status as 'pending' | 'in_progress' | 'completed',
+              blocks: [],
+              blockedBy: [],
+            };
+            if (existingIdx >= 0) {
+              tasks[existingIdx] = { ...tasks[existingIdx], ...task };
+            } else {
+              tasks.push(task);
+            }
+            return { ...prev, [threadId]: tasks };
+          });
+        } else if (type === 'plan_done') {
+          // Plan 完成：标记所有未完成的为 completed
+          setPlanTasksByThread(prev => {
+            const tasks = (prev[threadId] || []).map(t =>
+              t.status !== 'completed' ? { ...t, status: 'completed' as const } : t
+            );
+            return { ...prev, [threadId]: tasks };
+          });
         }
       },
       onError: (error) => {

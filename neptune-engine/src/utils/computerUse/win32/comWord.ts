@@ -9,31 +9,31 @@
 // ---------------------------------------------------------------------------
 
 export interface WordParagraph {
-  text: string
-  bold?: boolean
-  italic?: boolean
-  fontSize?: number
+	text: string
+	bold?: boolean
+	italic?: boolean
+	fontSize?: number
 }
 
 export interface WordTable {
-  rows: number
-  cols: number
-  data: string[][]
+	rows: number
+	cols: number
+	data: string[][]
 }
 
 export interface WordDocInfo {
-  text: string
-  paragraphs: WordParagraph[]
-  tables: WordTable[]
-  wordCount: number
-  pageCount: number
+	text: string
+	paragraphs: WordParagraph[]
+	tables: WordTable[]
+	wordCount: number
+	pageCount: number
 }
 
 export interface AppendTextOptions {
-  bold?: boolean
-  italic?: boolean
-  fontSize?: number
-  fontName?: string
+	bold?: boolean
+	italic?: boolean
+	fontSize?: number
+	fontName?: string
 }
 
 // ---------------------------------------------------------------------------
@@ -41,26 +41,26 @@ export interface AppendTextOptions {
 // ---------------------------------------------------------------------------
 
 function runPs(script: string): string {
-  const result = Bun.spawnSync({
-    cmd: ['powershell', '-NoProfile', '-NonInteractive', '-Command', script],
-    stdout: 'pipe',
-    stderr: 'pipe',
-  })
-  return new TextDecoder().decode(result.stdout).trim()
+	const result = Bun.spawnSync({
+		cmd: ['powershell', '-NoProfile', '-NonInteractive', '-Command', script],
+		stdout: 'pipe',
+		stderr: 'pipe',
+	})
+	return new TextDecoder().decode(result.stdout).trim()
 }
 
 function parseJsonOutput<T>(raw: string, fallback: T): T {
-  if (!raw) return fallback
-  try {
-    return JSON.parse(raw) as T
-  } catch {
-    return fallback
-  }
+	if (!raw) return fallback
+	try {
+		return JSON.parse(raw) as T
+	} catch {
+		return fallback
+	}
 }
 
 /** Escape a string for safe embedding inside a PowerShell single-quoted string. */
 function psEscape(s: string): string {
-  return s.replace(/'/g, "''")
+	return s.replace(/'/g, "''")
 }
 
 // ---------------------------------------------------------------------------
@@ -73,11 +73,11 @@ function psEscape(s: string): string {
  * If `openPath` is provided the document is opened; otherwise a new doc is created.
  */
 function wrapWordScript(body: string, openPath?: string): string {
-  const openCmd = openPath
-    ? `$doc = $word.Documents.Open('${psEscape(openPath)}')`
-    : '$doc = $word.Documents.Add()'
+	const openCmd = openPath
+		? `$doc = $word.Documents.Open('${psEscape(openPath)}')`
+		: '$doc = $word.Documents.Add()'
 
-  return `
+	return `
 $word = New-Object -ComObject Word.Application
 $word.Visible = $false
 $word.DisplayAlerts = 0
@@ -97,7 +97,7 @@ try {
  * After body runs, $doc.Save() is called automatically.
  */
 function wrapWordScriptWithSave(body: string, openPath: string): string {
-  return `
+	return `
 $word = New-Object -ComObject Word.Application
 $word.Visible = $false
 $word.DisplayAlerts = 0
@@ -121,8 +121,8 @@ try {
 // ---------------------------------------------------------------------------
 
 export async function openWord(filePath: string): Promise<WordDocInfo> {
-  const script = wrapWordScript(
-    `
+	const script = wrapWordScript(
+		`
     # Paragraphs (limit 500)
     $paras = @()
     $paraCount = $doc.Paragraphs.Count
@@ -174,17 +174,17 @@ export async function openWord(filePath: string): Promise<WordDocInfo> {
     }
     Write-Output (ConvertTo-Json $result -Depth 5 -Compress)
 `,
-    filePath,
-  )
+		filePath,
+	)
 
-  const raw = runPs(script)
-  return parseJsonOutput<WordDocInfo>(raw, {
-    text: '',
-    paragraphs: [],
-    tables: [],
-    wordCount: 0,
-    pageCount: 0,
-  })
+	const raw = runPs(script)
+	return parseJsonOutput<WordDocInfo>(raw, {
+		text: '',
+		paragraphs: [],
+		tables: [],
+		wordCount: 0,
+		pageCount: 0,
+	})
 }
 
 // ---------------------------------------------------------------------------
@@ -192,11 +192,11 @@ export async function openWord(filePath: string): Promise<WordDocInfo> {
 // ---------------------------------------------------------------------------
 
 export async function readText(filePath: string): Promise<string> {
-  const script = wrapWordScript(
-    `Write-Output $doc.Content.Text`,
-    filePath,
-  )
-  return runPs(script)
+	const script = wrapWordScript(
+		`Write-Output $doc.Content.Text`,
+		filePath,
+	)
+	return runPs(script)
 }
 
 // ---------------------------------------------------------------------------
@@ -204,31 +204,31 @@ export async function readText(filePath: string): Promise<string> {
 // ---------------------------------------------------------------------------
 
 export async function appendText(
-  filePath: string,
-  text: string,
-  opts?: AppendTextOptions,
+	filePath: string,
+	text: string,
+	opts?: AppendTextOptions,
 ): Promise<boolean> {
-  const fontSetup = opts
-    ? [
-        opts.bold !== undefined ? `$sel.Font.Bold = ${opts.bold ? '-1' : '0'}` : '',
-        opts.italic !== undefined ? `$sel.Font.Italic = ${opts.italic ? '-1' : '0'}` : '',
-        opts.fontSize !== undefined ? `$sel.Font.Size = ${opts.fontSize}` : '',
-        opts.fontName ? `$sel.Font.Name = '${psEscape(opts.fontName)}'` : '',
-      ]
-        .filter(Boolean)
-        .join('\n    ')
-    : ''
+	const fontSetup = opts
+		? [
+			opts.bold !== undefined ? `$sel.Font.Bold = ${opts.bold ? '-1' : '0'}` : '',
+			opts.italic !== undefined ? `$sel.Font.Italic = ${opts.italic ? '-1' : '0'}` : '',
+			opts.fontSize !== undefined ? `$sel.Font.Size = ${opts.fontSize}` : '',
+			opts.fontName ? `$sel.Font.Name = '${psEscape(opts.fontName)}'` : '',
+		]
+			.filter(Boolean)
+			.join('\n    ')
+		: ''
 
-  const body = `
+	const body = `
     $sel = $word.Selection
     $sel.EndKey(6) | Out-Null
     ${fontSetup}
     $sel.TypeText('${psEscape(text)}')
 `
 
-  const script = wrapWordScriptWithSave(body, filePath)
-  const raw = runPs(script)
-  return parseJsonOutput<{ ok: boolean }>(raw, { ok: false }).ok
+	const script = wrapWordScriptWithSave(body, filePath)
+	const raw = runPs(script)
+	return parseJsonOutput<{ ok: boolean }>(raw, {ok: false}).ok
 }
 
 // ---------------------------------------------------------------------------
@@ -236,16 +236,16 @@ export async function appendText(
 // ---------------------------------------------------------------------------
 
 export async function insertText(
-  filePath: string,
-  paraIndex: number,
-  text: string,
+	filePath: string,
+	paraIndex: number,
+	text: string,
 ): Promise<boolean> {
-  const body = `
+	const body = `
     $doc.Paragraphs.Item(${paraIndex}).Range.InsertBefore('${psEscape(text)}')
 `
-  const script = wrapWordScriptWithSave(body, filePath)
-  const raw = runPs(script)
-  return parseJsonOutput<{ ok: boolean }>(raw, { ok: false }).ok
+	const script = wrapWordScriptWithSave(body, filePath)
+	const raw = runPs(script)
+	return parseJsonOutput<{ ok: boolean }>(raw, {ok: false}).ok
 }
 
 // ---------------------------------------------------------------------------
@@ -253,15 +253,15 @@ export async function insertText(
 // ---------------------------------------------------------------------------
 
 export async function findReplace(
-  filePath: string,
-  find: string,
-  replace: string,
-  replaceAll?: boolean,
+	filePath: string,
+	find: string,
+	replace: string,
+	replaceAll?: boolean,
 ): Promise<number> {
-  // wdReplaceAll=2, wdReplaceOne=1
-  const replaceConst = replaceAll !== false ? 2 : 1
+	// wdReplaceAll=2, wdReplaceOne=1
+	const replaceConst = replaceAll !== false ? 2 : 1
 
-  const body = `
+	const body = `
     $content = $doc.Content
     $findObj = $content.Find
     $findObj.ClearFormatting()
@@ -290,7 +290,7 @@ export async function findReplace(
     }
 `
 
-  const script = `
+	const script = `
 $word = New-Object -ComObject Word.Application
 $word.Visible = $false
 $word.DisplayAlerts = 0
@@ -308,8 +308,8 @@ try {
 }
 `
 
-  const raw = runPs(script)
-  return parseJsonOutput<{ count: number }>(raw, { count: 0 }).count
+	const raw = runPs(script)
+	return parseJsonOutput<{ count: number }>(raw, {count: 0}).count
 }
 
 // ---------------------------------------------------------------------------
@@ -317,20 +317,20 @@ try {
 // ---------------------------------------------------------------------------
 
 export async function insertTable(
-  filePath: string,
-  rows: number,
-  cols: number,
-  data: string[][],
+	filePath: string,
+	rows: number,
+	cols: number,
+	data: string[][],
 ): Promise<boolean> {
-  // Build PowerShell array literal for the data
-  const psData = data
-    .map(
-      (row) =>
-        ',@(' + row.map((cell) => `'${psEscape(cell)}'`).join(',') + ')',
-    )
-    .join('\n    ')
+	// Build PowerShell array literal for the data
+	const psData = data
+		.map(
+			(row) =>
+				',@(' + row.map((cell) => `'${psEscape(cell)}'`).join(',') + ')',
+		)
+		.join('\n    ')
 
-  const body = `
+	const body = `
     $sel = $word.Selection
     $sel.EndKey(6) | Out-Null
     $table = $doc.Tables.Add($sel.Range, ${rows}, ${cols})
@@ -342,9 +342,9 @@ export async function insertTable(
     }
 `
 
-  const script = wrapWordScriptWithSave(body, filePath)
-  const raw = runPs(script)
-  return parseJsonOutput<{ ok: boolean }>(raw, { ok: false }).ok
+	const script = wrapWordScriptWithSave(body, filePath)
+	const raw = runPs(script)
+	return parseJsonOutput<{ ok: boolean }>(raw, {ok: false}).ok
 }
 
 // ---------------------------------------------------------------------------
@@ -352,17 +352,17 @@ export async function insertTable(
 // ---------------------------------------------------------------------------
 
 export async function saveWord(
-  filePath: string,
-  savePath?: string,
+	filePath: string,
+	savePath?: string,
 ): Promise<boolean> {
-  if (!savePath || savePath === filePath) {
-    const script = wrapWordScriptWithSave('', filePath)
-    const raw = runPs(script)
-    return parseJsonOutput<{ ok: boolean }>(raw, { ok: false }).ok
-  }
+	if (!savePath || savePath === filePath) {
+		const script = wrapWordScriptWithSave('', filePath)
+		const raw = runPs(script)
+		return parseJsonOutput<{ ok: boolean }>(raw, {ok: false}).ok
+	}
 
-  const body = `$doc.SaveAs('${psEscape(savePath)}')`
-  const script = `
+	const body = `$doc.SaveAs('${psEscape(savePath)}')`
+	const script = `
 $word = New-Object -ComObject Word.Application
 $word.Visible = $false
 $word.DisplayAlerts = 0
@@ -378,8 +378,8 @@ try {
     if ($word -ne $null) { [System.Runtime.InteropServices.Marshal]::ReleaseComObject($word) | Out-Null }
 }
 `
-  const raw = runPs(script)
-  return parseJsonOutput<{ ok: boolean }>(raw, { ok: false }).ok
+	const raw = runPs(script)
+	return parseJsonOutput<{ ok: boolean }>(raw, {ok: false}).ok
 }
 
 // ---------------------------------------------------------------------------
@@ -387,13 +387,13 @@ try {
 // ---------------------------------------------------------------------------
 
 export async function saveAsPdf(
-  filePath: string,
-  pdfPath: string,
+	filePath: string,
+	pdfPath: string,
 ): Promise<boolean> {
-  // wdFormatPDF = 17
-  const body = `$doc.SaveAs2('${psEscape(pdfPath)}', 17)`
+	// wdFormatPDF = 17
+	const body = `$doc.SaveAs2('${psEscape(pdfPath)}', 17)`
 
-  const script = `
+	const script = `
 $word = New-Object -ComObject Word.Application
 $word.Visible = $false
 $word.DisplayAlerts = 0
@@ -409,8 +409,8 @@ try {
     if ($word -ne $null) { [System.Runtime.InteropServices.Marshal]::ReleaseComObject($word) | Out-Null }
 }
 `
-  const raw = runPs(script)
-  return parseJsonOutput<{ ok: boolean }>(raw, { ok: false }).ok
+	const raw = runPs(script)
+	return parseJsonOutput<{ ok: boolean }>(raw, {ok: false}).ok
 }
 
 // ---------------------------------------------------------------------------
@@ -418,7 +418,7 @@ try {
 // ---------------------------------------------------------------------------
 
 export async function createWord(savePath: string): Promise<boolean> {
-  const script = `
+	const script = `
 $word = New-Object -ComObject Word.Application
 $word.Visible = $false
 $word.DisplayAlerts = 0
@@ -434,8 +434,8 @@ try {
     if ($word -ne $null) { [System.Runtime.InteropServices.Marshal]::ReleaseComObject($word) | Out-Null }
 }
 `
-  const raw = runPs(script)
-  return parseJsonOutput<{ ok: boolean }>(raw, { ok: false }).ok
+	const raw = runPs(script)
+	return parseJsonOutput<{ ok: boolean }>(raw, {ok: false}).ok
 }
 
 // ---------------------------------------------------------------------------
@@ -446,5 +446,5 @@ try {
  * closeWord is a no-op since each operation opens and closes its own COM instance.
  */
 export function closeWord(_filePath: string): void {
-  // No-op: each function manages its own Word lifecycle
+	// No-op: each function manages its own Word lifecycle
 }

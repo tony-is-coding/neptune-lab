@@ -1,10 +1,10 @@
 import {
-  type ExecSyncOptions,
-  type ExecSyncOptionsWithBufferEncoding,
-  type ExecSyncOptionsWithStringEncoding,
-  execSync as nodeExecSync,
+	type ExecSyncOptions,
+	type ExecSyncOptionsWithBufferEncoding,
+	type ExecSyncOptionsWithStringEncoding,
+	execSync as nodeExecSync,
 } from 'child_process'
-import { slowLogging } from './slowOperations.js'
+import {slowLogging} from './slowOperations.js'
 
 /**
  * @deprecated Use async alternatives when possible. Sync exec calls block the event loop.
@@ -18,21 +18,21 @@ import { slowLogging } from './slowOperations.js'
  */
 export function execSync_DEPRECATED(command: string): Buffer
 export function execSync_DEPRECATED(
-  command: string,
-  options: ExecSyncOptionsWithStringEncoding,
+	command: string,
+	options: ExecSyncOptionsWithStringEncoding,
 ): string
 export function execSync_DEPRECATED(
-  command: string,
-  options: ExecSyncOptionsWithBufferEncoding,
+	command: string,
+	options: ExecSyncOptionsWithBufferEncoding,
 ): Buffer
 export function execSync_DEPRECATED(
-  command: string,
-  options?: ExecSyncOptions,
+	command: string,
+	options?: ExecSyncOptions,
 ): Buffer | string
 export function execSync_DEPRECATED(
-  command: string,
-  options?: ExecSyncOptions,
+	command: string,
+	options?: ExecSyncOptions,
 ): Buffer | string {
-  using _ = slowLogging`execSync: ${command.slice(0, 100)}`
-  return nodeExecSync(command, options)
+	using _ = slowLogging`execSync: ${command.slice(0, 100)}`
+	return nodeExecSync(command, options)
 }

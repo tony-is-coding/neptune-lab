@@ -1,5 +1,5 @@
-import { normalizeNameForMCP } from '../../services/mcp/normalization.js'
-import { env } from '../env.js'
+import {normalizeNameForMCP} from '../../services/mcp/normalization.js'
+import {env} from '../env.js'
 
 export const COMPUTER_USE_MCP_SERVER_NAME = 'computer-use'
 
@@ -19,12 +19,12 @@ export const CLI_HOST_BUNDLE_ID = 'com.anthropic.claude-code.cli-no-window'
  * `createCliExecutor` is darwin-guarded.
  */
 const TERMINAL_BUNDLE_ID_FALLBACK: Readonly<Record<string, string>> = {
-  'iTerm.app': 'com.googlecode.iterm2',
-  Apple_Terminal: 'com.apple.Terminal',
-  ghostty: 'com.mitchellh.ghostty',
-  kitty: 'net.kovidgoyal.kitty',
-  WarpTerminal: 'dev.warp.Warp-Stable',
-  vscode: 'com.microsoft.VSCode',
+	'iTerm.app': 'com.googlecode.iterm2',
+	Apple_Terminal: 'com.apple.Terminal',
+	ghostty: 'com.mitchellh.ghostty',
+	kitty: 'net.kovidgoyal.kitty',
+	WarpTerminal: 'dev.warp.Warp-Stable',
+	vscode: 'com.microsoft.VSCode',
 }
 
 /**
@@ -41,9 +41,9 @@ const TERMINAL_BUNDLE_ID_FALLBACK: Readonly<Record<string, string>> = {
  * terminal window, and the screenshots exclude it regardless.
  */
 export function getTerminalBundleId(): string | null {
-  const cfBundleId = process.env.__CFBundleIdentifier
-  if (cfBundleId) return cfBundleId
-  return TERMINAL_BUNDLE_ID_FALLBACK[env.terminal ?? ''] ?? null
+	const cfBundleId = process.env.__CFBundleIdentifier
+	if (cfBundleId) return cfBundleId
+	return TERMINAL_BUNDLE_ID_FALLBACK[env.terminal ?? ''] ?? null
 }
 
 /**
@@ -52,16 +52,16 @@ export function getTerminalBundleId(): string | null {
  * takes this shape (no `hostBundleId`, no `teachMode`).
  */
 export const CLI_CU_CAPABILITIES = {
-  screenshotFiltering: (process.platform === 'darwin'
-    ? 'native'
-    : 'none') as any,
-  platform: (process.platform === 'win32'
-    ? 'win32'
-    : process.platform === 'linux'
-      ? 'linux'
-      : 'darwin') as any,
+	screenshotFiltering: (process.platform === 'darwin'
+		? 'native'
+		: 'none') as any,
+	platform: (process.platform === 'win32'
+		? 'win32'
+		: process.platform === 'linux'
+			? 'linux'
+			: 'darwin') as any,
 }
 
 export function isComputerUseMCPServer(name: string): boolean {
-  return normalizeNameForMCP(name) === COMPUTER_USE_MCP_SERVER_NAME
+	return normalizeNameForMCP(name) === COMPUTER_USE_MCP_SERVER_NAME
 }

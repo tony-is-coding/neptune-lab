@@ -17,19 +17,19 @@
  * **使用方式**：通过 EngineConfig.toolRegistryInstance 注入
  */
 
-import type { Tool } from './Tool.js'
-import type { ToolPermissionContext } from './types/permissions.js'
+import type {Tool} from './Tool.js'
+import type {ToolPermissionContext} from './types/permissions.js'
 
 /**
  * 工具集合定义
  */
 export type ToolSet = {
-  /** 工具列表 */
-  tools: Tool[]
-  /** 工具集合名称（用于标识） */
-  name?: string
-  /** 是否启用 */
-  enabled?: boolean
+	/** 工具列表 */
+	tools: Tool[]
+	/** 工具集合名称（用于标识） */
+	name?: string
+	/** 是否启用 */
+	enabled?: boolean
 }
 
 /**
@@ -38,36 +38,36 @@ export type ToolSet = {
  * 提供工具注册、获取和过滤功能。
  */
 export interface ToolRegistry {
-  /**
-   * 注册工具集合
-   * @param toolSet 工具集合
-   */
-  registerToolSet(toolSet: ToolSet): void
+	/**
+	 * 注册工具集合
+	 * @param toolSet 工具集合
+	 */
+	registerToolSet(toolSet: ToolSet): void
 
-  /**
-   * 获取所有工具列表
-   * @param permissionContext 权限上下文
-   * @returns 工具列表
-   */
-  getTools(permissionContext: ToolPermissionContext): Tool[]
+	/**
+	 * 获取所有工具列表
+	 * @param permissionContext 权限上下文
+	 * @returns 工具列表
+	 */
+	getTools(permissionContext: ToolPermissionContext): Tool[]
 
-  /**
-   * 根据名称获取工具
-   * @param name 工具名称
-   * @returns 工具实例或 undefined
-   */
-  getToolByName(name: string): Tool | undefined
+	/**
+	 * 根据名称获取工具
+	 * @param name 工具名称
+	 * @returns 工具实例或 undefined
+	 */
+	getToolByName(name: string): Tool | undefined
 
-  /**
-   * 过滤工具列表
-   * @param filterFn 过滤函数
-   * @returns 过滤后的工具列表
-   */
-  filterTools(filterFn: (tool: Tool) => boolean): Tool[]
+	/**
+	 * 过滤工具列表
+	 * @param filterFn 过滤函数
+	 * @returns 过滤后的工具列表
+	 */
+	filterTools(filterFn: (tool: Tool) => boolean): Tool[]
 
-  /**
-   * 获取核心工具数量（用于验证）
-   * @returns 核心工具数量
-   */
-  getCoreToolCount(): number
+	/**
+	 * 获取核心工具数量（用于验证）
+	 * @returns 核心工具数量
+	 */
+	getCoreToolCount(): number
 }

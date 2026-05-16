@@ -9,31 +9,31 @@ let autoModeFlagCli = false
 let autoModeCircuitBroken = false
 
 export function setAutoModeActive(active: boolean): void {
-  autoModeActive = active
+	autoModeActive = active
 }
 
 export function isAutoModeActive(): boolean {
-  return autoModeActive
+	return autoModeActive
 }
 
 export function setAutoModeFlagCli(passed: boolean): void {
-  autoModeFlagCli = passed
+	autoModeFlagCli = passed
 }
 
 export function getAutoModeFlagCli(): boolean {
-  return autoModeFlagCli
+	return autoModeFlagCli
 }
 
 export function setAutoModeCircuitBroken(broken: boolean): void {
-  autoModeCircuitBroken = broken
+	autoModeCircuitBroken = broken
 }
 
 export function isAutoModeCircuitBroken(): boolean {
-  return autoModeCircuitBroken
+	return autoModeCircuitBroken
 }
 
 export function _resetForTesting(): void {
-  autoModeActive = false
-  autoModeFlagCli = false
-  autoModeCircuitBroken = false
+	autoModeActive = false
+	autoModeFlagCli = false
+	autoModeCircuitBroken = false
 }

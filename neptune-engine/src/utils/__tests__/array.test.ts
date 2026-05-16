@@ -1,5 +1,5 @@
-import { describe, expect, test } from "bun:test";
-import { count, intersperse, uniq } from "../array";
+import {describe, expect, test} from "bun:test";
+import {count, intersperse, uniq} from "../array";
 
 describe("intersperse", () => {
 	test("inserts separator between elements", () => {

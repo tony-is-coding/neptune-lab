@@ -26,20 +26,20 @@
  * ```
  */
 
-import type { AgentEngineConfig, ProviderConfig } from '../AgentEngine.js'
-import type { EngineConfig } from './ConfigValidation.js'
-import type { SettingsJson } from '../../utils/settings/types.js'
-import type { ToolExtension } from '../bridge/OriginalQueryEngineBridge.js'
-import type { PermissionConfig } from '../bridge/OriginalQueryEngineBridge.js'
-import type { ProviderRegistry } from '../provider/ProviderRegistry.js'
-import { ConfigDiagnostics, ConfigSummary, type ConfigSourceType } from './ConfigDiagnostics.js'
+import type {AgentEngineConfig, ProviderConfig} from '../AgentEngine.js'
+import type {EngineConfig} from './ConfigValidation.js'
+import type {SettingsJson} from '../../utils/settings/types.js'
+import type {ToolExtension} from '../bridge/OriginalQueryEngineBridge.js'
+import type {PermissionConfig} from '../bridge/OriginalQueryEngineBridge.js'
+import type {ProviderRegistry} from '../provider/ProviderRegistry.js'
+import {ConfigDiagnostics, ConfigSummary, type ConfigSourceType} from './ConfigDiagnostics.js'
 
 /**
  * Provider 配置项（从 AgentEngine.ts 导入）
  * 支持在引擎级别或会话级别配置不同的 Provider（如 Anthropic、OpenAI 等）
  * 使用 discriminated union 确保类型安全。
  */
-export type { ProviderConfig }
+export type {ProviderConfig}
 
 /**
  * 统一配置类型

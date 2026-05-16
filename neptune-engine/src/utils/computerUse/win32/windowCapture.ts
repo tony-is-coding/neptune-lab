@@ -4,9 +4,9 @@
  */
 
 interface CaptureResult {
-  base64: string
-  width: number
-  height: number
+	base64: string
+	width: number
+	height: number
 }
 
 const CAPTURE_BY_TITLE_PS = `
@@ -83,29 +83,29 @@ public class WinCapH {
 `
 
 function parseCaptureOutput(raw: string): CaptureResult | null {
-  const trimmed = raw.trim()
-  if (!trimmed || trimmed === 'NOT_FOUND' || trimmed === 'INVALID_SIZE') {
-    return null
-  }
-  const firstComma = trimmed.indexOf(',')
-  const secondComma = trimmed.indexOf(',', firstComma + 1)
-  if (firstComma === -1 || secondComma === -1) return null
+	const trimmed = raw.trim()
+	if (!trimmed || trimmed === 'NOT_FOUND' || trimmed === 'INVALID_SIZE') {
+		return null
+	}
+	const firstComma = trimmed.indexOf(',')
+	const secondComma = trimmed.indexOf(',', firstComma + 1)
+	if (firstComma === -1 || secondComma === -1) return null
 
-  const width = Number(trimmed.slice(0, firstComma))
-  const height = Number(trimmed.slice(firstComma + 1, secondComma))
-  const base64 = trimmed.slice(secondComma + 1)
+	const width = Number(trimmed.slice(0, firstComma))
+	const height = Number(trimmed.slice(firstComma + 1, secondComma))
+	const base64 = trimmed.slice(secondComma + 1)
 
-  if (!width || !height || !base64) return null
-  return { base64, width, height }
+	if (!width || !height || !base64) return null
+	return {base64, width, height}
 }
 
 function runPs(script: string): string {
-  const result = Bun.spawnSync({
-    cmd: ['powershell', '-NoProfile', '-NonInteractive', '-Command', script],
-    stdout: 'pipe',
-    stderr: 'pipe',
-  })
-  return new TextDecoder().decode(result.stdout).trim()
+	const result = Bun.spawnSync({
+		cmd: ['powershell', '-NoProfile', '-NonInteractive', '-Command', script],
+		stdout: 'pipe',
+		stderr: 'pipe',
+	})
+	return new TextDecoder().decode(result.stdout).trim()
 }
 
 /**
@@ -113,17 +113,17 @@ function runPs(script: string): string {
  * Uses PrintWindow which works even for occluded/background windows.
  */
 export function captureWindow(title: string): CaptureResult | null {
-  const escaped = title.replace(/'/g, "''")
-  const script = `${CAPTURE_BY_TITLE_PS}\n[WinCap]::Capture('${escaped}')`
-  const raw = runPs(script)
-  return parseCaptureOutput(raw)
+	const escaped = title.replace(/'/g, "''")
+	const script = `${CAPTURE_BY_TITLE_PS}\n[WinCap]::Capture('${escaped}')`
+	const raw = runPs(script)
+	return parseCaptureOutput(raw)
 }
 
 /**
  * Capture a window screenshot by its HWND handle.
  */
 export function captureWindowByHwnd(hwnd: number): CaptureResult | null {
-  const script = `${CAPTURE_BY_HWND_PS}\n[WinCapH]::Capture([IntPtr]::new(${hwnd}))`
-  const raw = runPs(script)
-  return parseCaptureOutput(raw)
+	const script = `${CAPTURE_BY_HWND_PS}\n[WinCapH]::Capture([IntPtr]::new(${hwnd}))`
+	const raw = runPs(script)
+	return parseCaptureOutput(raw)
 }

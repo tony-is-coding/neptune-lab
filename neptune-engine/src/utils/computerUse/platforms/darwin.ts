@@ -8,60 +8,60 @@
  * uses global input via CoreGraphics events.
  */
 
-import type { Platform } from './index.js'
+import type {Platform} from './index.js'
 import type {
-  InputPlatform,
-  ScreenshotPlatform,
-  DisplayPlatform,
-  AppsPlatform,
-  WindowHandle,
-  FrontmostAppInfo,
+	InputPlatform,
+	ScreenshotPlatform,
+	DisplayPlatform,
+	AppsPlatform,
+	WindowHandle,
+	FrontmostAppInfo,
 } from './types.js'
-import { requireComputerUseInput } from '../inputLoader.js'
-import { requireComputerUseSwift } from '../swiftLoader.js'
+import {requireComputerUseInput} from '../inputLoader.js'
+import {requireComputerUseSwift} from '../swiftLoader.js'
 
 // ---------------------------------------------------------------------------
 // Input — delegate to @ant/computer-use-input darwin backend
 // ---------------------------------------------------------------------------
 
 const input: InputPlatform = {
-  async moveMouse(x, y) {
-    const api = requireComputerUseInput()
-    await api.moveMouse(x, y, false)
-  },
+	async moveMouse(x, y) {
+		const api = requireComputerUseInput()
+		await api.moveMouse(x, y, false)
+	},
 
-  async click(x, y, button) {
-    const api = requireComputerUseInput()
-    await api.moveMouse(x, y, false)
-    await api.mouseButton(button, 'click', 1)
-  },
+	async click(x, y, button) {
+		const api = requireComputerUseInput()
+		await api.moveMouse(x, y, false)
+		await api.mouseButton(button, 'click', 1)
+	},
 
-  async typeText(text) {
-    const api = requireComputerUseInput()
-    await api.typeText(text)
-  },
+	async typeText(text) {
+		const api = requireComputerUseInput()
+		await api.typeText(text)
+	},
 
-  async key(name, action) {
-    const api = requireComputerUseInput()
-    await api.key(name, action)
-  },
+	async key(name, action) {
+		const api = requireComputerUseInput()
+		await api.key(name, action)
+	},
 
-  async keys(combo) {
-    const api = requireComputerUseInput()
-    await api.keys(combo)
-  },
+	async keys(combo) {
+		const api = requireComputerUseInput()
+		await api.keys(combo)
+	},
 
-  async scroll(amount, direction) {
-    const api = requireComputerUseInput()
-    await api.mouseScroll(amount, direction)
-  },
+	async scroll(amount, direction) {
+		const api = requireComputerUseInput()
+		await api.mouseScroll(amount, direction)
+	},
 
-  async mouseLocation() {
-    const api = requireComputerUseInput()
-    return api.mouseLocation()
-  },
+	async mouseLocation() {
+		const api = requireComputerUseInput()
+		return api.mouseLocation()
+	},
 
-  // No window-bound methods on macOS
+	// No window-bound methods on macOS
 }
 
 // ---------------------------------------------------------------------------
@@ -69,19 +69,19 @@ const input: InputPlatform = {
 // ---------------------------------------------------------------------------
 
 const screenshot: ScreenshotPlatform = {
-  async captureScreen(displayId) {
-    const swift = requireComputerUseSwift()
-    return swift.screenshot.captureExcluding([], undefined, undefined, undefined, displayId)
-  },
+	async captureScreen(displayId) {
+		const swift = requireComputerUseSwift()
+		return swift.screenshot.captureExcluding([], undefined, undefined, undefined, displayId)
+	},
 
-  async captureRegion(x, y, w, h) {
-    const swift = requireComputerUseSwift()
-    return swift.screenshot.captureRegion([], x, y, w, h)
-  },
+	async captureRegion(x, y, w, h) {
+		const swift = requireComputerUseSwift()
+		return swift.screenshot.captureRegion([], x, y, w, h)
+	},
 
-  // macOS could use SCContentFilter for window capture but we don't expose
-  // it through this interface yet — the swift module's captureExcluding
-  // handles most use cases.
+	// macOS could use SCContentFilter for window capture but we don't expose
+	// it through this interface yet — the swift module's captureExcluding
+	// handles most use cases.
 }
 
 // ---------------------------------------------------------------------------
@@ -89,15 +89,15 @@ const screenshot: ScreenshotPlatform = {
 // ---------------------------------------------------------------------------
 
 const display: DisplayPlatform = {
-  listAll() {
-    const swift = requireComputerUseSwift()
-    return swift.display.listAll()
-  },
+	listAll() {
+		const swift = requireComputerUseSwift()
+		return swift.display.listAll()
+	},
 
-  getSize(displayId) {
-    const swift = requireComputerUseSwift()
-    return swift.display.getSize(displayId)
-  },
+	getSize(displayId) {
+		const swift = requireComputerUseSwift()
+		return swift.display.getSize(displayId)
+	},
 }
 
 // ---------------------------------------------------------------------------
@@ -105,48 +105,48 @@ const display: DisplayPlatform = {
 // ---------------------------------------------------------------------------
 
 const apps: AppsPlatform = {
-  listRunning(): WindowHandle[] {
-    const swift = requireComputerUseSwift()
-    const running = swift.apps.listRunning()
-    return running.map((app: any) => ({
-      id: app.bundleId ?? '',
-      pid: 0,  // macOS listRunning doesn't expose PID through this API
-      title: app.displayName ?? '',
-    }))
-  },
+	listRunning(): WindowHandle[] {
+		const swift = requireComputerUseSwift()
+		const running = swift.apps.listRunning()
+		return running.map((app: any) => ({
+			id: app.bundleId ?? '',
+			pid: 0,  // macOS listRunning doesn't expose PID through this API
+			title: app.displayName ?? '',
+		}))
+	},
 
-  async listInstalled() {
-    const swift = requireComputerUseSwift()
-    const installed = await swift.apps.listInstalled()
-    return installed.map((app: any) => ({
-      id: app.bundleId ?? '',
-      displayName: app.displayName ?? '',
-      path: app.path ?? '',
-    }))
-  },
+	async listInstalled() {
+		const swift = requireComputerUseSwift()
+		const installed = await swift.apps.listInstalled()
+		return installed.map((app: any) => ({
+			id: app.bundleId ?? '',
+			displayName: app.displayName ?? '',
+			path: app.path ?? '',
+		}))
+	},
 
-  async open(name) {
-    const swift = requireComputerUseSwift()
-    await swift.apps.open(name)
-  },
+	async open(name) {
+		const swift = requireComputerUseSwift()
+		await swift.apps.open(name)
+	},
 
-  getFrontmostApp(): FrontmostAppInfo | null {
-    const api = requireComputerUseInput()
-    const info = api.getFrontmostAppInfo()
-    if (!info) return null
-    return { id: info.bundleId, appName: info.appName }
-  },
+	getFrontmostApp(): FrontmostAppInfo | null {
+		const api = requireComputerUseInput()
+		const info = api.getFrontmostAppInfo()
+		if (!info) return null
+		return {id: info.bundleId, appName: info.appName}
+	},
 
-  findWindowByTitle(_title): WindowHandle | null {
-    // macOS: not directly supported through the current swift API.
-    // Use apps.listRunning() and filter by title instead.
-    const all = this.listRunning()
-    return all.find(w => w.title.includes(_title)) ?? null
-  },
+	findWindowByTitle(_title): WindowHandle | null {
+		// macOS: not directly supported through the current swift API.
+		// Use apps.listRunning() and filter by title instead.
+		const all = this.listRunning()
+		return all.find(w => w.title.includes(_title)) ?? null
+	},
 }
 
 // ---------------------------------------------------------------------------
 // Export
 // ---------------------------------------------------------------------------
 
-export const platform: Platform = { input, screenshot, display, apps }
+export const platform: Platform = {input, screenshot, display, apps}

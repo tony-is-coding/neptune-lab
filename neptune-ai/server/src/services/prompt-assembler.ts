@@ -22,65 +22,65 @@
  * Prompt Config 结构
  */
 export interface PromptConfig {
-  // Block 2: Agent 身份（必填）
-  identity: string;
+    // Block 2: Agent 身份（必填）
+    identity: string;
 
-  // Block 3: 内联技能定义（可选，优先于 skills 表关联）
-  inlineSkills?: Array<{
-    name: string;
-    content: string;
-  }>;
+    // Block 3: 内联技能定义（可选，优先于 skills 表关联）
+    inlineSkills?: Array<{
+        name: string;
+        content: string;
+    }>;
 
-  // Block 4: 知识库配置（可选）
-  knowledgeConfig?: {
-    maxDocuments: number;       // 最多注入多少文档
-    maxTokensPerDoc: number;    // 每文档最大 token
-    summaryMode: 'full' | 'summary' | 'keywords';  // 注入模式
-  };
+    // Block 4: 知识库配置（可选）
+    knowledgeConfig?: {
+        maxDocuments: number;       // 最多注入多少文档
+        maxTokensPerDoc: number;    // 每文档最大 token
+        summaryMode: 'full' | 'summary' | 'keywords';  // 注入模式
+    };
 
-  // Block 5: 工具约束覆盖（可选，默认自动生成）
-  toolInstructions?: string;
+    // Block 5: 工具约束覆盖（可选，默认自动生成）
+    toolInstructions?: string;
 
-  // 是否禁用平台 Guard（仅管理员可操作，默认 false）
-  disableGuard?: boolean;
+    // 是否禁用平台 Guard（仅管理员可操作，默认 false）
+    disableGuard?: boolean;
 }
 
 /**
  * Agent 模板（简化版，仅包含需要的字段）
  */
 export interface AgentTemplate {
-  systemPrompt: string;
-  promptConfig?: PromptConfig | null;
-  tools?: string[];
-  mcpServers?: Array<{ name: string; url: string }>;
+    systemPrompt: string;
+    promptConfig?: PromptConfig | null;
+    tools?: string[];
+    mcpServers?: Array<{ name: string; url: string }>;
 }
 
 /**
  * Skill（来自 skills 表）
  */
 export interface Skill {
-  name: string;
-  content?: string;
+    name: string;
+    content?: string;
 }
 
 /**
  * Document（来自 documents 表）
  */
 export interface Document {
-  id: string;
-  name: string;
-  type: string;
-  content: string;
+    id: string;
+    name: string;
+    type: string;
+    content: string;
 }
 
 /**
  * 组装参数
  */
 export interface AssembleParams {
-  template: AgentTemplate;
-  skills: Skill[];
-  documents: Document[];
-  agentInstructions?: string;  // Block 3: agent.md 内容
+    template: AgentTemplate;
+    skills: Skill[];
+    documents: Document[];
+    agentInstructions?: string;  // Block 3: agent.md 内容
 }
 
 // ===== 常量 =====
@@ -116,9 +116,9 @@ You are an AI assistant running on the Neptune-AI platform. Follow these securit
  * 默认知识库配置
  */
 export const DEFAULT_KNOWLEDGE_CONFIG = {
-  maxDocuments: 5,
-  maxTokensPerDoc: 2000,
-  summaryMode: 'full' as const,
+    maxDocuments: 5,
+    maxTokensPerDoc: 2000,
+    summaryMode: 'full' as const,
 };
 
 // ===== 主函数 =====
@@ -130,52 +130,52 @@ export const DEFAULT_KNOWLEDGE_CONFIG = {
  * @returns 完整的 System Prompt
  */
 export function assembleSystemPrompt(params: AssembleParams): string {
-  const { template, skills, documents, agentInstructions } = params;
-  const config = template.promptConfig;
+    const {template, skills, documents, agentInstructions} = params;
+    const config = template.promptConfig;
 
-  // 向后兼容：如果没有 prompt_config，回退到 system_prompt
-  if (!config) {
-    return template.systemPrompt;
-  }
+    // 向后兼容：如果没有 prompt_config，回退到 system_prompt
+    if (!config) {
+        return template.systemPrompt;
+    }
 
-  const blocks: string[] = [];
+    const blocks: string[] = [];
 
-  // Block 1: 平台 Guard
-  if (!config.disableGuard) {
-    blocks.push(PLATFORM_GUARD);
-  }
+    // Block 1: 平台 Guard
+    if (!config.disableGuard) {
+        blocks.push(PLATFORM_GUARD);
+    }
 
-  // Block 2: Agent 身份
-  if (config.identity) {
-    blocks.push(config.identity);
-  }
+    // Block 2: Agent 身份
+    if (config.identity) {
+        blocks.push(config.identity);
+    }
 
-  // Block 3: Agent Instructions（agent.md 行为指令）
-  if (agentInstructions) {
-    blocks.push(agentInstructions);
-  }
+    // Block 3: Agent Instructions（agent.md 行为指令）
+    if (agentInstructions) {
+        blocks.push(agentInstructions);
+    }
 
-  // Block 4: 技能
-  const allSkills = [
-    ...(config.inlineSkills || []),
-    ...skills.map(s => ({ name: s.name, content: s.content || '' })),
-  ];
-  if (allSkills.length > 0) {
-    blocks.push(buildSkillsBlock(allSkills));
-  }
+    // Block 4: 技能
+    const allSkills = [
+        ...(config.inlineSkills || []),
+        ...skills.map(s => ({name: s.name, content: s.content || ''})),
+    ];
+    if (allSkills.length > 0) {
+        blocks.push(buildSkillsBlock(allSkills));
+    }
 
-  // Block 4: 知识库
-  if (documents.length > 0) {
-    blocks.push(buildKnowledgeBlock(documents, config.knowledgeConfig));
-  }
+    // Block 4: 知识库
+    if (documents.length > 0) {
+        blocks.push(buildKnowledgeBlock(documents, config.knowledgeConfig));
+    }
 
-  // Block 5: 工具约束
-  if (config.toolInstructions) {
-    blocks.push(config.toolInstructions);
-  }
+    // Block 5: 工具约束
+    if (config.toolInstructions) {
+        blocks.push(config.toolInstructions);
+    }
 
-  // 过滤空块并用双换行连接
-  return blocks.filter(Boolean).join('\n\n');
+    // 过滤空块并用双换行连接
+    return blocks.filter(Boolean).join('\n\n');
 }
 
 // ===== 辅助函数 =====
@@ -187,16 +187,16 @@ export function assembleSystemPrompt(params: AssembleParams): string {
  * @returns 技能 Block 字符串
  */
 export function buildSkillsBlock(skills: Array<{ name: string; content: string }>): string {
-  if (skills.length === 0) {
-    return '';
-  }
+    if (skills.length === 0) {
+        return '';
+    }
 
-  const parts = skills.map(skill => {
-    const content = skill.content || `Use the ${skill.name} skill as needed.`;
-    return `## ${skill.name}\n${content}`;
-  });
+    const parts = skills.map(skill => {
+        const content = skill.content || `Use the ${skill.name} skill as needed.`;
+        return `## ${skill.name}\n${content}`;
+    });
 
-  return `# Skills\n\n${parts.join('\n\n')}`;
+    return `# Skills\n\n${parts.join('\n\n')}`;
 }
 
 /**
@@ -207,38 +207,38 @@ export function buildSkillsBlock(skills: Array<{ name: string; content: string }
  * @returns 知识库 Block 字符串
  */
 export function buildKnowledgeBlock(
-  documents: Document[],
-  config?: PromptConfig['knowledgeConfig'],
+    documents: Document[],
+    config?: PromptConfig['knowledgeConfig'],
 ): string {
-  if (documents.length === 0) {
-    return '';
-  }
-
-  const effectiveConfig = { ...DEFAULT_KNOWLEDGE_CONFIG, ...config };
-  const { maxDocuments, maxTokensPerDoc, summaryMode } = effectiveConfig;
-
-  // 限制文档数量
-  const limitedDocs = documents.slice(0, maxDocuments);
-
-  const parts = limitedDocs.map(doc => {
-    let content = doc.content;
-
-    // 根据模式处理内容
-    if (summaryMode === 'keywords') {
-      content = extractKeywords(content);
-    } else if (summaryMode === 'summary') {
-      content = summarizeContent(content);
+    if (documents.length === 0) {
+        return '';
     }
 
-    // 截断超长内容
-    if (content.length > maxTokensPerDoc * 4) { // 粗略估算：1 token ≈ 4 字符
-      content = content.substring(0, maxTokensPerDoc * 4) + '\n\n... [content truncated]';
-    }
+    const effectiveConfig = {...DEFAULT_KNOWLEDGE_CONFIG, ...config};
+    const {maxDocuments, maxTokensPerDoc, summaryMode} = effectiveConfig;
 
-    return `## ${doc.name}\n${content}`;
-  });
+    // 限制文档数量
+    const limitedDocs = documents.slice(0, maxDocuments);
 
-  return `# Knowledge Base\n\n${parts.join('\n\n')}`;
+    const parts = limitedDocs.map(doc => {
+        let content = doc.content;
+
+        // 根据模式处理内容
+        if (summaryMode === 'keywords') {
+            content = extractKeywords(content);
+        } else if (summaryMode === 'summary') {
+            content = summarizeContent(content);
+        }
+
+        // 截断超长内容
+        if (content.length > maxTokensPerDoc * 4) { // 粗略估算：1 token ≈ 4 字符
+            content = content.substring(0, maxTokensPerDoc * 4) + '\n\n... [content truncated]';
+        }
+
+        return `## ${doc.name}\n${content}`;
+    });
+
+    return `# Knowledge Base\n\n${parts.join('\n\n')}`;
 }
 
 /**
@@ -248,15 +248,15 @@ export function buildKnowledgeBlock(
  * @returns 关键词字符串
  */
 function extractKeywords(content: string): string {
-  // 简化实现：提取大写单词和常见术语
-  const words = content.split(/\s+/);
-  const keywords = words.filter(word =>
-    word.length > 3 &&
-    /^[A-Z]/.test(word) ||
-    /API|CRM|SDK|GUI|JSON|SQL|HTTP|REST/i.test(word)
-  );
+    // 简化实现：提取大写单词和常见术语
+    const words = content.split(/\s+/);
+    const keywords = words.filter(word =>
+        word.length > 3 &&
+        /^[A-Z]/.test(word) ||
+        /API|CRM|SDK|GUI|JSON|SQL|HTTP|REST/i.test(word)
+    );
 
-  return `Keywords: ${Array.from(new Set(keywords)).join(', ')}`;
+    return `Keywords: ${Array.from(new Set(keywords)).join(', ')}`;
 }
 
 /**
@@ -266,21 +266,21 @@ function extractKeywords(content: string): string {
  * @returns 摘要字符串
  */
 function summarizeContent(content: string): string {
-  // 简化实现：取前 200 字符作为摘要
-  const maxLength = 200;
-  if (content.length <= maxLength) {
-    return content;
-  }
+    // 简化实现：取前 200 字符作为摘要
+    const maxLength = 200;
+    if (content.length <= maxLength) {
+        return content;
+    }
 
-  return content.substring(0, maxLength).trim() + '... [summary]';
+    return content.substring(0, maxLength).trim() + '... [summary]';
 }
 
 // ===== 导出 =====
 
 export default {
-  assembleSystemPrompt,
-  buildSkillsBlock,
-  buildKnowledgeBlock,
-  PLATFORM_GUARD,
-  DEFAULT_KNOWLEDGE_CONFIG,
+    assembleSystemPrompt,
+    buildSkillsBlock,
+    buildKnowledgeBlock,
+    PLATFORM_GUARD,
+    DEFAULT_KNOWLEDGE_CONFIG,
 };

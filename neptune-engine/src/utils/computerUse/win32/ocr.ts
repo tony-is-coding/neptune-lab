@@ -3,21 +3,21 @@
  * Captures a screen region or window, then runs WinRT OCR to extract text.
  */
 
-import { ps as runPs } from './shared.js'
+import {ps as runPs} from './shared.js'
 
 export interface OcrLine {
-  text: string
-  bounds: { x: number; y: number; w: number; h: number }
+	text: string
+	bounds: { x: number; y: number; w: number; h: number }
 }
 
 export interface OcrResult {
-  text: string
-  lines: OcrLine[]
-  language: string
+	text: string
+	lines: OcrLine[]
+	language: string
 }
 
 function emptyResult(language: string): OcrResult {
-  return { text: '', lines: [], language }
+	return {text: '', lines: [], language}
 }
 
 /**
@@ -29,13 +29,13 @@ function emptyResult(language: string): OcrResult {
  * 5. Outputs JSON with text, lines, and bounding rects
  */
 function buildOcrRegionScript(
-  x: number,
-  y: number,
-  w: number,
-  h: number,
-  lang: string,
+	x: number,
+	y: number,
+	w: number,
+	h: number,
+	lang: string,
 ): string {
-  return `
+	return `
 Add-Type -AssemblyName System.Drawing
 Add-Type -AssemblyName System.Runtime.WindowsRuntime
 
@@ -136,8 +136,8 @@ try {
  * PowerShell script to get a window's bounding rect by title.
  */
 function buildGetWindowRectScript(windowTitle: string): string {
-  const escaped = windowTitle.replace(/'/g, "''")
-  return `
+	const escaped = windowTitle.replace(/'/g, "''")
+	return `
 Add-Type @'
 using System;
 using System.Runtime.InteropServices;
@@ -163,27 +163,27 @@ public class WinRect {
 }
 
 function parseOcrOutput(raw: string, lang: string): OcrResult {
-  if (!raw) return emptyResult(lang)
-  try {
-    const parsed = JSON.parse(raw)
-    return {
-      text: parsed.text ?? '',
-      lines: Array.isArray(parsed.lines)
-        ? parsed.lines.map((l: any) => ({
-            text: l.text ?? '',
-            bounds: {
-              x: l.bounds?.x ?? 0,
-              y: l.bounds?.y ?? 0,
-              w: l.bounds?.w ?? 0,
-              h: l.bounds?.h ?? 0,
-            },
-          }))
-        : [],
-      language: parsed.language ?? lang,
-    }
-  } catch {
-    return emptyResult(lang)
-  }
+	if (!raw) return emptyResult(lang)
+	try {
+		const parsed = JSON.parse(raw)
+		return {
+			text: parsed.text ?? '',
+			lines: Array.isArray(parsed.lines)
+				? parsed.lines.map((l: any) => ({
+					text: l.text ?? '',
+					bounds: {
+						x: l.bounds?.x ?? 0,
+						y: l.bounds?.y ?? 0,
+						w: l.bounds?.w ?? 0,
+						h: l.bounds?.h ?? 0,
+					},
+				}))
+				: [],
+			language: parsed.language ?? lang,
+		}
+	} catch {
+		return emptyResult(lang)
+	}
 }
 
 /**
@@ -197,22 +197,22 @@ function parseOcrOutput(raw: string, lang: string): OcrResult {
  * @param lang - BCP-47 language tag (default 'en-US'). Confirmed: 'en-US', 'zh-Hans-CN'
  */
 export async function ocrRegion(
-  x: number,
-  y: number,
-  w: number,
-  h: number,
-  lang?: string,
+	x: number,
+	y: number,
+	w: number,
+	h: number,
+	lang?: string,
 ): Promise<OcrResult> {
-  const language = lang ?? 'en-US'
-  if (w <= 0 || h <= 0) return emptyResult(language)
+	const language = lang ?? 'en-US'
+	if (w <= 0 || h <= 0) return emptyResult(language)
 
-  try {
-    const script = buildOcrRegionScript(x, y, w, h, language)
-    const raw = runPs(script)
-    return parseOcrOutput(raw, language)
-  } catch {
-    return emptyResult(language)
-  }
+	try {
+		const script = buildOcrRegionScript(x, y, w, h, language)
+		const raw = runPs(script)
+		return parseOcrOutput(raw, language)
+	} catch {
+		return emptyResult(language)
+	}
 }
 
 /**
@@ -223,28 +223,28 @@ export async function ocrRegion(
  * @param lang - BCP-47 language tag (default 'en-US')
  */
 export async function ocrWindow(
-  windowTitle: string,
-  lang?: string,
+	windowTitle: string,
+	lang?: string,
 ): Promise<OcrResult> {
-  const language = lang ?? 'en-US'
+	const language = lang ?? 'en-US'
 
-  try {
-    const rectScript = buildGetWindowRectScript(windowTitle)
-    const raw = runPs(rectScript)
-    const trimmed = raw.trim()
+	try {
+		const rectScript = buildGetWindowRectScript(windowTitle)
+		const raw = runPs(rectScript)
+		const trimmed = raw.trim()
 
-    if (!trimmed || trimmed === 'NOT_FOUND' || trimmed === 'INVALID_SIZE') {
-      return emptyResult(language)
-    }
+		if (!trimmed || trimmed === 'NOT_FOUND' || trimmed === 'INVALID_SIZE') {
+			return emptyResult(language)
+		}
 
-    const parts = trimmed.split(',')
-    if (parts.length !== 4) return emptyResult(language)
+		const parts = trimmed.split(',')
+		if (parts.length !== 4) return emptyResult(language)
 
-    const [x, y, w, h] = parts.map(Number)
-    if (!w || !h) return emptyResult(language)
+		const [x, y, w, h] = parts.map(Number)
+		if (!w || !h) return emptyResult(language)
 
-    return ocrRegion(x, y, w, h, lang)
-  } catch {
-    return emptyResult(language)
-  }
+		return ocrRegion(x, y, w, h, lang)
+	} catch {
+		return emptyResult(language)
+	}
 }

@@ -66,7 +66,7 @@ For example, to get tab context:
  * based on the actual tool search enabled state.
  */
 export function getChromeSystemPrompt(): string {
-  return BASE_CHROME_PROMPT
+	return BASE_CHROME_PROMPT
 }
 
 /**

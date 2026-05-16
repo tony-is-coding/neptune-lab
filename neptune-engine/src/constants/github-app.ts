@@ -1,7 +1,7 @@
 export const PR_TITLE = 'Add Claude Code GitHub Workflow'
 
 export const GITHUB_ACTION_SETUP_DOCS_URL =
-  'https://github.com/anthropics/claude-code-action/blob/main/docs/setup.md'
+	'https://github.com/anthropics/claude-code-action/blob/main/docs/setup.md'
 
 export const WORKFLOW_CONTENT = `name: Claude Code
 
@@ -62,7 +62,7 @@ This PR adds a GitHub Actions workflow that enables Claude Code integration in o
 ### What is Claude Code?
 
 [Claude Code](https://claude.com/claude-code) is an AI coding agent that can help with:
-- Bug fixes and improvements  
+- Bug fixes and improvements
 - Documentation updates
 - Implementing new features
 - Code reviews and suggestions

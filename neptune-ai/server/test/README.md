@@ -7,33 +7,40 @@
 ## 测试用例
 
 ### 1. 项目结构验证
+
 - 验证 package.json 存在且配置正确
 - 验证 tsconfig.json 存在
 - 验证 drizzle.config.ts 存在
 - 验证 docker-compose.yml 存在
 
 ### 2. Fastify 服务器验证
+
 - 验证 Fastify 应用可以成功创建
 - 验证 CORS 插件已注册
 
 ### 3. 健康检查端点验证
+
 - 验证 GET /health 返回 200 状态码
 - 验证响应包含正确的状态信息
 
 ### 4. 数据库连接验证
+
 - 验证能够连接到数据库
 - 验证 GET /health/db 端点返回数据库状态
 
 ### 5. DB Schema 验证
+
 - 验证所有表定义已导出
 - 验证所有类型定义已导出
 
 ### 6. 依赖验证
+
 - 验证 Fastify 可以正常导入
 - 验证 Drizzle ORM 可以正常导入
 - 验证 postgres 可以正常导入
 
 ### 7. 配置验证
+
 - 验证配置可以正常加载
 - 验证默认配置值正确
 
@@ -127,5 +134,6 @@ bun install
 ## 下一步
 
 测试通过后，可以继续：
+
 - 任务 #7: 认证模块 - JWT 签发/验证/中间件
 - 任务 #8: 租户/用户/Agent 模板 CRUD

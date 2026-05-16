@@ -16,12 +16,12 @@
  * Span 状态
  */
 export enum SpanStatus {
-  /** 未设置状态 */
-  UNSET = 'unset',
-  /** 操作成功完成 */
-  OK = 'ok',
-  /** 操作失败 */
-  ERROR = 'error',
+	/** 未设置状态 */
+	UNSET = 'unset',
+	/** 操作成功完成 */
+	OK = 'ok',
+	/** 操作失败 */
+	ERROR = 'error',
 }
 
 /**
@@ -30,16 +30,19 @@ export enum SpanStatus {
  * 表示一个操作的时间跨度，可包含嵌套子 Span。
  */
 export interface Span {
-  /** Span 名称 */
-  readonly name: string
-  /** 结构化属性 */
-  readonly attributes: Record<string, unknown>
-  /** 设置 Span 状态 */
-  setStatus(status: SpanStatus): Span
-  /** 添加事件 */
-  addEvent(name: string, attributes?: Record<string, unknown>): Span
-  /** 结束 Span */
-  end(): void
+	/** Span 名称 */
+	readonly name: string
+	/** 结构化属性 */
+	readonly attributes: Record<string, unknown>
+
+	/** 设置 Span 状态 */
+	setStatus(status: SpanStatus): Span
+
+	/** 添加事件 */
+	addEvent(name: string, attributes?: Record<string, unknown>): Span
+
+	/** 结束 Span */
+	end(): void
 }
 
 /**
@@ -48,8 +51,8 @@ export interface Span {
  * 用于单调递增的计数，如请求总数、错误总数。
  */
 export interface Counter {
-  /** 增加计数值（默认 +1） */
-  increment(value?: number): void
+	/** 增加计数值（默认 +1） */
+	increment(value?: number): void
 }
 
 /**
@@ -58,8 +61,8 @@ export interface Counter {
  * 用于表示可增可减的瞬时值，如当前连接数、队列长度。
  */
 export interface Gauge {
-  /** 设置当前值 */
-  set(value: number): void
+	/** 设置当前值 */
+	set(value: number): void
 }
 
 /**
@@ -68,8 +71,8 @@ export interface Gauge {
  * 用于记录值的分布，如请求延迟、消息大小。
  */
 export interface Histogram {
-  /** 记录一个值 */
-  record(value: number, attributes?: Record<string, unknown>): void
+	/** 记录一个值 */
+	record(value: number, attributes?: Record<string, unknown>): void
 }
 
 /**
@@ -78,8 +81,9 @@ export interface Histogram {
  * 用于测量操作耗时。
  */
 export interface Timer {
-  /** 开始计时 */
-  start(): void
-  /** 停止计时并返回耗时（毫秒） */
-  stop(): number
+	/** 开始计时 */
+	start(): void
+
+	/** 停止计时并返回耗时（毫秒） */
+	stop(): number
 }

@@ -9,5 +9,5 @@
  */
 
 // 重新导出 SystemPrompt 相关类型
-export type { SystemPrompt } from '../../utils/systemPromptType.js'
-export { asSystemPrompt } from '../../utils/systemPromptType.js'
+export type {SystemPrompt} from '../../utils/systemPromptType.js'
+export {asSystemPrompt} from '../../utils/systemPromptType.js'

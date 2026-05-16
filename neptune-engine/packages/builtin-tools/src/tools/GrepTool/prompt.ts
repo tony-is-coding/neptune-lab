@@ -1,10 +1,10 @@
-import { AGENT_TOOL_NAME } from '../AgentTool/constants.js'
-import { BASH_TOOL_NAME } from '../BashTool/toolName.js'
+import {AGENT_TOOL_NAME} from '../AgentTool/constants.js'
+import {BASH_TOOL_NAME} from '../BashTool/toolName.js'
 
 export const GREP_TOOL_NAME = 'Grep'
 
 export function getDescription(): string {
-  return `A powerful search tool built on ripgrep
+	return `A powerful search tool built on ripgrep
 
   Usage:
   - ALWAYS use ${GREP_TOOL_NAME} for search tasks. NEVER invoke \`grep\` or \`rg\` as a ${BASH_TOOL_NAME} command. The ${GREP_TOOL_NAME} tool has been optimized for correct permissions and access.

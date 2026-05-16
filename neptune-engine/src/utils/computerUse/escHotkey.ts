@@ -1,6 +1,6 @@
-import { logForDebugging } from '../debug.js'
-import { releasePump, retainPump } from './drainRunLoop.js'
-import { requireComputerUseSwift } from './swiftLoader.js'
+import {logForDebugging} from '../debug.js'
+import {releasePump, retainPump} from './drainRunLoop.js'
+import {requireComputerUseSwift} from './swiftLoader.js'
 
 /**
  * Global Escape → abort. Mirrors Cowork's `escAbort.ts` but without Electron:
@@ -23,33 +23,33 @@ import { requireComputerUseSwift } from './swiftLoader.js'
 let registered = false
 
 export function registerEscHotkey(onEscape: () => void): boolean {
-  if (process.platform !== 'darwin') return false
-  if (registered) return true
-  const cu = requireComputerUseSwift()
-  if (!(cu as any).hotkey?.registerEscape(onEscape)) {
-    // CGEvent.tapCreate failed — typically missing Accessibility permission.
-    // CU still works, just without ESC abort. Mirrors Cowork's escAbort.ts:81.
-    logForDebugging('[cu-esc] registerEscape returned false', { level: 'warn' })
-    return false
-  }
-  retainPump()
-  registered = true
-  logForDebugging('[cu-esc] registered')
-  return true
+	if (process.platform !== 'darwin') return false
+	if (registered) return true
+	const cu = requireComputerUseSwift()
+	if (!(cu as any).hotkey?.registerEscape(onEscape)) {
+		// CGEvent.tapCreate failed — typically missing Accessibility permission.
+		// CU still works, just without ESC abort. Mirrors Cowork's escAbort.ts:81.
+		logForDebugging('[cu-esc] registerEscape returned false', {level: 'warn'})
+		return false
+	}
+	retainPump()
+	registered = true
+	logForDebugging('[cu-esc] registered')
+	return true
 }
 
 export function unregisterEscHotkey(): void {
-  if (!registered) return
-  try {
-    (requireComputerUseSwift() as any).hotkey?.unregister()
-  } finally {
-    releasePump()
-    registered = false
-    logForDebugging('[cu-esc] unregistered')
-  }
+	if (!registered) return
+	try {
+		(requireComputerUseSwift() as any).hotkey?.unregister()
+	} finally {
+		releasePump()
+		registered = false
+		logForDebugging('[cu-esc] unregistered')
+	}
 }
 
 export function notifyExpectedEscape(): void {
-  if (!registered) return
-  (requireComputerUseSwift() as any).hotkey?.notifyExpectedEscape()
+	if (!registered) return
+	(requireComputerUseSwift() as any).hotkey?.notifyExpectedEscape()
 }

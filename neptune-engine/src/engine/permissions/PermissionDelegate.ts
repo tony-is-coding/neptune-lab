@@ -1,4 +1,4 @@
-import type { PermissionDecision } from './PermissionDecision.js'
+import type {PermissionDecision} from './PermissionDecision.js'
 
 /**
  * PermissionDelegate — 可编程的权限决策接口
@@ -8,6 +8,6 @@ import type { PermissionDecision } from './PermissionDecision.js'
  * 'ask' 时回退到 CC 原始权限检查（交互式对话框）。
  */
 export interface PermissionDelegate {
-  /** 工具访问权限决策 */
-  onToolAccess(toolName: string, input: Record<string, unknown>): Promise<PermissionDecision>
+	/** 工具访问权限决策 */
+	onToolAccess(toolName: string, input: Record<string, unknown>): Promise<PermissionDecision>
 }
