@@ -125,8 +125,14 @@
         }
 
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         .section-title {
@@ -340,431 +346,431 @@
     </style>
 </head>
 <body>
-    <div class="container">
-        <!-- 头部信息 -->
-        <div class="header">
-            <h1>金蝶国际2025年度财务分析报告</h1>
-            <div class="subtitle">Kingdee International Software Group Limited (00268.HK)</div>
-            <div class="company-info">
-                <div class="info-item">
-                    <div class="info-label">报告期间</div>
-                    <div class="info-value">2025年度</div>
-                </div>
-                <div class="info-item">
-                    <div class="info-label">股票代码</div>
-                    <div class="info-value">00268.HK</div>
-                </div>
-                <div class="info-item">
-                    <div class="info-label">市值</div>
-                    <div class="info-value">305.25亿元</div>
-                </div>
-                <div class="info-item">
-                    <div class="info-label">报告日期</div>
-                    <div class="info-value">2026年5月15日</div>
-                </div>
+<div class="container">
+    <!-- 头部信息 -->
+    <div class="header">
+        <h1>金蝶国际2025年度财务分析报告</h1>
+        <div class="subtitle">Kingdee International Software Group Limited (00268.HK)</div>
+        <div class="company-info">
+            <div class="info-item">
+                <div class="info-label">报告期间</div>
+                <div class="info-value">2025年度</div>
             </div>
-        </div>
-
-        <!-- 导航标签 -->
-        <div class="nav-tabs">
-            <button class="nav-tab active" onclick="showSection('overview')">财务概览</button>
-            <button class="nav-tab" onclick="showSection('performance')">业绩表现</button>
-            <button class="nav-tab" onclick="showSection('business')">业务分析</button>
-            <button class="nav-tab" onclick="showSection('ratios')">财务比率</button>
-            <button class="nav-tab" onclick="showSection('risks')">风险分析</button>
-            <button class="nav-tab" onclick="showSection('outlook')">投资建议</button>
-        </div>
-
-        <!-- 财务概览 -->
-        <div id="overview" class="content-section active">
-            <h2 class="section-title">财务概览</h2>
-
-            <div class="metrics-grid">
-                <div class="metric-card">
-                    <div class="metric-value">70.06</div>
-                    <div class="metric-label">总收入（人民币）</div>
-                    <div class="metric-change positive">+12.0%</div>
-                </div>
-                <div class="metric-card">
-                    <div class="metric-value">0.93亿</div>
-                    <div class="metric-label">净利润（人民币）</div>
-                    <div class="metric-change positive">扭亏为盈</div>
-                </div>
-                <div class="metric-card">
-                    <div class="metric-value">40.9亿</div>
-                    <div class="metric-label">订阅ARR（人民币）</div>
-                    <div class="metric-change positive">+19.2%</div>
-                </div>
-                <div class="metric-card">
-                    <div class="metric-value">65.6%</div>
-                    <div class="metric-label">毛利率</div>
-                    <div class="metric-change positive">+2.4pp</div>
-                </div>
+            <div class="info-item">
+                <div class="info-label">股票代码</div>
+                <div class="info-value">00268.HK</div>
             </div>
-
-            <div class="chart-container">
-                <div class="chart-title">收入构成分析</div>
-                <canvas id="revenueChart" width="400" height="200"></canvas>
+            <div class="info-item">
+                <div class="info-label">市值</div>
+                <div class="info-value">305.25亿元</div>
             </div>
-
-            <div class="chart-container">
-                <div class="chart-title">关键财务指标趋势</div>
-                <canvas id="trendChart" width="400" height="200"></canvas>
+            <div class="info-item">
+                <div class="info-label">报告日期</div>
+                <div class="info-value">2026年5月15日</div>
             </div>
-        </div>
-
-        <!-- 业绩表现 -->
-        <div id="performance" class="content-section">
-            <h2 class="section-title">业绩表现</h2>
-
-            <div class="business-analysis">
-                <div class="analysis-card">
-                    <h3>云服务业务</h3>
-                    <ul>
-                        <li>云服务收入占比83.7%</li>
-                        <li>云订阅收入增长22.1%</li>
-                        <li>ARR达37.3亿元（上半年）</li>
-                        <li>合同负债增长24.7%</li>
-                        <li>客户续费率持续提升</li>
-                    </ul>
-                </div>
-                <div class="analysis-card">
-                    <h3>订阅模式转型</h3>
-                    <ul>
-                        <li>订阅收入同比增长20.9%</li>
-                        <li>首次实现订阅模式盈利</li>
-                        <li>规模效应开始显现</li>
-                        <li>收入可见性大幅提升</li>
-                        <li>商业模式转型成功</li>
-                    </ul>
-                </div>
-                <div class="analysis-card">
-                    <h3>AI技术应用</h3>
-                    <ul>
-                        <li>AI应用商业化加速</li>
-                        <li>多个AI产品落地</li>
-                        <li>技术与产品深度融合</li>
-                        <li>智能化解决方案领先</li>
-                        <li>未来增长新引擎</li>
-                    </ul>
-                </div>
-            </div>
-
-            <div class="chart-container">
-                <div class="chart-title">业务板块收入对比</div>
-                <canvas id="businessChart" width="400" height="200"></canvas>
-            </div>
-        </div>
-
-        <!-- 业务分析 -->
-        <div id="business" class="content-section">
-            <h2 class="section-title">业务分析</h2>
-
-            <div class="analysis-card">
-                <h3>市场领导地位</h3>
-                <p>根据IDC报告，金蝶在多个细分领域位列中国市场第一：</p>
-                <ul>
-                    <li>企业应用云 - 市场第一</li>
-                    <li>SaaS ERP - 市场第一</li>
-                    <li>财务云 - 市场第一</li>
-                    <li>司库管理云 - 市场第一</li>
-                    <li>EPM（企业绩效管理）- 市场第一</li>
-                    <li>税务云 - 市场第一</li>
-                    <li>PLM云 - 市场第一</li>
-                    <li>连续21年蝉联成长型企业应用软件市场冠军</li>
-                </ul>
-            </div>
-
-            <div class="chart-container">
-                <div class="chart-title">市场份额分布</div>
-                <canvas id="marketChart" width="400" height="200"></canvas>
-            </div>
-        </div>
-
-        <!-- 财务比率 -->
-        <div id="ratios" class="content-section">
-            <h2 class="section-title">财务比率分析</h2>
-
-            <div class="metrics-grid">
-                <div class="metric-card">
-                    <div class="metric-value">1.14%</div>
-                    <div class="metric-label">ROE（净资产收益率）</div>
-                    <div class="metric-change positive">持续改善</div>
-                </div>
-                <div class="metric-card">
-                    <div class="metric-value">294.81</div>
-                    <div class="metric-label">市盈率</div>
-                    <div class="metric-change">高估值</div>
-                </div>
-                <div class="metric-card">
-                    <div class="metric-value">3.76</div>
-                    <div class="metric-label">市净率</div>
-                    <div class="metric-change">合理区间</div>
-                </div>
-                <div class="metric-card">
-                    <div class="metric-value">4.21</div>
-                    <div class="metric-label">市销率</div>
-                    <div class="metric-change">行业平均</div>
-                </div>
-            </div>
-
-            <div class="chart-container">
-                <div class="chart-title">财务比率对比</div>
-                <canvas id="ratioChart" width="400" height="200"></canvas>
-            </div>
-        </div>
-
-        <!-- 风险分析 -->
-        <div id="risks" class="content-section">
-            <h2 class="section-title">风险分析</h2>
-
-            <div class="risk-matrix">
-                <div class="risk-card">
-                    <h3>市场风险</h3>
-                    <ul>
-                        <li>宏观经济环境影响企业IT支出</li>
-                        <li>市场竞争加剧</li>
-                        <li>客户需求变化</li>
-                        <li>行业政策变动</li>
-                    </ul>
-                </div>
-                <div class="risk-card medium">
-                    <h3>运营风险</h3>
-                    <ul>
-                        <li>人才竞争激烈</li>
-                        <li>技术迭代风险</li>
-                        <li>国际化扩张挑战</li>
-                        <li>产品研发投入</li>
-                    </ul>
-                </div>
-                <div class="risk-card low">
-                    <h3>财务风险</h3>
-                    <ul>
-                        <li>高市盈率估值风险</li>
-                        <li>现金流管理</li>
-                        <li>汇率波动影响</li>
-                        <li>融资成本变化</li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-
-        <!-- 投资建议 -->
-        <div id="outlook" class="content-section">
-            <h2 class="section-title">投资建议</h2>
-
-            <div class="investment-recommendation">
-                <div class="recommendation-title">投资评级：谨慎乐观</div>
-                <div class="recommendation-content">
-                    <div class="recommendation-item">
-                        <h4>目标价位</h4>
-                        <p>建议关注18-22港元区间</p>
-                    </div>
-                    <div class="recommendation-item">
-                        <h4>投资逻辑</h4>
-                        <p>云转型完成，AI前景广阔，行业地位稳固</p>
-                    </div>
-                    <div class="recommendation-item">
-                        <h4>关键催化剂</h4>
-                        <p>订阅业务增长，AI商业化，运营效率提升</p>
-                    </div>
-                </div>
-            </div>
-
-            <div class="analysis-card">
-                <h3>关键成功因素</h3>
-                <ul>
-                    <li>持续的产品创新和技术投入</li>
-                    <li>客户成功和续费率提升</li>
-                    <li>AI技术的商业化落地</li>
-                    <li>运营效率的持续优化</li>
-                    <li>国际化市场拓展</li>
-                </ul>
-            </div>
-        </div>
-
-        <!-- 页脚 -->
-        <div class="footer">
-            <p>本报告基于公开信息整理分析，仅供参考，不构成投资建议</p>
-            <p>数据来源：公司公告、财务报表、IDC报告 | 报告日期：2026年5月15日</p>
         </div>
     </div>
 
-    <script>
-        // 切换标签页功能
-        function showSection(sectionId) {
-            // 隐藏所有内容区域
-            const sections = document.querySelectorAll('.content-section');
-            sections.forEach(section => {
-                section.classList.remove('active');
-            });
+    <!-- 导航标签 -->
+    <div class="nav-tabs">
+        <button class="nav-tab active" onclick="showSection('overview')">财务概览</button>
+        <button class="nav-tab" onclick="showSection('performance')">业绩表现</button>
+        <button class="nav-tab" onclick="showSection('business')">业务分析</button>
+        <button class="nav-tab" onclick="showSection('ratios')">财务比率</button>
+        <button class="nav-tab" onclick="showSection('risks')">风险分析</button>
+        <button class="nav-tab" onclick="showSection('outlook')">投资建议</button>
+    </div>
 
-            // 移除所有标签的active状态
-            const tabs = document.querySelectorAll('.nav-tab');
-            tabs.forEach(tab => {
-                tab.classList.remove('active');
-            });
+    <!-- 财务概览 -->
+    <div id="overview" class="content-section active">
+        <h2 class="section-title">财务概览</h2>
 
-            // 显示选中的内容区域
-            document.getElementById(sectionId).classList.add('active');
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-value">70.06</div>
+                <div class="metric-label">总收入（人民币）</div>
+                <div class="metric-change positive">+12.0%</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value">0.93亿</div>
+                <div class="metric-label">净利润（人民币）</div>
+                <div class="metric-change positive">扭亏为盈</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value">40.9亿</div>
+                <div class="metric-label">订阅ARR（人民币）</div>
+                <div class="metric-change positive">+19.2%</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value">65.6%</div>
+                <div class="metric-label">毛利率</div>
+                <div class="metric-change positive">+2.4pp</div>
+            </div>
+        </div>
 
-            // 添加选中标签的active状态
-            event.target.classList.add('active');
+        <div class="chart-container">
+            <div class="chart-title">收入构成分析</div>
+            <canvas id="revenueChart" width="400" height="200"></canvas>
+        </div>
+
+        <div class="chart-container">
+            <div class="chart-title">关键财务指标趋势</div>
+            <canvas id="trendChart" width="400" height="200"></canvas>
+        </div>
+    </div>
+
+    <!-- 业绩表现 -->
+    <div id="performance" class="content-section">
+        <h2 class="section-title">业绩表现</h2>
+
+        <div class="business-analysis">
+            <div class="analysis-card">
+                <h3>云服务业务</h3>
+                <ul>
+                    <li>云服务收入占比83.7%</li>
+                    <li>云订阅收入增长22.1%</li>
+                    <li>ARR达37.3亿元（上半年）</li>
+                    <li>合同负债增长24.7%</li>
+                    <li>客户续费率持续提升</li>
+                </ul>
+            </div>
+            <div class="analysis-card">
+                <h3>订阅模式转型</h3>
+                <ul>
+                    <li>订阅收入同比增长20.9%</li>
+                    <li>首次实现订阅模式盈利</li>
+                    <li>规模效应开始显现</li>
+                    <li>收入可见性大幅提升</li>
+                    <li>商业模式转型成功</li>
+                </ul>
+            </div>
+            <div class="analysis-card">
+                <h3>AI技术应用</h3>
+                <ul>
+                    <li>AI应用商业化加速</li>
+                    <li>多个AI产品落地</li>
+                    <li>技术与产品深度融合</li>
+                    <li>智能化解决方案领先</li>
+                    <li>未来增长新引擎</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="chart-container">
+            <div class="chart-title">业务板块收入对比</div>
+            <canvas id="businessChart" width="400" height="200"></canvas>
+        </div>
+    </div>
+
+    <!-- 业务分析 -->
+    <div id="business" class="content-section">
+        <h2 class="section-title">业务分析</h2>
+
+        <div class="analysis-card">
+            <h3>市场领导地位</h3>
+            <p>根据IDC报告，金蝶在多个细分领域位列中国市场第一：</p>
+            <ul>
+                <li>企业应用云 - 市场第一</li>
+                <li>SaaS ERP - 市场第一</li>
+                <li>财务云 - 市场第一</li>
+                <li>司库管理云 - 市场第一</li>
+                <li>EPM（企业绩效管理）- 市场第一</li>
+                <li>税务云 - 市场第一</li>
+                <li>PLM云 - 市场第一</li>
+                <li>连续21年蝉联成长型企业应用软件市场冠军</li>
+            </ul>
+        </div>
+
+        <div class="chart-container">
+            <div class="chart-title">市场份额分布</div>
+            <canvas id="marketChart" width="400" height="200"></canvas>
+        </div>
+    </div>
+
+    <!-- 财务比率 -->
+    <div id="ratios" class="content-section">
+        <h2 class="section-title">财务比率分析</h2>
+
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-value">1.14%</div>
+                <div class="metric-label">ROE（净资产收益率）</div>
+                <div class="metric-change positive">持续改善</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value">294.81</div>
+                <div class="metric-label">市盈率</div>
+                <div class="metric-change">高估值</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value">3.76</div>
+                <div class="metric-label">市净率</div>
+                <div class="metric-change">合理区间</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value">4.21</div>
+                <div class="metric-label">市销率</div>
+                <div class="metric-change">行业平均</div>
+            </div>
+        </div>
+
+        <div class="chart-container">
+            <div class="chart-title">财务比率对比</div>
+            <canvas id="ratioChart" width="400" height="200"></canvas>
+        </div>
+    </div>
+
+    <!-- 风险分析 -->
+    <div id="risks" class="content-section">
+        <h2 class="section-title">风险分析</h2>
+
+        <div class="risk-matrix">
+            <div class="risk-card">
+                <h3>市场风险</h3>
+                <ul>
+                    <li>宏观经济环境影响企业IT支出</li>
+                    <li>市场竞争加剧</li>
+                    <li>客户需求变化</li>
+                    <li>行业政策变动</li>
+                </ul>
+            </div>
+            <div class="risk-card medium">
+                <h3>运营风险</h3>
+                <ul>
+                    <li>人才竞争激烈</li>
+                    <li>技术迭代风险</li>
+                    <li>国际化扩张挑战</li>
+                    <li>产品研发投入</li>
+                </ul>
+            </div>
+            <div class="risk-card low">
+                <h3>财务风险</h3>
+                <ul>
+                    <li>高市盈率估值风险</li>
+                    <li>现金流管理</li>
+                    <li>汇率波动影响</li>
+                    <li>融资成本变化</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- 投资建议 -->
+    <div id="outlook" class="content-section">
+        <h2 class="section-title">投资建议</h2>
+
+        <div class="investment-recommendation">
+            <div class="recommendation-title">投资评级：谨慎乐观</div>
+            <div class="recommendation-content">
+                <div class="recommendation-item">
+                    <h4>目标价位</h4>
+                    <p>建议关注18-22港元区间</p>
+                </div>
+                <div class="recommendation-item">
+                    <h4>投资逻辑</h4>
+                    <p>云转型完成，AI前景广阔，行业地位稳固</p>
+                </div>
+                <div class="recommendation-item">
+                    <h4>关键催化剂</h4>
+                    <p>订阅业务增长，AI商业化，运营效率提升</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="analysis-card">
+            <h3>关键成功因素</h3>
+            <ul>
+                <li>持续的产品创新和技术投入</li>
+                <li>客户成功和续费率提升</li>
+                <li>AI技术的商业化落地</li>
+                <li>运营效率的持续优化</li>
+                <li>国际化市场拓展</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- 页脚 -->
+    <div class="footer">
+        <p>本报告基于公开信息整理分析，仅供参考，不构成投资建议</p>
+        <p>数据来源：公司公告、财务报表、IDC报告 | 报告日期：2026年5月15日</p>
+    </div>
+</div>
+
+<script>
+    // 切换标签页功能
+    function showSection(sectionId) {
+        // 隐藏所有内容区域
+        const sections = document.querySelectorAll('.content-section');
+        sections.forEach(section => {
+            section.classList.remove('active');
+        });
+
+        // 移除所有标签的active状态
+        const tabs = document.querySelectorAll('.nav-tab');
+        tabs.forEach(tab => {
+            tab.classList.remove('active');
+        });
+
+        // 显示选中的内容区域
+        document.getElementById(sectionId).classList.add('active');
+
+        // 添加选中标签的active状态
+        event.target.classList.add('active');
+    }
+
+    // 图表配置
+    Chart.defaults.font.family = "'Microsoft YaHei', 'PingFang SC', 'Helvetica Neue', Arial, sans-serif";
+    Chart.defaults.font.size = 12;
+
+    // 收入构成图表
+    const revenueCtx = document.getElementById('revenueChart').getContext('2d');
+    new Chart(revenueCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['云订阅收入', '云服务收入', '传统软件收入'],
+            datasets: [{
+                data: [40.9, 29.16, 0],
+                backgroundColor: ['#667eea', '#764ba2', '#95a5a6'],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        padding: 20,
+                        usePointStyle: true
+                    }
+                }
+            }
         }
+    });
 
-        // 图表配置
-        Chart.defaults.font.family = "'Microsoft YaHei', 'PingFang SC', 'Helvetica Neue', Arial, sans-serif";
-        Chart.defaults.font.size = 12;
-
-        // 收入构成图表
-        const revenueCtx = document.getElementById('revenueChart').getContext('2d');
-        new Chart(revenueCtx, {
-            type: 'doughnut',
-            data: {
-                labels: ['云订阅收入', '云服务收入', '传统软件收入'],
-                datasets: [{
-                    data: [40.9, 29.16, 0],
-                    backgroundColor: ['#667eea', '#764ba2', '#95a5a6'],
-                    borderWidth: 0
-                }]
+    // 趋势图表
+    const trendCtx = document.getElementById('trendChart').getContext('2d');
+    new Chart(trendCtx, {
+        type: 'line',
+        data: {
+            labels: ['2021', '2022', '2023', '2024', '2025'],
+            datasets: [{
+                label: '总收入（亿元）',
+                data: [45.2, 52.8, 58.4, 62.5, 70.06],
+                borderColor: '#667eea',
+                backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                tension: 0.4,
+                fill: true
+            }, {
+                label: '订阅收入（亿元）',
+                data: [15.2, 22.8, 28.4, 33.8, 40.9],
+                borderColor: '#764ba2',
+                backgroundColor: 'rgba(118, 75, 162, 0.1)',
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'top'
+                }
             },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: {
-                            padding: 20,
-                            usePointStyle: true
-                        }
-                    }
+            scales: {
+                y: {
+                    beginAtZero: true
                 }
             }
-        });
+        }
+    });
 
-        // 趋势图表
-        const trendCtx = document.getElementById('trendChart').getContext('2d');
-        new Chart(trendCtx, {
-            type: 'line',
-            data: {
-                labels: ['2021', '2022', '2023', '2024', '2025'],
-                datasets: [{
-                    label: '总收入（亿元）',
-                    data: [45.2, 52.8, 58.4, 62.5, 70.06],
-                    borderColor: '#667eea',
-                    backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                    tension: 0.4,
-                    fill: true
-                }, {
-                    label: '订阅收入（亿元）',
-                    data: [15.2, 22.8, 28.4, 33.8, 40.9],
-                    borderColor: '#764ba2',
-                    backgroundColor: 'rgba(118, 75, 162, 0.1)',
-                    tension: 0.4,
-                    fill: true
-                }]
+    // 业务板块图表
+    const businessCtx = document.getElementById('businessChart').getContext('2d');
+    new Chart(businessCtx, {
+        type: 'bar',
+        data: {
+            labels: ['云订阅', '云服务', '传统软件', 'AI应用'],
+            datasets: [{
+                label: '2024年收入（亿元）',
+                data: [33.8, 24.5, 4.2, 0],
+                backgroundColor: 'rgba(102, 126, 234, 0.6)'
+            }, {
+                label: '2025年收入（亿元）',
+                data: [40.9, 26.73, 2.43, 0],
+                backgroundColor: 'rgba(118, 75, 162, 0.8)'
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'top'
+                }
             },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: {
-                        position: 'top'
-                    }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true
-                    }
+            scales: {
+                y: {
+                    beginAtZero: true
                 }
             }
-        });
+        }
+    });
 
-        // 业务板块图表
-        const businessCtx = document.getElementById('businessChart').getContext('2d');
-        new Chart(businessCtx, {
-            type: 'bar',
-            data: {
-                labels: ['云订阅', '云服务', '传统软件', 'AI应用'],
-                datasets: [{
-                    label: '2024年收入（亿元）',
-                    data: [33.8, 24.5, 4.2, 0],
-                    backgroundColor: 'rgba(102, 126, 234, 0.6)'
-                }, {
-                    label: '2025年收入（亿元）',
-                    data: [40.9, 26.73, 2.43, 0],
-                    backgroundColor: 'rgba(118, 75, 162, 0.8)'
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: {
-                        position: 'top'
-                    }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true
-                    }
+    // 市场份额图表
+    const marketCtx = document.getElementById('marketChart').getContext('2d');
+    new Chart(marketCtx, {
+        type: 'radar',
+        data: {
+            labels: ['SaaS ERP', '财务云', '司库管理云', 'EPM', '税务云', 'PLM云'],
+            datasets: [{
+                label: '金蝶市场地位',
+                data: [95, 90, 85, 88, 92, 87],
+                borderColor: '#667eea',
+                backgroundColor: 'rgba(102, 126, 234, 0.2)',
+                pointBackgroundColor: '#667eea'
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                r: {
+                    beginAtZero: true,
+                    max: 100
                 }
             }
-        });
+        }
+    });
 
-        // 市场份额图表
-        const marketCtx = document.getElementById('marketChart').getContext('2d');
-        new Chart(marketCtx, {
-            type: 'radar',
-            data: {
-                labels: ['SaaS ERP', '财务云', '司库管理云', 'EPM', '税务云', 'PLM云'],
-                datasets: [{
-                    label: '金蝶市场地位',
-                    data: [95, 90, 85, 88, 92, 87],
-                    borderColor: '#667eea',
-                    backgroundColor: 'rgba(102, 126, 234, 0.2)',
-                    pointBackgroundColor: '#667eea'
-                }]
+    // 财务比率图表
+    const ratioCtx = document.getElementById('ratioChart').getContext('2d');
+    new Chart(ratioCtx, {
+        type: 'bar',
+        data: {
+            labels: ['毛利率', '净利润率', 'ROE', 'ROA'],
+            datasets: [{
+                label: '2024年',
+                data: [63.2, -1.5, -0.8, -0.5],
+                backgroundColor: 'rgba(149, 165, 166, 0.6)'
+            }, {
+                label: '2025年',
+                data: [65.6, 1.3, 1.14, 0.8],
+                backgroundColor: 'rgba(102, 126, 234, 0.8)'
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'top'
+                }
             },
-            options: {
-                responsive: true,
-                scales: {
-                    r: {
-                        beginAtZero: true,
-                        max: 100
-                    }
+            scales: {
+                y: {
+                    beginAtZero: false
                 }
             }
-        });
-
-        // 财务比率图表
-        const ratioCtx = document.getElementById('ratioChart').getContext('2d');
-        new Chart(ratioCtx, {
-            type: 'bar',
-            data: {
-                labels: ['毛利率', '净利润率', 'ROE', 'ROA'],
-                datasets: [{
-                    label: '2024年',
-                    data: [63.2, -1.5, -0.8, -0.5],
-                    backgroundColor: 'rgba(149, 165, 166, 0.6)'
-                }, {
-                    label: '2025年',
-                    data: [65.6, 1.3, 1.14, 0.8],
-                    backgroundColor: 'rgba(102, 126, 234, 0.8)'
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: {
-                        position: 'top'
-                    }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: false
-                    }
-                }
-            }
-        });
-    </script>
+        }
+    });
+</script>
 </body>
 </html>

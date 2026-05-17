@@ -27,7 +27,7 @@ export function FloatingPlanPanel({ todos }: FloatingPlanPanelProps) {
   const allDone = completed === total;
 
   return (
-    <div className="mx-4 mb-2">
+    <div className="mb-2 w-full max-w-4xl mx-auto px-6">
       <div className="border border-border-cream rounded-[10px] overflow-hidden bg-ivory/80 backdrop-blur-sm shadow-sm">
         {/* Header */}
         <div

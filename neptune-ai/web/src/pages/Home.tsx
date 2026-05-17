@@ -17,7 +17,14 @@ export function Home() {
 
   useEffect(() => {
     listAgents({ active: true })
-      .then(res => setAgents(res.data))
+      .then(res => {
+        setAgents(res.data);
+        // 默认选择第一个可用 Agent
+        if (res.data.length > 0 && !selectedAgent) {
+          const first = res.data[0];
+          setSelectedAgent({ id: first.id, name: first.name, description: first.description, icon: first.icon });
+        }
+      })
       .catch(err => console.error('Failed to load agents:', err));
   }, []);
 

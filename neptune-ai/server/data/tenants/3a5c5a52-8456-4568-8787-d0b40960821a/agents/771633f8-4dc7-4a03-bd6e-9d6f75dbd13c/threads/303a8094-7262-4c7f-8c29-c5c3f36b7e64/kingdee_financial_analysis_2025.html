@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>金蝶国际2025年度财务分析报告</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            min-height: 100vh;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+
+        .header {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 2rem;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            font-weight: 300;
+        }
+
+        .header .subtitle {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        .nav-tabs {
+            display: flex;
+            background: #f8f9fa;
+            border-bottom: 2px solid #dee2e6;
+            overflow-x: auto;
+        }
+
+        .nav-tab {
+            padding: 1rem 2rem;
+            cursor: pointer;
+            border: none;
+            background: none;
+            font-size: 1rem;
+            color: #495057;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+
+        .nav-tab:hover {
+            background: #e9ecef;
+            color: #2a5298;
+        }
+
+        .nav-tab.active {
+            background: #2a5298;
+            color: white;
+            border-bottom: 3px solid #1e3c72;
+        }
+
+        .content {
+            padding: 2rem;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .summary-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .card {
+            background: white;
+            border-radius: 10px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            border-left: 4px solid #2a5298;
+            transition: transform 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 15px rgba(0,0,0,0.2);
+        }
+
+        .card-title {
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .card-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #2a5298;
+            margin-bottom: 0.5rem;
+        }
+
+        .card-change {
+            font-size: 0.9rem;
+            padding: 0.2rem 0.5rem;
+            border-radius: 15px;
+            display: inline-block;
+        }
+
+        .positive {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .negative {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .chart-container {
+            background: white;
+            border-radius: 10px;
+            padding: 2rem;
+            margin: 1.5rem 0;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .chart-title {
+            font-size: 1.3rem;
+            margin-bottom: 1rem;
+            color: #2a5298;
+            text-align: center;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .data-table th {
+            background: #2a5298;
+            color: white;
+            padding: 1rem;
+            text-align: left;
+            font-weight: 500;
+        }
+
+        .data-table td {
+            padding: 1rem;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .data-table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .section-title {
+            font-size: 1.8rem;
+            color: #2a5298;
+            margin: 2rem 0 1rem 0;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .highlight-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1.5rem;
+            border-radius: 10px;
+            margin: 1.5rem 0;
+        }
+
+        .highlight-box h3 {
+            margin-bottom: 1rem;
+        }
+
+        .risk-item {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 5px;
+            padding: 1rem;
+            margin: 0.5rem 0;
+        }
+
+        .risk-item h4 {
+            color: #856404;
+            margin-bottom: 0.5rem;
+        }
+
+        .footer {
+            background: #2a5298;
+            color: white;
+            text-align: center;
+            padding: 2rem;
+            margin-top: 3rem;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .content {
+                padding: 1rem;
+            }
+
+            .summary-cards {
+                grid-template-columns: 1fr;
+            }
+
+            .nav-tab {
+                padding: 0.8rem 1rem;
+                font-size: 0.9rem;
+            }
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #666;
+        }
+
+        .btn {
+            background: #2a5298;
+            color: white;
+            border: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background 0.3s ease;
+        }
+
+        .btn:hover {
+            background: #1e3c72;
+        }
+
+        .export-section {
+            text-align: center;
+            margin: 2rem 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>金蝶国际软件集团</h1>
+            <div class="subtitle">2025年度财务分析报告</div>
+            <div style="margin-top: 1rem; font-size: 0.9rem; opacity: 0.8;">
+                报告日期: 2026年5月16日 | 股票代码: 0268.HK
+            </div>
+        </header>
+
+        <nav class="nav-tabs">
+            <button class="nav-tab active" onclick="showTab('summary')">执行摘要</button>
+            <button class="nav-tab" onclick="showTab('financial')">财务分析</button>
+            <button class="nav-tab" onclick="showTab('business')">业务分析</button>
+            <button class="nav-tab" onclick="showTab('comparison')">行业对比</button>
+            <button class="nav-tab" onclick="showTab('risks')">风险分析</button>
+            <button class="nav-tab" onclick="showTab('outlook')">未来展望</button>
+        </nav>
+
+        <main class="content">
+            <!-- 执行摘要 -->
+            <div id="summary" class="tab-content active">
+                <h2 class="section-title">核心财务指标概览</h2>
+                <div class="summary-cards">
+                    <div class="card">
+                        <div class="card-title">营业收入</div>
+                        <div class="card-value">待填入 亿元</div>
+                        <div class="card-change positive">同比增长 待填入%</div>
+                    </div>
+                    <div class="card">
+                        <div class="card-title">净利润</div>
+                        <div class="card-value">待填入 亿元</div>
+                        <div class="card-change positive">同比增长 待填入%</div>
+                    </div>
+                    <div class="card">
+                        <div class="card-title">毛利率</div>
+                        <div class="card-value">待填入%</div>
+                        <div class="card-change positive">+待填入 个百分点</div>
+                    </div>
+                    <div class="card">
+                        <div class="card-title">净资产收益率</div>
+                        <div class="card-value">待填入%</div>
+                        <div class="card-change positive">+待填入 个百分点</div>
+                    </div>
+                </div>
+
+                <div class="highlight-box">
+                    <h3>主要发现</h3>
+                    <ul style="list-style-type: none; padding-left: 0;">
+                        <li style="margin: 0.5rem 0;">✓ 云服务业务持续高速增长，收入占比进一步提升</li>
+                        <li style="margin: 0.5rem 0;">✓ 数字化转型需求旺盛，市场地位稳固</li>
+                        <li style="margin: 0.5rem 0;">✓ 研发投入持续加大，技术创新能力增强</li>
+                        <li style="margin: 0.5rem 0;">✓ 在中国企业管理软件市场保持领先地位</li>
+                    </ul>
+                </div>
+
+                <div class="chart-container">
+                    <div class="chart-title">收入构成分析</div>
+                    <canvas id="revenueChart" width="400" height="200"></canvas>
+                </div>
+            </div>
+
+            <!-- 财务分析 -->
+            <div id="financial" class="tab-content">
+                <h2 class="section-title">盈利能力分析</h2>
+
+                <div class="chart-container">
+                    <div class="chart-title">营业收入趋势</div>
+                    <canvas id="revenueGrowthChart" width="400" height="200"></canvas>
+                </div>
+
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>财务指标</th>
+                            <th>2023年</th>
+                            <th>2024年</th>
+                            <th>2025年</th>
+                            <th>同比变化</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>营业收入 (亿元)</td>
+                            <td>待填入</td>
+                            <td>待填入</td>
+                            <td>待填入</td>
+                            <td>待填入%</td>
+                        </tr>
+                        <tr>
+                            <td>毛利率 (%)</td>
+                            <td>待填入</td>
+                            <td>待填入</td>
+                            <td>待填入</td>
+                            <td>待填入 个百分点</td>
+                        </tr>
+                        <tr>
+                            <td>净利润率 (%)</td>
+                            <td>待填入</td>
+                            <td>待填入</td>
+                            <td>待填入</td>
+                            <td>待填入 个百分点</td>
+                        </tr>
+                        <tr>
+                            <td>ROE (%)</td>
+                            <td>待填入</td>
+                            <td>待填入</td>
+                            <td>待填入</td>
+                            <td>待填入 个百分点</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h2 class="section-title">偿债能力分析</h2>
+                <div class="summary-cards">
+                    <div class="card">
+                        <div class="card-title">流动比率</div>
+                        <div class="card-value">待填入</div>
+                        <div class="card-change">安全水平</div>
+                    </div>
+                    <div class="card">
+                        <div class="card-title">资产负债率</div>
+                        <div class="card-value">待填入%</div>
+                        <div class="card-change">合理水平</div>
+                    </div>
+                    <div class="card">
+                        <div class="card-title">现金比率</div>
+                        <div class="card-value">待填入</div>
+                        <div class="card-change">充足</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 业务分析 -->
+            <div id="business" class="tab-content">
+                <h2 class="section-title">云服务业务分析</h2>
+
+                <div class="chart-container">
+                    <div class="chart-title">云服务收入增长趋势</div>
+                    <canvas id="cloudRevenueChart" width="400" height="200"></canvas>
+                </div>
+
+                <div class="summary-cards">
+                    <div class="card">
+                        <div class="card-title">金蝶云·苍穹</div>
+                        <div class="card-value">待填入 亿元</div>
+                        <div class="card-change">大型企业客户</div>
+                    </div>
+                    <div class="card">
+                        <div class="card-title">金蝶云·星瀚</div>
+                        <div class="card-value">待填入 亿元</div>
+                        <div class="card-change">成长型企业</div>
+                    </div>
+                    <div class="card">
+                        <div class="card-title">金蝶云·星辰</div>
+                        <div class="card-value">待填入 亿元</div>
+                        <div class="card-change">小微企业</div>
+                    </div>
+                    <div class="card">
+                        <div class="card-title">客户续费率</div>
+                        <div class="card-value">待填入%</div>
+                        <div class="card-change positive">高粘性</div>
+                    </div>
+                </div>
+
+                <h2 class="section-title">传统软件业务转型</h2>
+                <div class="highlight-box">
+                    <h3>软件产品云化进展</h3>
+                    <p>传统软件产品正在加速向云服务转型，预计未来几年云服务收入占比将持续提升，传统软件收入将逐步下降但保持稳定的现金流贡献。</p>
+                </div>
+            </div>
+
+            <!-- 行业对比 -->
+            <div id="comparison" class="tab-content">
+                <h2 class="section-title">与主要竞争对手对比</h2>
+
+                <div class="chart-container">
+                    <div class="chart-title">市场份额对比</div>
+                    <canvas id="marketShareChart" width="400" height="200"></canvas>
+                </div>
+
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>公司</th>
+                            <th>营收规模 (亿元)</th>
+                            <th>云服务占比 (%)</th>
+                            <th>毛利率 (%)</th>
+                            <th>增长率 (%)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>金蝶国际</strong></td>
+                            <td>待填入</td>
+                            <td>待填入</td>
+                            <td>待填入</td>
+                            <td>待填入</td>
+                        </tr>
+                        <tr>
+                            <td>用友网络</td>
+                            <td>待填入</td>
+                            <td>待填入</td>
+                            <td>待填入</td>
+                            <td>待填入</td>
+                        </tr>
+                        <tr>
+                            <td>浪潮软件</td>
+                            <td>待填入</td>
+                            <td>待填入</td>
+                            <td>待填入</td>
+                            <td>待填入</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="highlight-box">
+                    <h3>竞争优势</h3>
+                    <ul style="list-style-type: none; padding-left: 0;">
+                        <li style="margin: 0.5rem 0;">🏆 中国企业管理软件市场占有率第一</li>
+                        <li style="margin: 0.5rem 0;">☁️ 企业级SaaS市场领导者</li>
+                        <li style="margin: 0.5rem 0;">🔬 持续的技术创新和研发投入</li>
+                        <li style="margin: 0.5rem 0;">🤝 高客户粘性和续费率</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- 风险分析 -->
+            <div id="risks" class="tab-content">
+                <h2 class="section-title">风险评估</h2>
+
+                <div class="risk-item">
+                    <h4>财务风险</h4>
+                    <p>应收账款规模较大存在坏账风险；需要关注经营现金流的稳定性；海外业务面临汇率波动风险。</p>
+                </div>
+
+                <div class="risk-item">
+                    <h4>经营风险</h4>
+                    <p>市场竞争激烈；技术迭代速度加快需要持续投入；核心技术人员流失风险；大客户依赖度较高。</p>
+                </div>
+
+                <div class="risk-item">
+                    <h4>行业风险</h4>
+                    <p>相关政策调整的影响；宏观经济波动对企业IT支出的影响；新技术对现有产品的替代风险。</p>
+                </div>
+
+                <div class="chart-container">
+                    <div class="chart-title">风险评估矩阵</div>
+                    <canvas id="riskChart" width="400" height="200"></canvas>
+                </div>
+            </div>
+
+            <!-- 未来展望 -->
+            <div id="outlook" class="tab-content">
+                <h2 class="section-title">业务发展前景</h2>
+
+                <div class="chart-container">
+                    <div class="chart-title">收入预测 (2026-2028)</div>
+                    <canvas id="forecastChart" width="400" height="200"></canvas>
+                </div>
+
+                <div class="summary-cards">
+                    <div class="card">
+                        <div class="card-title">2026年预测收入</div>
+                        <div class="card-value">待预测 亿元</div>
+                        <div class="card-change positive">预计增长 待预测%</div>
+                    </div>
+                    <div class="card">
+                        <div class="card-title">云服务占比目标</div>
+                        <div class="card-value">待预测%</div>
+                        <div class="card-change positive">持续提升</div>
+                    </div>
+                    <div class="card">
+                        <div class="card-title">国际化进展</div>
+                        <div class="card-value">海外收入</div>
+                        <div class="card-change positive">加速拓展</div>
+                    </div>
+                </div>
+
+                <div class="highlight-box">
+                    <h3>投资建议</h3>
+                    <p><strong>投资评级：建议 | 目标价格：待设定 港元</strong></p>
+                    <ul style="margin-top: 1rem;">
+                        <li>受益于企业数字化转型趋势</li>
+                        <li>云服务业务具有良好的增长前景</li>
+                        <li>在细分市场具有竞争优势</li>
+                        <li>财务状况稳健，现金流良好</li>
+                    </ul>
+                </div>
+
+                <div class="export-section">
+                    <button class="btn" onclick="exportToPDF()">导出PDF报告</button>
+                    <button class="btn" onclick="printReport()">打印报告</button>
+                </div>
+            </div>
+        </main>
+
+        <footer class="footer">
+            <p>&copy; 2026 金蝶国际财务分析报告 | 本报告仅供参考，不构成投资建议</p>
+            <p>免责声明：投资有风险，决策需谨慎</p>
+        </footer>
+    </div>
+
+    <script>
+        // 标签页切换功能
+        function showTab(tabName) {
+            // 隐藏所有标签页内容
+            const contents = document.querySelectorAll('.tab-content');
+            contents.forEach(content => content.classList.remove('active'));
+
+            // 移除所有标签页的活动状态
+            const tabs = document.querySelectorAll('.nav-tab');
+            tabs.forEach(tab => tab.classList.remove('active'));
+
+            // 显示选中的标签页内容
+            document.getElementById(tabName).classList.add('active');
+
+            // 设置选中标签页为活动状态
+            event.target.classList.add('active');
+        }
+
+        // 图表配置
+        const chartOptions = {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'top',
+                },
+            },
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        };
+
+        // 收入构成饼图
+        const revenueCtx = document.getElementById('revenueChart').getContext('2d');
+        new Chart(revenueCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['云服务收入', '软件产品收入', '专业服务收入', '其他收入'],
+                datasets: [{
+                    data: [60, 25, 10, 5], // 示例数据
+                    backgroundColor: [
+                        '#2a5298',
+                        '#667eea',
+                        '#764ba2',
+                        '#f093fb'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                    },
+                }
+            }
+        });
+
+        // 营业收入增长趋势
+        const growthCtx = document.getElementById('revenueGrowthChart').getContext('2d');
+        new Chart(growthCtx, {
+            type: 'line',
+            data: {
+                labels: ['2021', '2022', '2023', '2024', '2025'],
+                datasets: [{
+                    label: '营业收入 (亿元)',
+                    data: [30, 35, 42, 48, 55], // 示例数据
+                    borderColor: '#2a5298',
+                    backgroundColor: 'rgba(42, 82, 152, 0.1)',
+                    tension: 0.4
+                }]
+            },
+            options: chartOptions
+        });
+
+        // 云服务收入增长
+        const cloudCtx = document.getElementById('cloudRevenueChart').getContext('2d');
+        new Chart(cloudCtx, {
+            type: 'bar',
+            data: {
+                labels: ['2021', '2022', '2023', '2024', '2025'],
+                datasets: [{
+                    label: '云服务收入 (亿元)',
+                    data: [15, 20, 28, 35, 42], // 示例数据
+                    backgroundColor: '#667eea'
+                }]
+            },
+            options: chartOptions
+        });
+
+        // 市场份额对比
+        const marketCtx = document.getElementById('marketShareChart').getContext('2d');
+        new Chart(marketCtx, {
+            type: 'bar',
+            data: {
+                labels: ['金蝶国际', '用友网络', '浪潮软件', '其他'],
+                datasets: [{
+                    label: '市场份额 (%)',
+                    data: [35, 28, 15, 22], // 示例数据
+                    backgroundColor: ['#2a5298', '#667eea', '#764ba2', '#f093fb']
+                }]
+            },
+            options: chartOptions
+        });
+
+        // 风险评估图表
+        const riskCtx = document.getElementById('riskChart').getContext('2d');
+        new Chart(riskCtx, {
+            type: 'radar',
+            data: {
+                labels: ['财务风险', '经营风险', '市场风险', '技术风险', '政策风险'],
+                datasets: [{
+                    label: '风险等级',
+                    data: [3, 4, 3, 2, 2], // 1-5级风险评估
+                    borderColor: '#2a5298',
+                    backgroundColor: 'rgba(42, 82, 152, 0.2)'
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    r: {
+                        beginAtZero: true,
+                        max: 5
+                    }
+                }
+            }
+        });
+
+        // 收入预测图表
+        const forecastCtx = document.getElementById('forecastChart').getContext('2d');
+        new Chart(forecastCtx, {
+            type: 'line',
+            data: {
+                labels: ['2023', '2024', '2025', '2026E', '2027E', '2028E'],
+                datasets: [
+                    {
+                        label: '总收入',
+                        data: [42, 48, 55, 63, 72, 82], // 示例数据
+                        borderColor: '#2a5298',
+                        backgroundColor: 'rgba(42, 82, 152, 0.1)'
+                    },
+                    {
+                        label: '云服务收入',
+                        data: [28, 35, 42, 52, 63, 75], // 示例数据
+                        borderColor: '#667eea',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)'
+                    }
+                ]
+            },
+            options: chartOptions
+        });
+
+        // 导出PDF功能
+        function exportToPDF() {
+            alert('PDF导出功能需要集成专门的PDF生成库，如jsPDF或Puppeteer');
+        }
+
+        // 打印功能
+        function printReport() {
+            window.print();
+        }
+
+        // 页面加载完成后的初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('金蝶国际财务分析报告已加载完成');
+        });
+    </script>
+</body>
+</html>

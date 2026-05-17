@@ -120,6 +120,9 @@ export class TracingEventProcessor {
         const eventType = e.type as string;
 
         switch (eventType) {
+            case 'system':
+                this.handleSystem(e);
+                break;
             case 'stream_event':
                 this.handleStreamEvent(e);
                 break;
@@ -226,6 +229,19 @@ export class TracingEventProcessor {
                 roundIndex: this.roundIndex,
             });
             this.roundActive = true;
+        }
+    }
+
+    private handleSystem(event: Record<string, unknown>): void {
+        // system 事件不需要特殊处理（完整 prompt 通过 setFullSystemPrompt 注入）
+    }
+
+    /**
+     * 外部注入完整 system prompt（Engine 内部组装后回调）
+     */
+    setFullSystemPrompt(prompt: string): void {
+        if (prompt && prompt.length > this.systemPrompt.length) {
+            this.systemPrompt = prompt;
         }
     }
 

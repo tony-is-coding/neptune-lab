@@ -702,6 +702,8 @@ export type Options = {
 	agents: AgentDefinition[]
 	allowedAgentTypes?: string[]
 	hasAppendSystemPrompt: boolean
+	/** Agent 身份覆盖：精确替换 CC 默认身份前缀（"You are Claude Code..." → "你是财务分析 Agent..."） */
+	identityOverride?: string
 	fetchOverride?: ClientOptions['fetch']
 	enablePromptCaching?: boolean
 	skipCacheWrite?: boolean
@@ -1407,6 +1409,7 @@ async function* queryModel(
 			getCLISyspromptPrefix({
 				isNonInteractive: options.isNonInteractiveSession,
 				hasAppendSystemPrompt: options.hasAppendSystemPrompt,
+			identityOverride: options.identityOverride,
 			}),
 			...systemPrompt,
 			...(advisorModel ? [ADVISOR_TOOL_INSTRUCTIONS] : []),

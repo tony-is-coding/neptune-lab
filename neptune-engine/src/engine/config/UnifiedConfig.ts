@@ -68,6 +68,11 @@ export interface UnifiedConfig {
 	/** 是否启用 bare 模式（最小化模式） */
 	bare?: boolean
 
+	/** Agent 身份覆盖：精确替换 CC 默认身份前缀（"你是谁"） */
+	identityOverride?: string
+	/** 回调：LLM 调用时传出完整 system prompt（供外部 tracing 使用） */
+	onSystemPromptResolved?: (fullPrompt: string) => void
+
 	// ============================================================
 	// 权限配置
 	// ============================================================

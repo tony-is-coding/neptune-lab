@@ -472,7 +472,7 @@ export async function getSystemPrompt(
 		return [
 			`\nYou are an autonomous agent. Use the available tools to do useful work.
 
-${CYBER_RISK_INSTRUCTION}`,
+			${CYBER_RISK_INSTRUCTION}`,
 			getSystemRemindersSection(),
 			await loadMemoryPrompt(),
 			envInfo,

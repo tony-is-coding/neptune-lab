@@ -719,6 +719,7 @@ async function* queryLoop(
 							toolUseContext.options.agentDefinitions.allowedAgentTypes,
 							hasAppendSystemPrompt:
 								!!toolUseContext.options.appendSystemPrompt,
+							identityOverride: toolUseContext.options.identityOverride,
 							maxOutputTokensOverride,
 							fetchOverride: dumpPromptsFetch,
 							mcpTools: appState.mcp.tools,

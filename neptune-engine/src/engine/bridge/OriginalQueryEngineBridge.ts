@@ -64,6 +64,8 @@ export interface PermissionConfig {
 export interface BridgeOptions {
 	cwd: string
 	systemPrompt?: string | (() => Promise<string>)
+	/** Agent 身份声明（精确替换 CC 默认身份前缀） */
+	identityOverride?: string
 	tools?: ToolExtension[]
 	signal?: AbortSignal
 	/** 历史消息（会话恢复时传入）- 使用兼容的类型 */
@@ -79,6 +81,8 @@ export interface BridgeOptions {
 	maxTurns?: number
 	/** 单次 query 最大 USD 预算 */
 	maxBudgetUsd?: number
+	/** 回调：LLM 调用时传出完整 system prompt（供外部 tracing 使用） */
+	onSystemPromptResolved?: (fullPrompt: string) => void
 }
 
 // ============================================================
@@ -281,8 +285,11 @@ export async function buildQueryEngineConfig(config: UnifiedConfig, runtime?: CC
 		}
 	}
 
-	// 解析 systemPrompt
-	const customSystemPrompt = typeof systemPrompt === 'string' ? systemPrompt : undefined
+	// 提示词分层设计：
+	// - identityOverride: 精确替换 CC 身份前缀（"你是谁"）
+	// - appendSystemPrompt: Agent 扩展内容（skills/knowledge/instructions），追加在 CC 核心能力之后
+	const identityOverride = config.identityOverride
+	const appendSystemPrompt = typeof systemPrompt === 'string' ? systemPrompt : undefined
 
 	// 构造 readFileCache（通过 CCRuntime）
 	const readFileCache = ccRuntime.createFileStateCache({maxEntries: 100, maxSizeBytes: 25 * 1024 * 1024})
@@ -320,16 +327,22 @@ export async function buildQueryEngineConfig(config: UnifiedConfig, runtime?: CC
 				callModel: async function* (params) {
 					// 关键日志：LLM API 调用入口
 					const msgTypes = (params as any).messages?.map((m: any) => m.type || m.role) ?? []
-					const sysLen = Array.isArray((params as any).systemPrompt)
-						? (params as any).systemPrompt.join('').length
-						: String((params as any).systemPrompt ?? '').length
+					const systemPromptArr = (params as any).systemPrompt as string[] | undefined
+					const fullPrompt = Array.isArray(systemPromptArr)
+						? systemPromptArr.join('\n\n')
+						: String((params as any).systemPrompt ?? '')
 					log.info('LLM API call', {
 						provider: provider.type,
 						messagesCount: msgTypes.length,
 						messageRoles: msgTypes,
-						systemPromptLength: sysLen,
+						systemPromptLength: fullPrompt.length,
 						toolsCount: (params as any).tools?.length ?? 0,
 					})
+
+					// 通过回调传出完整 system prompt（供外部 tracing 使用）
+					if (config.onSystemPromptResolved) {
+						config.onSystemPromptResolved(fullPrompt)
+					}
 
 					// 检查熔断器状态
 					if (!baseProvider.circuitBreaker.canExecute()) {
@@ -382,15 +395,22 @@ export async function buildQueryEngineConfig(config: UnifiedConfig, runtime?: CC
 		getAppState: getAppState as unknown as QueryEngineConfig['getAppState'],
 		setAppState: setAppState as unknown as QueryEngineConfig['setAppState'],
 		readFileCache: readFileCache as unknown as QueryEngineConfig['readFileCache'],
-		customSystemPrompt,
+		// CC 核心能力完整保留（不传 customSystemPrompt）
+		// Agent 内容通过 appendSystemPrompt 追加
+		// CC 核心能力完整保留（不传 customSystemPrompt）
+		// identityOverride 精确替换 CC 身份前缀
+		// appendSystemPrompt 追加 Agent 扩展内容（skills/knowledge/instructions）
+		...(identityOverride ? {identityOverride} : {}),
+		appendSystemPrompt,
 		verbose: config.verbose ?? false,
 		abortController,
-		// 启用部分消息流式输出（用于 SSE 流式打印）
 		includePartialMessages: true,
+		isNonInteractiveSession: true,
+		hasAppendSystemPrompt: !!(appendSystemPrompt || identityOverride),
 		// Loop 安全护栏
 		...(config.maxTurns ? {maxTurns: config.maxTurns} : {}),
 		...(config.maxBudgetUsd ? {maxBudgetUsd: config.maxBudgetUsd} : {}),
-		// Provider 配置透传：通过 provider.config.model 设置 userSpecifiedModel
+		// Provider 配置透传
 		...(provider?.config?.model ? {userSpecifiedModel: provider.config.model as string} : {}),
 		// fallbackModel
 		...(config.fallbackModel ? {fallbackModel: config.fallbackModel} : {}),
@@ -414,6 +434,7 @@ export async function buildQueryEngineConfigFromOptions(options: BridgeOptions, 
 	const unifiedConfig: UnifiedConfig = {
 		cwd: options.cwd,
 		systemPrompt: options.systemPrompt,
+		identityOverride: options.identityOverride,
 		toolExtensions: options.tools,
 		permissions: options.permissions,
 		provider: options.provider ? {
@@ -423,6 +444,7 @@ export async function buildQueryEngineConfigFromOptions(options: BridgeOptions, 
 		verbose: false,
 		maxTurns: options.maxTurns,
 		maxBudgetUsd: options.maxBudgetUsd,
+		onSystemPromptResolved: options.onSystemPromptResolved,
 	}
 
 	const queryEngineConfig = await buildQueryEngineConfig(unifiedConfig, runtime)

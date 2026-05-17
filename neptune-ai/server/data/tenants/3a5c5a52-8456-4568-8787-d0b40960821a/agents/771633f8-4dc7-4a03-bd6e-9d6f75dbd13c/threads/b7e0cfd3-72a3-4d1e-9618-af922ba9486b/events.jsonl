@@ -1,0 +1,15 @@
+{
+  "_role": "user",
+  "content": "你好，简单回复一句话"
+}
+{
+  "type": "thinking",
+  "content": "\nThe user is greeting me in Chinese and asking for a simple one-sentence reply. According to the system prompt, I should respond in Chinese and keep it concise. The user is asking for a simple greeting response.\n\nLooking at the identity section, I am Kiro, an AI-powered development environment. But there's also a Chinese section that says when users ask for self-introduction, I should reply as \"Neptune 智能助手\" (Neptune AI Assistant).\n\nHowever, this is just a simple greeting, not a request for self-introduction. I should just give a friendly, brief response in Chinese as requested.\n"
+}
+{
+  "type": "text",
+  "content": "你好！我是 Kiro，很高兴为你提供帮助。"
+}
+{
+  "_meta": "done"
+}

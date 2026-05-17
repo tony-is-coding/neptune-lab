@@ -1,10 +1,9 @@
 /**
  * ThreadManager — Thread 生命周期管理服务
  *
- * 基于 EnginePool 管理 Thread 的 CRUD 和 Engine 调度。
  * 核心设计：
- * - Engine 在 Thread 粒度复用（不像 QueryDispatcher 每次 query 创建/销毁）
- * - 通过 EnginePool 管理并发和 LRU 淘汰
+ * - 每次 dispatch 创建/销毁 Engine（无状态，无池化）
+ * - SDK 自动从 workspace 恢复对话历史
  * - Engine 创建通过工厂函数注入，便于测试 mock
  */
 
@@ -20,7 +19,6 @@ import {
     agentSkills
 } from '../db/schema.js';
 import {eq, and, desc, sql} from 'drizzle-orm';
-import {EnginePool, type DestroyableEngine} from './engine-pool.js';
 import {
     assembleSystemPrompt,
     type AgentTemplate as PromptAssemblerTemplate,
@@ -64,10 +62,22 @@ export interface ThreadListResult {
 }
 
 /**
+ * Engine 最小接口 — 只需要 query 和 destroy
+ */
+export interface QueryableEngine {
+    query(sessionId: string, content: string): AsyncIterable<unknown>;
+    destroy(): Promise<void>;
+    on?(event: string, handler: (payload: unknown) => void): void;
+}
+
+/**
  * Engine 工厂接口 — 用于解耦 AgentEngine 依赖
  */
 export interface EngineFactory {
     createAndLoad(params: {
+        /** Agent 身份声明（精确替换 CC 默认身份前缀） */
+        identityOverride?: string;
+        /** Agent 扩展内容（skills/knowledge/instructions，追加在 CC 核心能力之后） */
         systemPrompt: string;
         memoryRoot: string;
         workspace: string;
@@ -75,7 +85,7 @@ export interface EngineFactory {
         mcpServerUrls: string[];
         tenantId: string;
     }): Promise<{
-        engine: DestroyableEngine;
+        engine: QueryableEngine;
         sdkSessionId: string;
     }>;
 }
@@ -95,11 +105,6 @@ export interface QueryUsageResult {
 }
 
 /**
- * 默认并发限制
- */
-const DEFAULT_MAX_CONCURRENT = 10;
-
-/**
  * 默认 workspace 基础路径
  */
 const DEFAULT_DATA_ROOT = '/data';
@@ -108,7 +113,6 @@ const DEFAULT_DATA_ROOT = '/data';
  * ThreadManager 配置
  */
 export interface ThreadManagerConfig {
-    maxConcurrent?: number;
     engineFactory?: EngineFactory;
     dataRoot?: string;
 }
@@ -117,15 +121,11 @@ export interface ThreadManagerConfig {
  * ThreadManager — Thread 生命周期管理
  */
 export class ThreadManager {
-    private pool: EnginePool;
     private engineFactory: EngineFactory | undefined;
     private lastUsage: QueryUsageResult | null = null;
     private dataRoot: string;
 
     constructor(config?: ThreadManagerConfig) {
-        this.pool = new EnginePool({
-            maxConcurrent: config?.maxConcurrent ?? DEFAULT_MAX_CONCURRENT,
-        });
         this.engineFactory = config?.engineFactory;
         this.dataRoot = config?.dataRoot ?? DEFAULT_DATA_ROOT;
     }
@@ -321,11 +321,6 @@ export class ThreadManager {
      * 删除 Thread
      */
     async delete(threadId: string): Promise<boolean> {
-        // 先释放 pool 中的 engine（如果存在）
-        if (this.pool.has(threadId)) {
-            await this.pool.release(threadId);
-        }
-
         const result = await db
             .delete(sessionsTable)
             .where(eq(sessionsTable.id, threadId))
@@ -342,10 +337,11 @@ export class ThreadManager {
      * 流程：
      * 1. 获取 Thread，验证状态
      * 2. 更新状态为 running
-     * 3. 获取 Agent 模板
-     * 4. 从 pool 获取或创建 Engine
+     * 3. 获取 Agent 模板，组装 systemPrompt
+     * 4. 创建 Engine（每次新建，SDK 自动从 workspace 恢复历史）
      * 5. 执行 query 并 yield 事件
-     * 6. 完成后更新状态为 idle
+     * 6. 持久化 transcript → destroy Engine
+     * 7. 更新状态为 idle
      */
     async* dispatch(
         threadId: string,
@@ -363,9 +359,7 @@ export class ThreadManager {
         if (thread.status === 'running') {
             throw new Error(`Thread 正在执行中: ${threadId}`);
         }
-        // error 状态允许重试（engine 可能因 server 重启丢失）
 
-        // 如果没有 engineFactory，无法执行 dispatch（测试环境下可能没有）
         if (!this.engineFactory) {
             throw new Error('Engine factory 未配置');
         }
@@ -377,17 +371,17 @@ export class ThreadManager {
         });
 
         const startTime = performance.now();
-        log.info('Query start', {...ctx, contentLength: content.length});
+        log.info('Query 开始', {...ctx, contentLength: content.length});
 
-        // Tracing processor 在 try 内创建，但需要在 catch 中访问
         let tracingProcessor: TracingEventProcessor | null = null;
+        let engine: QueryableEngine | null = null;
 
         try {
-            // 获取 Agent 模板
             if (!agentId) {
                 throw new Error('Thread 没有关联的 Agent 模板');
             }
 
+            // 步骤 1：从数据库加载 Agent 模板配置
             const [template] = await db
                 .select()
                 .from(agentTemplates)
@@ -397,83 +391,56 @@ export class ThreadManager {
             if (!template) {
                 throw new Error(`Agent 模板不存在: ${agentId}`);
             }
+            log.debug('Agent 模板已加载', {...ctx, templateName: (template as any).name});
 
-            // 从 pool 获取或创建 Engine
-            const entry = this.pool.get(threadId);
-            let engine: DestroyableEngine;
-            let sdkSessionId: string;
+            // 步骤 2：组装 System Prompt
+            // identity: 通过 identityOverride 精确替换 CC 身份前缀（"你是谁"）
+            // extensions: 通过 appendSystemPrompt 追加在 CC 核心能力之后（guard + instructions + skills + knowledge）
+            const assembledExtensions = await this.assembleSystemPromptForAgent(template, agentId, thread.tenantId, { excludeIdentity: true });
 
-            if (!entry) {
-                // 检查池是否已满，需要淘汰
-                if (this.pool.isAtCapacity()) {
-                    const evictableId = this.pool.getEvictable();
-                    if (evictableId) {
-                        log.info('Engine evicted', {
-                            ...ctx,
-                            evictedThreadId: evictableId,
-                            poolSize: this.pool.getActiveCount(),
-                        });
-                        await this.pool.release(evictableId);
-                        // 被淘汰的 thread 状态改为 idle
-                        await this.update(evictableId, {status: 'idle'}).catch(() => {
-                        });
-                    }
-                }
+            // 从 template 中提取 identity（用于替换 CC 身份前缀）
+            const promptConfig = template.promptConfig as { identity?: string } | null;
+            const identityOverride = promptConfig?.identity || (template as any).systemPrompt || undefined;
 
-                log.info('Engine cache miss, creating new engine', ctx);
+            log.debug('System Prompt 组装完成', {
+                ...ctx,
+                identityLength: identityOverride?.length ?? 0,
+                extensionsLength: assembledExtensions.length,
+            });
 
-                // 创建新 Engine
-                // Phase 2: 使用 PromptAssembler 组装 systemPrompt
-                const assembledSystemPrompt = await this.assembleSystemPromptForAgent(template, agentId, thread.tenantId);
+            // 步骤 3：创建 Engine（配置 Provider、权限、可观测性，创建 SDK Session）
+            const mcpServerUrls = (template.mcpServers as Array<{ name: string; url: string }> || []).map(s => s.url);
+            const result = await this.engineFactory.createAndLoad({
+                identityOverride,
+                systemPrompt: assembledExtensions,
+                memoryRoot: `${this.dataRoot}/tenants/${thread.tenantId}/agents/${agentId}`,
+                workspace: thread.workspace,
+                tools: (template.tools as string[]) || [],
+                mcpServerUrls,
+                tenantId: thread.tenantId,
+            });
 
-                const mcpServerUrls = (template.mcpServers as Array<{
-                    name: string;
-                    url: string
-                }> || []).map(s => s.url);
-                const result = await this.engineFactory!.createAndLoad({
-                    systemPrompt: assembledSystemPrompt,
-                    memoryRoot: `${this.dataRoot}/tenants/${thread.tenantId}/agents/${agentId}`,
-                    workspace: thread.workspace,
-                    tools: (template.tools as string[]) || [],
-                    mcpServerUrls,
-                    tenantId: thread.tenantId,
-                });
+            engine = result.engine;
+            const sdkSessionId = result.sdkSessionId;
+            log.info('Engine 就绪，开始执行 query', {...ctx, sdkSessionId});
 
-                engine = result.engine;
-                sdkSessionId = result.sdkSessionId;
-                this.pool.register(threadId, engine, sdkSessionId);
-            } else {
-                log.debug('Engine cache hit', ctx);
-                // 已有 engine，使用存储的 sdkSessionId
-                engine = entry.engine;
-                sdkSessionId = entry.sdkSessionId;
-            }
-
-            // 执行 query（通过 engine 的通用接口）
-            const queryable = engine as any;
-            if (typeof queryable.query !== 'function') {
-                throw new Error('Engine 不支持 query 操作');
-            }
-
-            // 监听 query:complete 收集 usage
-            if (typeof queryable.on === 'function') {
-                queryable.on('query:complete', (payload: unknown) => {
+            // 步骤 4：监听 query:complete 事件收集 token 用量
+            if (typeof engine.on === 'function') {
+                engine.on('query:complete', (payload: unknown) => {
                     this.lastUsage = payload as QueryUsageResult;
-                    log.debug('query:complete received', {payload});
+                    log.debug('query:complete 收到 usage', {threadId});
                 });
             }
 
-            // 创建 PlanManager（每次 dispatch 新建，传入 workspace 用于持久化）
+            // 步骤 5：创建 PlanManager（监听 TaskCreate/TaskUpdate 事件，转换为 plan SSE 事件）
             const {PlanManager} = await import('./plan/PlanManager.js');
             const planManager = new PlanManager(threadId, {workspace: thread.workspace});
 
-            // 创建 Tracing 处理器（独立模块，自动管理 turn 状态机）
+            // 步骤 6：创建 Tracing 处理器（Langfuse 上报每个 turn 的 generation + tool span）
             const provider = getTracingProvider();
             if (provider instanceof LangfuseTracingProvider) {
                 const modelConfig = template.modelConfig as { model?: string } | null;
                 const configuredModel = modelConfig?.model || process.env.NEPTUNE_LLM_MODEL || 'unknown';
-                // 获取 system prompt（新建 engine 时已组装，cache hit 时重新组装用于 tracing）
-                const systemPromptForTracing = await this.assembleSystemPromptForAgent(template, agentId, thread.tenantId);
                 tracingProcessor = new TracingEventProcessor({
                     provider,
                     model: configuredModel,
@@ -482,32 +449,41 @@ export class ThreadManager {
                     tenantId: thread.tenantId,
                     agentId: agentId!,
                     userInput: content,
-                    systemPrompt: systemPromptForTracing,
+                    systemPrompt: assembledExtensions,
                 });
             }
 
-            for await (const event of queryable.query(sdkSessionId, content)) {
-                // Tracing：一行调用，自动记录 generation/tool/thinking
+            // 步骤 7：执行 query（Engine 内部 AgentLoop：LLM 调用 → 工具执行 → 循环直到完成或达到 maxTurns）
+            // 注入回调：Engine 首次 LLM 调用时传出完整 system prompt
+            const engineAny = engine as any;
+            if (engineAny._onSystemPromptResolved === undefined) {
+                engineAny._onSystemPromptResolved = (fullPrompt: string) => {
+                    if (tracingProcessor) {
+                        tracingProcessor.setFullSystemPrompt(fullPrompt);
+                    }
+                };
+            }
+
+            for await (const event of engine.query(sdkSessionId, content)) {
+                // Langfuse 上报：每个事件都经过 tracing 处理器记录
                 tracingProcessor?.process(event);
 
-                // 通过 PlanManager 处理 Plan 相关事件
+                // Plan 事件处理：拦截 TaskCreate/TaskUpdate 工具调用，转换为 plan_step SSE 事件
                 const planEvents = planManager.processSDKEvent(event as Record<string, unknown>);
                 for (const planEvent of planEvents) {
                     yield planEvent;
                 }
 
-                // 原有事件继续 yield
+                // 原始事件透传给 SSE 路由层（经 mapSSEEvent 转换后发送给前端）
                 yield event;
             }
 
-            // 更新状态为 idle
-            await this.update(threadId, {
-                status: 'idle',
-            });
+            // 步骤 8：Query 完成，更新 Thread 状态
+            await this.update(threadId, { status: 'idle' });
 
             const durationMs = Math.round(performance.now() - startTime);
             const usage = this.lastUsage;
-            log.info('Query complete', {
+            log.info('Query 完成', {
                 ...ctx,
                 durationMs,
                 ...(usage?.modelUsage
@@ -522,7 +498,7 @@ export class ThreadManager {
             // 结束 Langfuse trace
             tracingProcessor?.end(usage ? {modelUsage: usage.modelUsage} : undefined, durationMs);
 
-            // 持久化对话历史到 workspace（Engine 内存中的 messages → 磁盘）
+            // 持久化对话历史
             try {
                 const engineAny = engine as any;
                 if (typeof engineAny._getSessionMessages === 'function') {
@@ -539,12 +515,19 @@ export class ThreadManager {
         } catch (error) {
             const durationMs = Math.round(performance.now() - startTime);
             log.error('Query failed', {...ctx, durationMs, detail: (error as Error).message});
-            // 结束 Langfuse trace
             tracingProcessor?.endWithError();
-            // 出错时更新状态为 error
-            await this.update(threadId, {status: 'error'}).catch(() => {
-            });
+            await this.update(threadId, {status: 'error'}).catch(() => {});
             throw error;
+        } finally {
+            // 始终销毁 Engine（无论成功或失败）
+            if (engine) {
+                try {
+                    await engine.destroy();
+                    log.debug('Engine destroyed', ctx);
+                } catch (destroyError) {
+                    log.warn('Engine destroy failed', {threadId, detail: (destroyError as Error).message});
+                }
+            }
         }
     }
 
@@ -604,15 +587,6 @@ export class ThreadManager {
     async getWorkspace(threadId: string): Promise<string | null> {
         const thread = await this.get(threadId);
         return thread?.workspace ?? null;
-    }
-
-    /**
-     * 获取 pool 中的 Engine entry（测试专用）
-     *
-     * 仅用于测试验证 pool 内部状态，生产环境不应依赖此方法。
-     */
-    getPoolEntry(threadId: string): { engine: DestroyableEngine; sdkSessionId: string } | undefined {
-        return this.pool.get(threadId);
     }
 
     /**
@@ -748,27 +722,40 @@ export class ThreadManager {
     }
 
     /**
-     * 组装 System Prompt（Phase 2 集成）
+     * 组装 System Prompt — 核心链路
      *
-     * 使用 PromptAssembler 将 Agent 模板的各个模块组装成完整的 System Prompt
+     * 从多个数据源读取内容，通过 PromptAssembler 拼接为完整的 System Prompt：
+     * - Block 1: 平台安全规则（硬编码）
+     * - Block 2: Agent 身份（DB: agent_templates.promptConfig.identity）
+     * - Block 3: 行为指令（文件: {dataRoot}/agents/{id}/agent.md）
+     * - Block 4: 技能（DB: agent_skills + skills 表）
+     * - Block 5: 知识库（DB: documents 表 + 文件内容）
+     * - Block 6: 工具约束（DB: agent_templates.promptConfig.toolInstructions）
      *
-     * @param template Agent 模板
-     * @param agentId Agent ID
-     * @returns 组装后的 System Prompt
+     * 组装后的 prompt 传给 Engine，Engine 会在前面追加 CC 框架前缀
      */
     private async assembleSystemPromptForAgent(
         template: any,
         agentId: string,
         tenantId: string,
+        options?: { excludeIdentity?: boolean },
     ): Promise<string> {
-        // 查询 skills 和 documents
+        // 并行查询 skills 和 documents（减少 DB 等待时间）
         const [fetchedSkills, fetchedDocuments] = await Promise.all([
             this.fetchAgentSkills(agentId),
             this.fetchAgentDocuments(agentId),
         ]);
+        log.debug('Prompt 数据源加载完成', {
+            agentId,
+            skillsCount: fetchedSkills.length,
+            documentsCount: fetchedDocuments.length,
+        });
 
-        // 读取 agent.md 行为指令
+        // 读取 agent.md 行为指令（文件系统）
         const agentInstructions = this.loadAgentInstructions(tenantId, agentId);
+        if (agentInstructions) {
+            log.debug('agent.md 行为指令已加载', { agentId, instructionsLength: agentInstructions.length });
+        }
 
         // 转换为 PromptAssembler 需要的格式
         const assemblerTemplate: PromptAssemblerTemplate = {
@@ -778,12 +765,13 @@ export class ThreadManager {
             mcpServers: template.mcpServers as Array<{ name: string; url: string }> | undefined,
         };
 
-        // 调用 PromptAssembler
+        // 调用 PromptAssembler 组装最终 prompt
         return assembleSystemPrompt({
             template: assemblerTemplate,
             skills: fetchedSkills,
             documents: fetchedDocuments,
             agentInstructions,
+            excludeIdentity: options?.excludeIdentity,
         });
     }
 

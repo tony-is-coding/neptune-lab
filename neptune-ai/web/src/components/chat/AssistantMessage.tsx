@@ -126,12 +126,8 @@ export function AssistantMessage({ message, agentIcon, onOpenArtifact, onAnswerQ
                 );
 
               case 'plan':
-                return (
-                  <PlanBlock
-                    key={`${message.id}-plan-${block.id}`}
-                    todos={block.todos}
-                  />
-                );
+                // Plan 在底部 FloatingPlanPanel 显示，不内联渲染
+                return null;
 
               default:
                 return null;

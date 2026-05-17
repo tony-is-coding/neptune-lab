@@ -201,6 +201,8 @@ export type ProviderConfig =
 export interface AgentEngineConfig {
 	/** 系统提示词，可以是字符串或返回字符串的异步函数 */
 	systemPrompt?: string | (() => Promise<string>)
+	/** Agent 身份覆盖：精确替换 CC 默认身份前缀（"你是谁"） */
+	identityOverride?: string
 	/** CLI 当前工作目录（仅 CLI 模式需要） */
 	cwd?: string
 	/** 扩展配置 */
@@ -260,6 +262,8 @@ export interface QueryOptions {
 	metadata?: Record<string, unknown>
 	/** 中断信号（用于取消查询） */
 	signal?: AbortSignal
+	/** 回调：LLM 调用时传出完整 system prompt（供外部 tracing 使用） */
+	onSystemPromptResolved?: (fullPrompt: string) => void
 }
 
 /**
@@ -312,6 +316,8 @@ export class AgentEngine {
 	private sessionProviders = new Map<string, ProviderConfig>()
 	/** per-session 缓存 SessionContext */
 	private sessionContexts = new Map<string, SessionContext>()
+	/** 外部注入的 system prompt 回调 */
+	_onSystemPromptResolved?: (fullPrompt: string) => void
 	/** per-session AbortController，用于取消活跃查询 */
 	private activeAbortControllers = new Map<string, AbortController>()
 	/** per-session 互斥锁，防止并发 query 导致状态混乱 */
@@ -683,6 +689,7 @@ export class AgentEngine {
 				const bridgeOptions: BridgeOptions = {
 					cwd: session.workspace,
 					systemPrompt: effectiveSystemPrompt,
+					identityOverride: this.config.identityOverride,
 					tools: this.config.extensions?.tools as ToolExtension[] | undefined,
 					signal: options?.signal,
 					initialMessages,
@@ -690,6 +697,7 @@ export class AgentEngine {
 					provider: effectiveProvider,
 					maxTurns: this.config.options?.maxTurns,
 					maxBudgetUsd: this.config.options?.maxBudgetUsd,
+					onSystemPromptResolved: options?.onSystemPromptResolved ?? this._onSystemPromptResolved,
 				}
 				const queryEngineConfig = await buildQueryEngineConfigFromOptions(bridgeOptions, this.ccRuntime)
 				const queryEngine = this.ccRuntime.createQueryEngine(queryEngineConfig)

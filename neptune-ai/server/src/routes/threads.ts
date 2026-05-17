@@ -352,7 +352,7 @@ export async function threadRoutes(fastify: FastifyInstance) {
 
         // 连接确认
         reply.raw.write(`event: connected\ndata: ${JSON.stringify({threadId, timestamp: Date.now()})}\n\n`);
-// Note: X-Accel-Buffering: no + Cache-Control: no-cache ensures real-time delivery
+        // Note: X-Accel-Buffering: no + Cache-Control: no-cache ensures real-time delivery
 
         // 创建 AbortController 用于取消操作
         const abortController = new AbortController();
@@ -390,7 +390,6 @@ export async function threadRoutes(fastify: FastifyInstance) {
                 if (abortController.signal.aborted) {
                     break;
                 }
-
                 // 检查是否为 Plan 事件（已经是 SSE 格式）
                 const eventType = (sdkEvent as any).type;
                 if (eventType === 'plan_created' || eventType === 'plan_step' || eventType === 'plan_done') {
@@ -399,7 +398,6 @@ export async function threadRoutes(fastify: FastifyInstance) {
                     // Note: X-Accel-Buffering: no + Cache-Control: no-cache ensures real-time delivery
                     continue;
                 }
-
                 // 处理 stream_event：标记已收到增量，收集文本
                 if (eventType === 'stream_event') {
                     hasReceivedStreamDelta = true;

@@ -144,6 +144,8 @@ export type QueryEngineConfig = {
 	readFileCache: FileStateCache
 	customSystemPrompt?: string
 	appendSystemPrompt?: string
+	/** Agent 身份覆盖：精确替换 CC 默认身份前缀 */
+	identityOverride?: string
 	userSpecifiedModel?: string
 	fallbackModel?: string
 	thinkingConfig?: ThinkingConfig
@@ -234,6 +236,7 @@ export class QueryEngine {
 			canUseTool,
 			customSystemPrompt,
 			appendSystemPrompt,
+			identityOverride,
 			userSpecifiedModel,
 			fallbackModel,
 			jsonSchema,
@@ -333,6 +336,7 @@ export class QueryEngine {
 		const systemPrompt = asSystemPrompt([
 			...(customPrompt !== undefined ? [customPrompt] : defaultSystemPrompt),
 			...(memoryMechanicsPrompt ? [memoryMechanicsPrompt] : []),
+			// Agent 扩展内容追加在 CC 核心能力之后
 			...(appendSystemPrompt ? [appendSystemPrompt] : []),
 		])
 
@@ -370,6 +374,7 @@ export class QueryEngine {
 				mcpResources: {},
 				ideInstallationStatus: null,
 				isNonInteractiveSession: true,
+				identityOverride,
 				customSystemPrompt,
 				appendSystemPrompt,
 				agentDefinitions: {activeAgents: agents, allAgents: []},
@@ -523,6 +528,7 @@ export class QueryEngine {
 				mcpResources: {},
 				ideInstallationStatus: null,
 				isNonInteractiveSession: true,
+				identityOverride,
 				customSystemPrompt,
 				appendSystemPrompt,
 				theme: resolveThemeSetting(getGlobalConfig().theme),

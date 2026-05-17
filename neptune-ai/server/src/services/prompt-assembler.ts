@@ -81,9 +81,15 @@ export interface AssembleParams {
     skills: Skill[];
     documents: Document[];
     agentInstructions?: string;  // Block 3: agent.md 内容
+    /** 是否排除 identity 块（identity 通过 identityOverride 单独传递时设为 true） */
+    excludeIdentity?: boolean;
 }
 
 // ===== 常量 =====
+
+import { createLogger } from '../utils/logger.js';
+
+const log = createLogger('prompt-assembler');
 
 /**
  * 平台 Guard — 硬编码常量，不可定制
@@ -124,38 +130,48 @@ export const DEFAULT_KNOWLEDGE_CONFIG = {
 // ===== 主函数 =====
 
 /**
- * 组装 System Prompt
+ * 组装 System Prompt — 核心组装逻辑
  *
- * @param params 组装参数
- * @returns 完整的 System Prompt
+ * 将多个模块按固定顺序拼接为完整的 System Prompt 字符串：
+ * Block 1: 平台安全规则（防止 prompt 泄露、危险操作）
+ * Block 2: Agent 身份（定义 Agent 的角色和行为）
+ * Block 3: 行为指令（agent.md 文件内容）
+ * Block 4: 技能（inline + DB 关联的 skills）
+ * Block 5: 知识库（documents 表 + 文件内容）
+ * Block 6: 工具约束（限制工具使用方式）
+ *
+ * @param params 组装参数（模板、技能、文档、行为指令）
+ * @returns 完整的 System Prompt 字符串
  */
 export function assembleSystemPrompt(params: AssembleParams): string {
-    const {template, skills, documents, agentInstructions} = params;
+    const {template, skills, documents, agentInstructions, excludeIdentity} = params;
     const config = template.promptConfig;
 
-    // 向后兼容：如果没有 prompt_config，回退到 system_prompt
+    // 向后兼容：如果没有 prompt_config，直接使用旧的 system_prompt 字段
     if (!config) {
+        log.debug('使用旧版 systemPrompt（无 promptConfig）', { promptLength: template.systemPrompt.length });
         return template.systemPrompt;
     }
 
     const blocks: string[] = [];
 
-    // Block 1: 平台 Guard
+    // Block 1: 平台安全规则（可通过 disableGuard 禁用，仅管理员可操作）
     if (!config.disableGuard) {
         blocks.push(PLATFORM_GUARD);
     }
 
     // Block 2: Agent 身份
-    if (config.identity) {
+    // excludeIdentity=true 时跳过（identity 通过 identityOverride 单独传递给 Engine）
+    if (!excludeIdentity && config.identity) {
         blocks.push(config.identity);
     }
 
-    // Block 3: Agent Instructions（agent.md 行为指令）
+    // Block 3: 行为指令（来自 agent.md 文件，定义具体工作规范）
     if (agentInstructions) {
         blocks.push(agentInstructions);
     }
 
-    // Block 4: 技能
+    // Block 4: 技能（合并 inline 定义 + DB 关联的 skills）
     const allSkills = [
         ...(config.inlineSkills || []),
         ...skills.map(s => ({name: s.name, content: s.content || ''})),
@@ -164,18 +180,29 @@ export function assembleSystemPrompt(params: AssembleParams): string {
         blocks.push(buildSkillsBlock(allSkills));
     }
 
-    // Block 4: 知识库
+    // Block 5: 知识库（从 documents 表读取的文档内容注入）
     if (documents.length > 0) {
         blocks.push(buildKnowledgeBlock(documents, config.knowledgeConfig));
     }
 
-    // Block 5: 工具约束
+    // Block 6: 工具约束（限制工具使用方式的额外指令）
     if (config.toolInstructions) {
         blocks.push(config.toolInstructions);
     }
 
     // 过滤空块并用双换行连接
-    return blocks.filter(Boolean).join('\n\n');
+    const result = blocks.filter(Boolean).join('\n\n');
+    log.info('System Prompt 组装完成', {
+        blocksCount: blocks.length,
+        totalLength: result.length,
+        hasGuard: !config.disableGuard,
+        hasIdentity: !!config.identity,
+        hasInstructions: !!agentInstructions,
+        skillsCount: allSkills.length,
+        documentsCount: documents.length,
+        hasToolInstructions: !!config.toolInstructions,
+    });
+    return result;
 }
 
 // ===== 辅助函数 =====
@@ -278,9 +305,6 @@ function summarizeContent(content: string): string {
 // ===== 导出 =====
 
 export default {
-    assembleSystemPrompt,
-    buildSkillsBlock,
-    buildKnowledgeBlock,
     PLATFORM_GUARD,
     DEFAULT_KNOWLEDGE_CONFIG,
 };
