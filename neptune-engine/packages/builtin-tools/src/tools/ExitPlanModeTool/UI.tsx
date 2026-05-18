@@ -1,9 +1,9 @@
 import * as React from 'react'
-import {Markdown} from '../../../../../../neptune-cli/src/components/Markdown'
-import {MessageResponse} from '../../../../../../neptune-cli/src/components/MessageResponse'
+import {Markdown} from '../../../../../src/ui/components/Markdown'
+import {MessageResponse} from '../../../../../src/ui/components/MessageResponse'
 import {
 	RejectedPlanMessage
-} from '../../../../../../neptune-cli/src/components/messages/UserToolResultMessage/RejectedPlanMessage'
+} from '../../../../../src/ui/components/messages/UserToolResultMessage/RejectedPlanMessage'
 import {BLACK_CIRCLE} from 'src/constants/figures.js'
 import {getModeColor} from 'src/utils/permissions/PermissionMode.js'
 import {Box, Text} from '@anthropic/ink'

@@ -11,7 +11,7 @@ import {
 	persistBinaryContent,
 } from 'src/utils/mcpOutputStorage.js'
 import {jsonStringify} from 'src/utils/slowOperations.js'
-import {isOutputLineTruncated} from '../../../../../../neptune-cli/src/terminal.js'
+import {isOutputLineTruncated} from '../../../../../src/ui/terminal.js'
 import {DESCRIPTION, PROMPT} from './prompt.js'
 import {
 	renderToolResultMessage,

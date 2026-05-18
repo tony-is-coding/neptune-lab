@@ -1,6 +1,6 @@
 import {feature} from 'bun:bundle'
 import {getModelOptions} from 'src/utils/model/modelOptions.js'
-import {isVoiceGrowthBookEnabled} from '../../../../../../neptune-cli/src/voice/voiceModeEnabled'
+import {isVoiceGrowthBookEnabled} from '../../../../../src/ui/voice/voiceModeEnabled'
 import {
 	getOptionsForSetting,
 	SUPPORTED_SETTINGS,

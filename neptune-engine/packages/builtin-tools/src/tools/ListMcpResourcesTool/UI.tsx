@@ -1,6 +1,6 @@
 import * as React from 'react'
-import {MessageResponse} from '../../../../../../neptune-cli/src/components/MessageResponse'
-import {OutputLine} from '../../../../../../neptune-cli/src/components/shell/OutputLine'
+import {MessageResponse} from '../../../../../src/ui/components/MessageResponse'
+import {OutputLine} from '../../../../../src/ui/components/shell/OutputLine'
 import {Text} from '@anthropic/ink'
 import type {ToolProgressData} from 'src/Tool.js'
 import type {ProgressMessage} from 'src/types/message.js'

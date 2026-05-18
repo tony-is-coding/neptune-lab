@@ -7,7 +7,7 @@ import {
 	link,
 } from 'fs/promises'
 import * as React from 'react'
-import type {CanUseToolFn} from '../../../../../../neptune-cli/src/hooks/useCanUseTool'
+import type {CanUseToolFn} from '../../../../../src/ui/hooks/useCanUseTool'
 import type {AppState} from 'src/state/AppState.js'
 import {z} from 'zod/v4'
 import {getKairosActive} from 'src/bootstrap/state.js'
@@ -66,7 +66,7 @@ import {semanticNumber} from 'src/utils/semanticNumber.js'
 import {EndTruncatingAccumulator} from 'src/utils/stringUtils.js'
 import {getTaskOutputPath} from 'src/utils/task/diskOutput.js'
 import {TaskOutput} from 'src/utils/task/TaskOutput.js'
-import {isOutputLineTruncated} from '../../../../../../neptune-cli/src/terminal'
+import {isOutputLineTruncated} from '../../../../../src/ui/terminal'
 import {
 	buildLargeToolResultMessage,
 	ensureToolResultsDir,

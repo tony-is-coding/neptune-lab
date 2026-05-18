@@ -8,7 +8,7 @@ import {errorMessage} from 'src/utils/errors.js'
 import {lazySchema} from 'src/utils/lazySchema.js'
 import {logMCPError} from 'src/utils/log.js'
 import {jsonStringify} from 'src/utils/slowOperations.js'
-import {isOutputLineTruncated} from '../../../../../../neptune-cli/src/terminal'
+import {isOutputLineTruncated} from '../../../../../src/ui/terminal'
 import {DESCRIPTION, LIST_MCP_RESOURCES_TOOL_NAME, PROMPT} from './prompt.js'
 import {renderToolResultMessage, renderToolUseMessage} from './UI.js'
 

@@ -22,7 +22,7 @@ import {z} from 'zod/v4'
 import {
 	getBridgeAccessToken,
 	getBridgeBaseUrlOverride,
-} from '../../../../../../neptune-cli/src/bridge/bridgeConfig'
+} from '../../../../../src/ui/bridge/bridgeConfig'
 import {getOauthConfig} from 'src/constants/oauth.js'
 import {logForDebugging} from 'src/utils/debug.js'
 import {lazySchema} from 'src/utils/lazySchema.js'
