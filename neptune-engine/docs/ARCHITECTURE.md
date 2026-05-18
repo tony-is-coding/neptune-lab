@@ -19,7 +19,7 @@
 
 核心原则：**包装不替代** — 框架的核心是扩展 Claude Code，不是从头构建。
 
-详细目标与用户画像见 [project-purpose.md](project-purpose.md)。
+详细目标与用户画像见上方「一、项目目标」章节。
 
 ---
 
@@ -509,7 +509,7 @@ engine.loadSession({ workspace })
 - [记忆与会话内容](feature-design/core-components/memory-and-session-content-design.md)
 
 ### 项目管理
-- [项目目标](project-purpose.md) — 定位、用户画像、场景、成功标准
+- [项目目标](#一项目目标) — 定位、用户画像、场景、成功标准
 - [分层架构标准](architecture-layering-standard.md) — L0-L4 定义与 Import 规则
 - [OKR 路线图](okr-roadmap.md) — 版本交付路线图
 - [CLI 使用说明](cli-usage.md) — CLI 包使用与导入路径规则
