@@ -53,3 +53,8 @@ docs/api/
 # Shared layer - no build artifacts committed
 shared/**/node_modules
 shared/**/dist
+
+.claude/
+CLAUDE.md
+*/.tmp_docs/
+neptune-ai/server/data/

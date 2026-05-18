@@ -286,10 +286,10 @@ export async function buildQueryEngineConfig(config: UnifiedConfig, runtime?: CC
 	}
 
 	// 提示词分层设计：
-	// - identityOverride: 精确替换 CC 身份前缀（"你是谁"）
-	// - appendSystemPrompt: Agent 扩展内容（skills/knowledge/instructions），追加在 CC 核心能力之后
+	// - customSystemPrompt: Agent 完整 prompt（替换 CC 默认 prompt）
+	// - identityOverride: 精确替换 CC 身份前缀（"你是谁"）— 仅在无 systemPrompt 时生效
 	const identityOverride = config.identityOverride
-	const appendSystemPrompt = typeof systemPrompt === 'string' ? systemPrompt : undefined
+	const customSystemPrompt = typeof systemPrompt === 'string' ? systemPrompt : undefined
 
 	// 构造 readFileCache（通过 CCRuntime）
 	const readFileCache = ccRuntime.createFileStateCache({maxEntries: 100, maxSizeBytes: 25 * 1024 * 1024})
@@ -395,18 +395,15 @@ export async function buildQueryEngineConfig(config: UnifiedConfig, runtime?: CC
 		getAppState: getAppState as unknown as QueryEngineConfig['getAppState'],
 		setAppState: setAppState as unknown as QueryEngineConfig['setAppState'],
 		readFileCache: readFileCache as unknown as QueryEngineConfig['readFileCache'],
-		// CC 核心能力完整保留（不传 customSystemPrompt）
-		// Agent 内容通过 appendSystemPrompt 追加
-		// CC 核心能力完整保留（不传 customSystemPrompt）
+		// Agent prompt 替换 CC 默认 prompt（customSystemPrompt 优先级高于 defaultSystemPrompt）
 		// identityOverride 精确替换 CC 身份前缀
-		// appendSystemPrompt 追加 Agent 扩展内容（skills/knowledge/instructions）
 		...(identityOverride ? {identityOverride} : {}),
-		appendSystemPrompt,
+		...(customSystemPrompt ? {customSystemPrompt} : {}),
 		verbose: config.verbose ?? false,
 		abortController,
 		includePartialMessages: true,
 		isNonInteractiveSession: true,
-		hasAppendSystemPrompt: !!(appendSystemPrompt || identityOverride),
+		hasAppendSystemPrompt: !!(customSystemPrompt || identityOverride),
 		// Loop 安全护栏
 		...(config.maxTurns ? {maxTurns: config.maxTurns} : {}),
 		...(config.maxBudgetUsd ? {maxBudgetUsd: config.maxBudgetUsd} : {}),

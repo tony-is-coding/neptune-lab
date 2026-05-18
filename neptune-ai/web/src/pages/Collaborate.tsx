@@ -3,23 +3,21 @@ import { useParams, useLocation, useNavigate, useSearchParams } from 'react-rout
 import { useResizableSidebar } from '../hooks/useResizableSidebar';
 import { useChatMessages } from '../hooks/useChatMessages';
 import { useThreads } from '../hooks/useThreads';
+import { useArtifacts } from '../hooks/useArtifacts';
 import { listAgentsWithSummary } from '../api/agents';
 import { replyToQuestion } from '../api/threads';
 import { UserMessage } from '../components/chat/UserMessage';
 import { AssistantMessage } from '../components/chat/AssistantMessage';
 import { ChatInput } from '../components/chat/ChatInput';
-import { ArtifactPanel } from '../components/artifact/ArtifactPanel';
-import { FloatingPlanPanel } from '../components/chat/FloatingPlanPanel';
 import {
   EmptyCollaborateView,
   AgentWelcomeView,
   AgentInactiveBanner,
   AgentRemovedBanner,
-  ThreadDropdown,
+  ThreadSidebar,
+  RightSidebar,
 } from '../components/collaborate';
 import type { AgentWithSummary, MessageBlock } from '../types/chat';
-
-type RightPanel = 'none' | 'canvas';
 
 export function Collaborate() {
   const { agentId } = useParams<{ agentId: string }>();
@@ -27,7 +25,7 @@ export function Collaborate() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // Agent list (left sidebar) - 现在使用 AgentWithSummary 类型
+  // Agent list (left sidebar)
   const [agents, setAgents] = useState<AgentWithSummary[]>([]);
   const [agentsLoading, setAgentsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -51,7 +49,7 @@ export function Collaborate() {
   const messages = getMessages(activeThreadId || '');
   const planTasks = getPlanTasks(activeThreadId || '');
 
-  // 从 messages 中提取最新的 plan todos（用于 FloatingPlanPanel）
+  // Extract plan todos from messages (fallback for RightSidebar)
   const currentPlanTodos = (() => {
     for (let i = messages.length - 1; i >= 0; i--) {
       const msg = messages[i];
@@ -67,9 +65,11 @@ export function Collaborate() {
     return [];
   })();
 
+  // Artifacts extracted from messages
+  const artifacts = useArtifacts(messages);
+
   // UI state
-  const [rightPanel, setRightPanel] = useState<RightPanel>('none');
-  const [activeArtifact, setActiveArtifact] = useState<Extract<MessageBlock, { type: 'artifact' }> | null>(null);
+  const [isRightPanelCollapsed, setIsRightPanelCollapsed] = useState(false);
   const [agentRemoved, setAgentRemoved] = useState(false);
   const [threadLoadError, setThreadLoadError] = useState<string | null>(null);
   const [isSwitchingThread, setIsSwitchingThread] = useState(false);
@@ -77,6 +77,15 @@ export function Collaborate() {
   const initialMessageProcessed = useRef(false);
   const lastThreadRef = useRef<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Responsive: auto-collapse right panel on narrow screens
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 1024px)');
+    const handler = (e: MediaQueryListEvent) => setIsRightPanelCollapsed(e.matches);
+    setIsRightPanelCollapsed(mq.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
 
   // 过滤后的 Agent 列表
   const filteredAgents = agents.filter((agent) => {
@@ -88,7 +97,7 @@ export function Collaborate() {
     );
   });
 
-  // Load agents on mount - 使用 listAgentsWithSummary 加载所有 Agent（含 inactive）
+  // Load agents on mount
   useEffect(() => {
     let cancelled = false;
     setAgentsLoading(true);
@@ -99,21 +108,15 @@ export function Collaborate() {
         if (cancelled) return;
         setAgents(res.data);
 
-        // B0: 零 Agent
-        if (res.data.length === 0) {
-          return;
-        }
+        if (res.data.length === 0) return;
 
-        // Auto-redirect if no agentId or invalid agentId
         if (agentId) {
           const exists = res.data.some((a) => a.id === agentId);
           if (!exists) {
-            // Agent 不存在，标记为已删除并重定向到第一个
             setAgentRemoved(true);
             navigate(`/collaborate/${res.data[0].id}`, { replace: true });
           }
         } else {
-          // URL 无 agentId → 自动选第一个（按 updatedAt 降序）
           const sorted = [...res.data].sort(
             (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
           );
@@ -126,9 +129,7 @@ export function Collaborate() {
       .finally(() => {
         if (!cancelled) setAgentsLoading(false);
       });
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Load thread history when switching threads
@@ -152,14 +153,11 @@ export function Collaborate() {
         initialMessageProcessed.current = true;
         let threadId = activeThreadId;
 
-        // 优先使用 Home 页面创建的 threadId
         if (location.state?.threadId) {
           threadId = location.state.threadId;
-          // 切换到该 thread（等 threads 加载完后会自动切换）
           switchThread(threadId);
         }
 
-        // 如果没有 threadId，创建新 Thread
         if (!threadId) {
           try {
             const newThread = await createNewThread();
@@ -170,7 +168,6 @@ export function Collaborate() {
         }
 
         sendMessage(agentId, threadId, location.state.initialMessage);
-        // 清除 location state 避免重复发送
         window.history.replaceState({}, '');
       };
 
@@ -178,7 +175,7 @@ export function Collaborate() {
     }
   }, [location.state, agentId, activeThreadId, sendMessage, createNewThread, switchThread]);
 
-  // Scroll to bottom on new messages (debounced to avoid flickering during streaming)
+  // Scroll to bottom on new messages
   useEffect(() => {
     const timer = setTimeout(() => {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -186,9 +183,8 @@ export function Collaborate() {
     return () => clearTimeout(timer);
   }, [messages]);
 
-  const handleOpenArtifact = (block: Extract<MessageBlock, { type: 'artifact' }>) => {
-    setActiveArtifact(block);
-    setRightPanel('canvas');
+  const handleOpenArtifact = (_block: Extract<MessageBlock, { type: 'artifact' }>) => {
+    // Artifacts are viewed in the right sidebar now
   };
 
   const handleAnswerQuestion = useCallback(
@@ -196,7 +192,6 @@ export function Collaborate() {
       if (!agentId || !activeThreadId) return;
       try {
         await replyToQuestion(agentId, activeThreadId, id, answers);
-        // Mark the question as answered in the UI
         updateBlock(activeThreadId, id, { answered: true, answers } as any);
       } catch (err) {
         console.error('Failed to reply to question:', err);
@@ -209,7 +204,6 @@ export function Collaborate() {
     (content: string) => {
       if (!agentId) return;
 
-      // B1: 有 Agent 但零对话时，发送消息需要先创建 Thread
       if (!activeThreadId) {
         const sendWithNewThread = async () => {
           try {
@@ -233,11 +227,7 @@ export function Collaborate() {
   const handleCreateThread = useCallback(async () => {
     setThreadLoadError(null);
     try {
-      const newThread = await createNewThread();
-      if (newThread?.id) {
-        // URL 会通过 useEffect 自动更新
-        // 新 Thread 显示欢迎界面（通过检查 messages.length === 0）
-      }
+      await createNewThread();
     } catch (err) {
       console.error('Failed to create thread:', err);
       setThreadLoadError(err instanceof Error ? err.message : 'Failed to create thread');
@@ -252,10 +242,7 @@ export function Collaborate() {
       setThreadLoadError(null);
 
       try {
-        // 切换 Thread
         switchThread(threadId);
-
-        // 加载历史消息
         await loadHistory(agentId, threadId);
       } catch (err) {
         console.error('Failed to switch thread:', err);
@@ -267,20 +254,16 @@ export function Collaborate() {
     [agentId, switchThread, loadHistory]
   );
 
-  // URL 同步：从 URL 读取 threadId 并同步到状态（仅在组件挂载时执行一次）
+  // URL sync
   useEffect(() => {
     const urlThreadId = searchParams.get('threadId');
-
     if (urlThreadId && urlThreadId !== activeThreadId) {
-      // URL 有 threadId，切换到该 Thread
       handleSwitchThread(urlThreadId);
     } else if (!urlThreadId && activeThreadId) {
-      // URL 没有 threadId 但有 activeThreadId，更新 URL
       setSearchParams({ threadId: activeThreadId });
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // URL 同步：当 activeThreadId 变化时更新 URL
   useEffect(() => {
     if (activeThreadId) {
       setSearchParams({ threadId: activeThreadId });
@@ -292,32 +275,23 @@ export function Collaborate() {
   const getStatusColor = () => {
     if (!activeThread) return 'bg-stone-400';
     switch (activeThread.status) {
-      case 'running':
-        return 'bg-[#4ade80]';
-      case 'idle':
-        return 'bg-stone-400';
-      case 'completed':
-        return 'bg-[#4ade80]';
-      case 'error':
-        return 'bg-red-500';
+      case 'running': return 'bg-[#4ade80]';
+      case 'idle': return 'bg-stone-400';
+      case 'completed': return 'bg-[#4ade80]';
+      case 'error': return 'bg-red-500';
     }
   };
 
   const getStatusText = () => {
     if (!activeThread) return 'New';
     switch (activeThread.status) {
-      case 'running':
-        return 'Working...';
-      case 'idle':
-        return 'Idle';
-      case 'completed':
-        return 'Completed';
-      case 'error':
-        return 'Error';
+      case 'running': return 'Working...';
+      case 'idle': return 'Idle';
+      case 'completed': return 'Completed';
+      case 'error': return 'Error';
     }
   };
 
-  const isRightPanelOpen = rightPanel !== 'none';
   const isAgentInactive = activeAgent && !activeAgent.isActive;
 
   return (
@@ -358,7 +332,6 @@ export function Collaborate() {
             </div>
           ) : (
             filteredAgents.map((agent) => {
-              // 从聚合对象获取 Thread 状态颜色
               const threadStatusColor = agent.threadSummary
                 ? agent.threadSummary.latestStatus === 'running'
                   ? 'bg-[#4ade80]'
@@ -396,9 +369,7 @@ export function Collaborate() {
                   </div>
                   <div className="overflow-hidden flex-1">
                     <div className="flex items-center gap-2">
-                      <p
-                        className={`text-sm truncate ${agentId === agent.id ? 'font-semibold text-charcoal' : 'text-charcoal'}`}
-                      >
+                      <p className={`text-sm truncate ${agentId === agent.id ? 'font-semibold text-charcoal' : 'text-charcoal'}`}>
                         {agent.name}
                       </p>
                       {!agent.isActive && (
@@ -409,7 +380,6 @@ export function Collaborate() {
                     </div>
                     <p className="text-[11px] text-stone truncate">{agent.description || 'AI Agent'}</p>
                   </div>
-                  {/* Thread 状态点 */}
                   {threadStatusColor !== 'bg-transparent' && (
                     <div className={`w-2 h-2 rounded-full ${threadStatusColor} shrink-0`} />
                   )}
@@ -427,7 +397,7 @@ export function Collaborate() {
         </div>
       </div>
 
-      {/* Main Content */}
+      {/* Main Content + Right Panel */}
       <div className="flex-1 flex min-w-0 bg-surface-container-low relative">
         {/* B0: 零 Agent */}
         {agents.length === 0 && !agentsLoading && <EmptyCollaborateView />}
@@ -439,7 +409,7 @@ export function Collaborate() {
             {agentRemoved && <AgentRemovedBanner />}
 
             {/* Header */}
-            <header className="absolute top-0 w-full h-16 border-b border-surface-container-highest bg-surface-container-low/80 backdrop-blur-md flex items-center px-8 z-30 justify-between">
+            <header className="absolute top-0 left-0 right-0 h-16 border-b border-surface-container-highest bg-surface-container-low/80 backdrop-blur-md flex items-center px-8 z-30 justify-between">
               <div className="flex items-center gap-4">
                 <div className="relative">
                   <div className="w-8 h-8 rounded-full bg-secondary-container flex items-center justify-center text-on-secondary-container">
@@ -457,9 +427,28 @@ export function Collaborate() {
                 </div>
               </div>
 
-              {/* ThreadDropdown - 替代原来的 Thread 覆盖面板 */}
+              <div className="flex items-center gap-3">
+                {/* Right panel toggle */}
+                {isRightPanelCollapsed && (
+                  <button
+                    onClick={() => setIsRightPanelCollapsed(false)}
+                    className="p-1.5 text-stone hover:text-charcoal hover:bg-surface-container-highest rounded-lg transition-colors"
+                    title="展开面板"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">right_panel_open</span>
+                  </button>
+                )}
+              </div>
+            </header>
+
+            {/* B2a: Agent 被停用横幅 */}
+            {isAgentInactive && <AgentInactiveBanner />}
+
+            {/* Thread Sidebar + Chat Panel */}
+            <div className="flex flex-1 min-h-0 pt-16">
+              {/* Thread Sidebar — left of chat */}
               {activeAgent && (
-                <ThreadDropdown
+                <ThreadSidebar
                   threads={threads}
                   activeThreadId={activeThreadId}
                   onSwitchThread={handleSwitchThread}
@@ -467,120 +456,105 @@ export function Collaborate() {
                   loading={threadsLoading}
                 />
               )}
-            </header>
 
-            {/* B2a: Agent 被停用横幅 */}
-            {isAgentInactive && <AgentInactiveBanner />}
-
-            {/* Chat Panel */}
-            <section
-              className={`${
-                rightPanel === 'canvas'
-                  ? 'w-[40%] min-w-[360px] max-w-[500px]'
-                  : 'flex-1'
-              } flex flex-col border-r border-surface-container-highest pt-16 transition-all duration-300 min-h-0 relative overflow-hidden`}
-            >
+              {/* Chat Panel */}
+              <section className="flex-1 flex flex-col transition-all duration-300 min-h-0 relative overflow-hidden">
               <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
                 <div className="p-6 space-y-6 w-full max-w-4xl mx-auto flex flex-col">
-                {/* Thread 切换 Loading 状态 */}
-                {isSwitchingThread && (
-                  <div className="flex items-center justify-center h-full">
-                    <div className="flex flex-col items-center gap-3">
-                      <div className="w-6 h-6 border-2 border-stone/30 border-t-charcoal rounded-full animate-spin" />
-                      <span className="text-[12px] text-stone">Loading conversation...</span>
-                    </div>
-                  </div>
-                )}
-
-                {/* Thread 加载错误提示 */}
-                {threadLoadError && !isSwitchingThread && (
-                  <div className="flex items-center justify-center h-full">
-                    <div className="flex flex-col items-center gap-4 text-center max-w-md">
-                      <span className="material-symbols-outlined text-[40px] text-red-500">error_outline</span>
-                      <div>
-                        <p className="text-sm text-charcoal font-medium mb-1">Failed to load conversation</p>
-                        <p className="text-xs text-stone">{threadLoadError}</p>
-                      </div>
-                      <button
-                        onClick={() => {
-                          setThreadLoadError(null);
-                          if (activeThreadId && agentId) {
-                            handleSwitchThread(activeThreadId);
-                          }
-                        }}
-                        className="px-4 py-2 bg-brand text-white text-sm font-semibold rounded-lg hover:bg-brand/90 transition-colors"
-                      >
-                        Retry
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {!activeAgent ? (
-                  <div className="flex items-center justify-center h-full">
-                    <span className="text-[12px] text-stone">Select an agent to start chatting</span>
-                  </div>
-                ) : !isSwitchingThread && !threadLoadError && (
-                  // B1: 有 Agent 但零对话
-                  activeThreadId && messages.length === 0 && !isStreaming ? (
+                  {/* Thread 切换 Loading 状态 */}
+                  {isSwitchingThread && (
                     <div className="flex items-center justify-center h-full">
-                      <span className="text-[12px] text-stone">No messages yet</span>
-                    </div>
-                  ) : activeThreadId && messages.length > 0 ? (
-                    <>
-                      <div className="text-center">
-                        <span className="px-3 py-1 rounded-full bg-surface-container text-[11px] font-bold tracking-wider text-stone uppercase">
-                          Today
-                        </span>
+                      <div className="flex flex-col items-center gap-3">
+                        <div className="w-6 h-6 border-2 border-stone/30 border-t-charcoal rounded-full animate-spin" />
+                        <span className="text-[12px] text-stone">Loading conversation...</span>
                       </div>
-                      {messages.map((message) =>
-                        message.role === 'user' ? (
-                          <UserMessage key={message.id} message={message} />
-                        ) : (
-                          <AssistantMessage
-                            key={message.id}
-                            message={message}
-                            agentIcon={activeAgent?.icon || 'smart_toy'}
-                            onOpenArtifact={handleOpenArtifact}
-                            onAnswerQuestion={handleAnswerQuestion}
-                          />
-                        )
-                      )}
-                    </>
-                  ) : // B1: Agent 欢迎卡片（新建 Thread 或空 Thread）
-                  activeAgent && (!activeThreadId || messages.length === 0) ? (
-                    <AgentWelcomeView agent={activeAgent} onSendMessage={handleSend} />
-                  ) : null
-                )}
+                    </div>
+                  )}
 
-                <div ref={messagesEndRef} />
+                  {/* Thread 加载错误提示 */}
+                  {threadLoadError && !isSwitchingThread && (
+                    <div className="flex items-center justify-center h-full">
+                      <div className="flex flex-col items-center gap-4 text-center max-w-md">
+                        <span className="material-symbols-outlined text-[40px] text-red-500">error_outline</span>
+                        <div>
+                          <p className="text-sm text-charcoal font-medium mb-1">Failed to load conversation</p>
+                          <p className="text-xs text-stone">{threadLoadError}</p>
+                        </div>
+                        <button
+                          onClick={() => {
+                            setThreadLoadError(null);
+                            if (activeThreadId && agentId) {
+                              handleSwitchThread(activeThreadId);
+                            }
+                          }}
+                          className="px-4 py-2 bg-brand text-white text-sm font-semibold rounded-lg hover:bg-brand/90 transition-colors"
+                        >
+                          Retry
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {!activeAgent ? (
+                    <div className="flex items-center justify-center h-full">
+                      <span className="text-[12px] text-stone">Select an agent to start chatting</span>
+                    </div>
+                  ) : !isSwitchingThread && !threadLoadError && (
+                    activeThreadId && messages.length === 0 && !isStreaming ? (
+                      <div className="flex items-center justify-center h-full">
+                        <span className="text-[12px] text-stone">No messages yet</span>
+                      </div>
+                    ) : activeThreadId && messages.length > 0 ? (
+                      <>
+                        <div className="text-center">
+                          <span className="px-3 py-1 rounded-full bg-surface-container text-[11px] font-bold tracking-wider text-stone uppercase">
+                            Today
+                          </span>
+                        </div>
+                        {messages.map((message) =>
+                          message.role === 'user' ? (
+                            <UserMessage key={message.id} message={message} />
+                          ) : (
+                            <AssistantMessage
+                              key={message.id}
+                              message={message}
+                              agentIcon={activeAgent?.icon || 'smart_toy'}
+                              onOpenArtifact={handleOpenArtifact}
+                              onAnswerQuestion={handleAnswerQuestion}
+                            />
+                          )
+                        )}
+                      </>
+                    ) : activeAgent && (!activeThreadId || messages.length === 0) ? (
+                      <AgentWelcomeView agent={activeAgent} onSendMessage={handleSend} />
+                    ) : null
+                  )}
+
+                  <div ref={messagesEndRef} />
                 </div>
               </div>
 
-              {/* FloatingPlanPanel 和 ChatInput */}
+              {/* ChatInput */}
               {activeAgent && activeThreadId && (
-                <>
-                  <FloatingPlanPanel todos={currentPlanTodos} />
-                  <ChatInput
-                    agentName={activeAgent.name}
-                    onSend={handleSend}
-                    disabled={
-                      isStreaming ||
-                      isSwitchingThread ||
-                      activeThread?.status === 'running' ||
-                      isAgentInactive
-                    }
-                    placeholder={
-                      isSwitchingThread
-                        ? 'Loading conversation...'
-                        : isAgentInactive
-                        ? 'This AI Employee is currently inactive'
-                        : activeThread?.status === 'running'
-                        ? 'Agent is thinking...'
-                        : undefined
-                    }
-                  />
-                </>
+                <ChatInput
+                  agentName={activeAgent.name}
+                  onSend={handleSend}
+                  disabled={
+                    isStreaming ||
+                    isSwitchingThread ||
+                    activeThread?.status === 'running' ||
+                    isAgentInactive
+                  }
+                  placeholder={
+                    isSwitchingThread
+                      ? 'Loading conversation...'
+                      : isAgentInactive
+                      ? 'This AI Employee is currently inactive'
+                      : activeThread?.status === 'running'
+                      ? 'Agent is thinking...'
+                      : undefined
+                  }
+                />
               )}
 
               {/* B1 场景下的 ChatInput（无 activeThreadId 但有 activeAgent） */}
@@ -592,20 +566,22 @@ export function Collaborate() {
                 />
               )}
             </section>
+            </div>
 
-            {/* Right Panel: Canvas */}
-            {rightPanel === 'canvas' && (
-              <ArtifactPanel
-                block={activeArtifact}
-                onClose={() => {
-                  setRightPanel('none');
-                  setActiveArtifact(null);
-                }}
+            {/* Right Sidebar — always rendered when not collapsed */}
+            {!isRightPanelCollapsed && (
+              <RightSidebar
+                planTasks={planTasks}
+                planTodos={currentPlanTodos}
+                artifacts={artifacts}
+                onCollapse={() => setIsRightPanelCollapsed(true)}
               />
             )}
           </>
         )}
       </div>
+
+      {/* Artifact viewing is handled in RightSidebar */}
     </div>
   );
 }

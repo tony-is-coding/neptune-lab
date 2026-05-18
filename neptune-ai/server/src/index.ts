@@ -1,6 +1,8 @@
 // ===== 平台级环境变量（必须在所有 import 之前设置） =====
 // 禁用 SDK 读取任何 CLAUDE.md 文件 — Neptune 是独立 SaaS 平台，不依赖本地项目
 process.env.CLAUDE_CODE_DISABLE_CLAUDE_MDS = '1';
+// 禁用 SDK 注入 git status 到 system prompt — Neptune Agent 不是 coding agent
+process.env.CLAUDE_CODE_DISABLE_GIT_INSTRUCTIONS = 'true';
 // 覆盖 SDK 内部使用的 Anthropic 环境变量 — 强制走 Neptune 配置的 LLM Provider
 // SDK 的 callModel (queryModelWithStreaming) 直接读取这些 env vars
 if (process.env.NEPTUNE_LLM_API_KEY) {

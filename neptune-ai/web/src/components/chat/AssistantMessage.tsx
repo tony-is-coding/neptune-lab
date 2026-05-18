@@ -27,6 +27,28 @@ function ThinkingDots() {
   );
 }
 
+/** Format timestamp for display */
+function formatMessageTime(isoStr?: string): string {
+  if (!isoStr) return '';
+  const d = new Date(isoStr);
+  if (isNaN(d.getTime())) return '';
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  const hh = String(d.getHours()).padStart(2, '0');
+  const min = String(d.getMinutes()).padStart(2, '0');
+  return `${mm}-${dd} ${hh}:${min}`;
+}
+
+/** Count tool_use blocks following a thinking block until next thinking or end */
+function countToolCallsAfterThinking(blocks: MessageBlock[], thinkingIndex: number): number {
+  let count = 0;
+  for (let i = thinkingIndex + 1; i < blocks.length; i++) {
+    if (blocks[i].type === 'thinking') break;
+    if (blocks[i].type === 'tool_use') count++;
+  }
+  return count;
+}
+
 export function AssistantMessage({ message, agentIcon, onOpenArtifact, onAnswerQuestion }: AssistantMessageProps) {
   const isStreaming = message.status === 'streaming';
 
@@ -39,8 +61,10 @@ export function AssistantMessage({ message, agentIcon, onOpenArtifact, onAnswerQ
   // 将连续的 tool_use blocks 分组
   const groupedBlocks = groupConsecutiveTools(message.blocks);
 
+  const timeStr = formatMessageTime(message.createdAt);
+
   return (
-    <div className="max-w-[95%]">
+    <div className="max-w-[95%] group/msg">
       <div className="flex flex-col gap-0.5">
         {isWaiting ? (
           // 等待状态：显示简洁的"思考中..."动画
@@ -53,26 +77,28 @@ export function AssistantMessage({ message, agentIcon, onOpenArtifact, onAnswerQ
           // 正常状态：渲染分组后的 blocks
           groupedBlocks.map((group, groupIndex) => {
             if (group.type === 'tool_group') {
-              // 连续工具调用合并为一个容器
+              // 连续工具调用合并为一个容器，带左侧竖线引导
               return (
                 <div
                   key={`${message.id}-toolgroup-${groupIndex}`}
-                  className="border border-border-cream rounded-[10px] overflow-hidden my-0.5 divide-y divide-border-cream"
+                  className="my-1"
                 >
-                  {group.blocks.map((block) => {
-                    const toolResult = message.blocks.find(
-                      (b): b is Extract<MessageBlock, { type: 'tool_result' }> =>
-                        b.type === 'tool_result' && b.toolUseId === block.id
-                    );
-                    return (
-                      <ToolUseBlock
-                        key={`${message.id}-tool-${block.id}`}
-                        block={block}
-                        toolResult={toolResult}
-                        grouped
-                      />
-                    );
-                  })}
+                  <div className="border border-charcoal/20 rounded-lg overflow-hidden divide-y divide-charcoal/10">
+                    {group.blocks.map((block) => {
+                      const toolResult = message.blocks.find(
+                        (b): b is Extract<MessageBlock, { type: 'tool_result' }> =>
+                          b.type === 'tool_result' && b.toolUseId === block.id
+                      );
+                      return (
+                        <ToolUseBlock
+                          key={`${message.id}-tool-${block.id}`}
+                          block={block}
+                          toolResult={toolResult}
+                          grouped
+                        />
+                      );
+                    })}
+                  </div>
                 </div>
               );
             }
@@ -88,6 +114,7 @@ export function AssistantMessage({ message, agentIcon, onOpenArtifact, onAnswerQ
                     content={block.content}
                     duration={block.duration}
                     isStreaming={isStreaming && index === message.blocks.length - 1}
+                    toolCallCount={countToolCallsAfterThinking(message.blocks, index)}
                   />
                 );
 
@@ -108,13 +135,8 @@ export function AssistantMessage({ message, agentIcon, onOpenArtifact, onAnswerQ
                 return null;
 
               case 'artifact':
-                return (
-                  <ArtifactBlock
-                    key={`${message.id}-artifact-${block.id}`}
-                    block={block}
-                    onOpen={() => onOpenArtifact(block)}
-                  />
-                );
+                // Artifacts show in right sidebar, not inline
+                return null;
 
               case 'ask_user':
                 return (
@@ -126,7 +148,7 @@ export function AssistantMessage({ message, agentIcon, onOpenArtifact, onAnswerQ
                 );
 
               case 'plan':
-                // Plan 在底部 FloatingPlanPanel 显示，不内联渲染
+                // Plan 在右侧面板显示，不内联渲染
                 return null;
 
               default:
@@ -135,6 +157,23 @@ export function AssistantMessage({ message, agentIcon, onOpenArtifact, onAnswerQ
           })
         )}
       </div>
+
+      {/* Footer: timestamp + feedback (only show when message is complete) */}
+      {!isStreaming && !isWaiting && (
+        <div className="flex items-center gap-3 mt-2 pl-0.5">
+          {timeStr && (
+            <span className="text-[11px] text-stone/60">{timeStr}</span>
+          )}
+          <div className="flex items-center gap-1 opacity-0 group-hover/msg:opacity-100 transition-opacity">
+            <button className="p-1 text-stone/50 hover:text-charcoal rounded transition-colors" title="有帮助">
+              <span className="material-symbols-outlined text-[16px]">thumb_up</span>
+            </button>
+            <button className="p-1 text-stone/50 hover:text-charcoal rounded transition-colors" title="没帮助">
+              <span className="material-symbols-outlined text-[16px]">thumb_down</span>
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -40,7 +40,7 @@ export function ArtifactPanel({ block, onClose }: ArtifactPanelProps) {
   );
 }
 
-function ArtifactContent({ block }: { block: Extract<MessageBlock, { type: 'artifact' }> }) {
+export function ArtifactContent({ block }: { block: Extract<MessageBlock, { type: 'artifact' }> }) {
   const fileType = block.fileType.toLowerCase();
 
   // Table / spreadsheet rendering

@@ -135,4 +135,5 @@ export interface ChatMessage {
   role: 'user' | 'assistant'
   blocks: MessageBlock[]
   status: 'streaming' | 'complete'
+  createdAt?: string
 }

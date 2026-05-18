@@ -51,7 +51,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/login" element={<Login />} />
+        <Route path="/login" element={<Navigate to="/" replace />} />
         <Route element={<ProtectedRoute />}>
           <Route path="/" element={<Home />} />
           <Route path="/skills" element={<Skills />} />

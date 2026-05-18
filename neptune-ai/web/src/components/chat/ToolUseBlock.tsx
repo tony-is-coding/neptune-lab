@@ -94,7 +94,7 @@ export function ToolUseBlock({ block, toolResult, grouped }: ToolUseBlockProps) 
   // 在分组容器内时不需要外层边框
   if (grouped) {
     return (
-      <div className="px-3 py-2 flex items-center gap-2">
+      <div className="px-3 py-2.5 flex items-center gap-2.5">
         {isRunning && (
           <span className="w-[14px] h-[14px] rounded-full border-[1.5px] border-stone/30 border-t-stone animate-spin shrink-0" />
         )}
@@ -119,8 +119,8 @@ export function ToolUseBlock({ block, toolResult, grouped }: ToolUseBlockProps) 
   }
 
   return (
-    <div className="border border-border-cream rounded-[10px] overflow-hidden my-0.5">
-      <div className="px-3 py-2 flex items-center gap-2">
+    <div className="border border-charcoal/20 rounded-lg overflow-hidden my-1">
+      <div className="px-3 py-2.5 flex items-center gap-2.5">
         {isRunning && (
           <span className="w-[14px] h-[14px] rounded-full border-[1.5px] border-stone/30 border-t-stone animate-spin shrink-0" />
         )}

@@ -77,8 +77,10 @@ export interface EngineFactory {
     createAndLoad(params: {
         /** Agent 身份声明（精确替换 CC 默认身份前缀） */
         identityOverride?: string;
-        /** Agent 扩展内容（skills/knowledge/instructions，追加在 CC 核心能力之后） */
-        systemPrompt: string;
+        /** 技能列表（Engine 内部写入 .claude/skills/，CC 自动发现） */
+        skills?: Array<{ name: string; description?: string; content: string }>;
+        /** 平台安全规则 + 行为指令（写入 workspace CLAUDE.md，CC 自动读取） */
+        instructions?: string;
         memoryRoot: string;
         workspace: string;
         tools: string[];
@@ -393,26 +395,56 @@ export class ThreadManager {
             }
             log.debug('Agent 模板已加载', {...ctx, templateName: (template as any).name});
 
-            // 步骤 2：组装 System Prompt
-            // identity: 通过 identityOverride 精确替换 CC 身份前缀（"你是谁"）
-            // extensions: 通过 appendSystemPrompt 追加在 CC 核心能力之后（guard + instructions + skills + knowledge）
-            const assembledExtensions = await this.assembleSystemPromptForAgent(template, agentId, thread.tenantId, { excludeIdentity: true });
-
-            // 从 template 中提取 identity（用于替换 CC 身份前缀）
-            const promptConfig = template.promptConfig as { identity?: string } | null;
+            // 步骤 2：准备 Agent 配置（结构化数据，不做字符串拼接）
+            // - identity: 替换 CC 身份前缀
+            // - skills: Engine 内部写入 .claude/skills/，CC 自动发现
+            // - instructions: 写入 workspace/CLAUDE.md，CC 自动读取
+            const promptConfig = template.promptConfig as { identity?: string; disableGuard?: boolean; toolInstructions?: string } | null;
             const identityOverride = promptConfig?.identity || (template as any).systemPrompt || undefined;
 
-            log.debug('System Prompt 组装完成', {
+            // 从 DB 读取 skills 和 documents
+            const [fetchedSkills, fetchedDocuments] = await Promise.all([
+                this.fetchAgentSkills(agentId),
+                this.fetchAgentDocuments(agentId),
+            ]);
+            const agentInstructions = this.loadAgentInstructions(thread.tenantId, agentId);
+
+            // 组装 instructions（Guard + 行为指令 + 知识库 + 工具约束）→ 写入 CLAUDE.md
+            const instructionBlocks: string[] = [];
+            if (!promptConfig?.disableGuard) {
+                const {PLATFORM_GUARD} = await import('./prompt-assembler.js');
+                instructionBlocks.push(PLATFORM_GUARD);
+            }
+            if (agentInstructions) {
+                instructionBlocks.push(agentInstructions);
+            }
+            if (fetchedDocuments.length > 0) {
+                const docsBlock = fetchedDocuments.map(d => `## ${d.name}\n\n${d.content}`).join('\n\n');
+                instructionBlocks.push(`# Knowledge Base\n\n${docsBlock}`);
+            }
+            if (promptConfig?.toolInstructions) {
+                instructionBlocks.push(promptConfig.toolInstructions);
+            }
+            const instructions = instructionBlocks.length > 0 ? instructionBlocks.join('\n\n') : undefined;
+
+            // 转换 skills 为 Engine SkillExtension 格式
+            const skillExtensions = fetchedSkills
+                .filter(s => s.content)
+                .map(s => ({ name: s.name, content: s.content! }));
+
+            log.debug('Agent 配置准备完成', {
                 ...ctx,
                 identityLength: identityOverride?.length ?? 0,
-                extensionsLength: assembledExtensions.length,
+                skillsCount: skillExtensions.length,
+                instructionsLength: instructions?.length ?? 0,
             });
 
-            // 步骤 3：创建 Engine（配置 Provider、权限、可观测性，创建 SDK Session）
+            // 步骤 3：创建 Engine（结构化参数，Engine 内部按原生机制注入）
             const mcpServerUrls = (template.mcpServers as Array<{ name: string; url: string }> || []).map(s => s.url);
             const result = await this.engineFactory.createAndLoad({
                 identityOverride,
-                systemPrompt: assembledExtensions,
+                skills: skillExtensions.length > 0 ? skillExtensions : undefined,
+                instructions,
                 memoryRoot: `${this.dataRoot}/tenants/${thread.tenantId}/agents/${agentId}`,
                 workspace: thread.workspace,
                 tools: (template.tools as string[]) || [],
@@ -449,7 +481,7 @@ export class ThreadManager {
                     tenantId: thread.tenantId,
                     agentId: agentId!,
                     userInput: content,
-                    systemPrompt: assembledExtensions,
+                    systemPrompt: instructions || identityOverride || '',
                 });
             }
 

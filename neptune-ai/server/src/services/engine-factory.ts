@@ -1,19 +1,13 @@
 /**
  * ClaudeCodeEngineFactory — AgentEngine 的 EngineFactory 实现
  *
- * 核心链路：ThreadManager.dispatch() → engineFactory.createAndLoad()
- *
  * 职责：
- * - 创建 AgentEngine 实例（配置 Provider、权限、可观测性）
- * - 创建 SDK Session（绑定 workspace 目录）
- * - 返回可执行 query 的 Engine + sdkSessionId
- *
- * 设计要点：
- * - Engine 创建通过 AgentEngine.create() 静态工厂
- * - 权限隔离通过 TenantPermissionDelegate 注入
- * - systemPrompt 来自 prompt-assembler.ts 组装结果
- * - API Key 从环境变量 NEPTUNE_LLM_API_KEY 读取
- * - maxTurns 配置传递给 Engine 内部的 AgentLoop 防止无限循环
+ * - 创建 Engine 实例（配置 Provider、权限、可观测性）
+ * - 创建 SDK Session（绑定 workspace）
+ * - 将 Agent 配置注入 Engine 原生扩展点：
+ *   - identityOverride → 替换 CC 身份前缀
+ *   - skills → SkillExtension[] → Engine 写入 .claude/skills/
+ *   - instructions → 写入 workspace/CLAUDE.md → CC 自动读取
  */
 
 import {AgentEngine} from 'claude-code-best/engine';
@@ -21,6 +15,8 @@ import type {EngineFactory, QueryableEngine} from './thread-manager.js';
 import {TenantPermissionDelegate} from './permission-delegate.js';
 import {createLogger} from '../utils/logger.js';
 import {getTracingProvider, getMetricsProvider} from './observability/index.js';
+import {writeFileSync, mkdirSync, existsSync} from 'fs';
+import {join} from 'path';
 
 const log = createLogger('engine-factory');
 
@@ -28,11 +24,8 @@ const log = createLogger('engine-factory');
  * ClaudeCodeEngineFactory 配置
  */
 export interface ClaudeCodeEngineFactoryConfig {
-    /** Anthropic API Key（必需） */
     apiKey: string;
-    /** 自定义 API Base URL（可选，用于代理或兼容 API） */
     baseURL?: string;
-    /** 默认模型（可选，如 claude-sonnet-4-20250514 或 glm-5.1） */
     defaultModel?: string;
 }
 
@@ -52,7 +45,8 @@ export class ClaudeCodeEngineFactory implements EngineFactory {
 
     async createAndLoad(params: {
         identityOverride?: string;
-        systemPrompt: string;
+        skills?: Array<{ name: string; description?: string; content: string }>;
+        instructions?: string;
         memoryRoot: string;
         workspace: string;
         tools: string[];
@@ -65,7 +59,24 @@ export class ClaudeCodeEngineFactory implements EngineFactory {
         const startTime = performance.now();
         log.info('Engine 开始创建', {tenantId: params.tenantId, workspace: params.workspace});
 
-        // 1. 创建权限委托（租户隔离：限制工具白名单 + 文件路径 + MCP Server）
+        // 1. 将 instructions 写入 workspace/CLAUDE.md（CC 自动发现并注入 prompt）
+        if (params.instructions) {
+            const claudeMdPath = join(params.workspace, 'CLAUDE.md');
+            if (!existsSync(params.workspace)) {
+                mkdirSync(params.workspace, {recursive: true});
+            }
+            writeFileSync(claudeMdPath, params.instructions, 'utf-8');
+            log.debug('CLAUDE.md 已写入', {path: claudeMdPath, length: params.instructions.length});
+        }
+
+        // 2. 将 skills 转换为 Engine 的 SkillExtension 格式
+        const skillExtensions = (params.skills || []).map(s => ({
+            name: s.name,
+            description: s.description || s.name,
+            content: s.content,
+        }));
+
+        // 3. 创建权限委托
         const permissionDelegate = new TenantPermissionDelegate(
             {
                 tenantId: params.tenantId,
@@ -78,22 +89,24 @@ export class ClaudeCodeEngineFactory implements EngineFactory {
         );
 
         try {
-            // 2. 创建 Engine 实例
-            // identityOverride: 精确替换 CC 身份前缀（"你是谁"）
-            // systemPrompt: Agent 扩展内容（追加在 CC 核心能力之后）
+            // 4. 创建 Engine 实例
             const engine = AgentEngine.create({
-                systemPrompt: params.systemPrompt,
+                // identity: 精确替换 CC 身份前缀
                 identityOverride: params.identityOverride,
+                // memory: 用户级记忆隔离
                 memoryRoot: params.memoryRoot,
+                // observability
                 tracingProvider: getTracingProvider(),
                 metricsProvider: getMetricsProvider(),
                 extensions: {
+                    // skills: Engine 内部写入 .claude/skills/，CC 自动发现
+                    skills: skillExtensions.length > 0 ? skillExtensions : undefined,
                     permissions: {
                         bypassPermissions: true,
                     },
                 },
                 options: {
-                    maxTurns: 50, // AgentLoop 最大轮数，防止无限循环
+                    maxTurns: 50,
                 },
                 provider: {
                     type: 'anthropic',
@@ -105,10 +118,9 @@ export class ClaudeCodeEngineFactory implements EngineFactory {
                 },
             } as any);
 
-            // 3. 创建 SDK Session（绑定 workspace 目录，Engine 内部会在此目录下管理 memory、transcript 等）
+            // 5. 创建 SDK Session
             const sdkSessionId = await engine.createSession({
                 workspace: params.workspace,
-                systemPrompt: params.systemPrompt,
             });
 
             const durationMs = Math.round(performance.now() - startTime);
@@ -120,7 +132,7 @@ export class ClaudeCodeEngineFactory implements EngineFactory {
             };
         } catch (error) {
             const durationMs = Math.round(performance.now() - startTime);
-            log.error('Engine 创建失败', {
+            log.error('Engine creation failed', {
                 tenantId: params.tenantId,
                 durationMs,
                 detail: (error as Error).message,

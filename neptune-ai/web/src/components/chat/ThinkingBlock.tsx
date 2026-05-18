@@ -4,6 +4,7 @@ interface ThinkingBlockProps {
   content: string;
   duration?: number;
   isStreaming?: boolean;
+  toolCallCount?: number;
 }
 
 /**
@@ -11,29 +12,42 @@ interface ThinkingBlockProps {
  *
  * 设计参考：Claude 风格
  * - 流式中：显示 "思考中..." 文字 + 实时内容
- * - 完成后：折叠为 "思考完成 >"，点击展开查看内容
+ * - 完成后：折叠为摘要行，点击展开查看内容
  * - 遵循 DESIGN.md 暖色系设计规范
  */
-export function ThinkingBlock({ content, duration, isStreaming }: ThinkingBlockProps) {
+export function ThinkingBlock({ content, duration, isStreaming, toolCallCount }: ThinkingBlockProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
   const showContent = isStreaming || isExpanded;
+
+  // Summary text when collapsed
+  const summaryText = (() => {
+    if (isStreaming) return '思考中...';
+    const parts: string[] = [];
+    if (toolCallCount && toolCallCount > 0) {
+      parts.push(`已完成 ${toolCallCount} 次工具调用`);
+    }
+    if (duration) {
+      parts.push(`${duration}s`);
+    }
+    return parts.length > 0 ? parts.join(' · ') : '思考完成';
+  })();
 
   return (
     <div className="my-0.5">
       {/* Header toggle */}
       <div
-        className="inline-flex items-center gap-1 cursor-pointer select-none group"
+        className="inline-flex items-center gap-1.5 cursor-pointer select-none group"
         onClick={() => !isStreaming && setIsExpanded(!isExpanded)}
       >
-        <span className="text-[13px] text-stone font-medium group-hover:text-charcoal transition-colors">
-          {isStreaming ? '思考中...' : `思考完成${duration ? ` (${duration}s)` : ''}`}
-        </span>
         {!isStreaming && (
-          <span className={`text-stone text-[11px] transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`}>
+          <span className={`text-stone/60 text-[11px] transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`}>
             ›
           </span>
         )}
+        <span className="text-[13px] text-stone font-medium group-hover:text-charcoal transition-colors">
+          {summaryText}
+        </span>
       </div>
 
       {/* Thinking content */}

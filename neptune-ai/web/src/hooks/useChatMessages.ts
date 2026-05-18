@@ -42,6 +42,7 @@ export function useChatMessages() {
           role: (item.role as 'user' | 'assistant') || 'user',
           blocks: item.blocks || (item.content ? [{ type: 'text' as const, content: item.content }] : []),
           status: (item.status as 'streaming' | 'complete') || 'complete',
+          createdAt: (item as any).createdAt || undefined,
         }));
         setMessagesByThread(prev => ({ ...prev, [threadId]: messages }));
       }
@@ -61,6 +62,7 @@ export function useChatMessages() {
       role: 'user',
       blocks: [{ type: 'text', content }],
       status: 'complete',
+      createdAt: new Date().toISOString(),
     };
 
     const assistantId = genId();
@@ -69,6 +71,7 @@ export function useChatMessages() {
       role: 'assistant',
       blocks: [{ type: 'thinking', content: '思考中...' }],
       status: 'streaming',
+      createdAt: new Date().toISOString(),
     };
 
     setMessagesByThread(prev => ({
