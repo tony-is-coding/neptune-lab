@@ -1,0 +1,77 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: neptune_ai
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6380:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      # neptune-ai/server env vars
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5433/neptune_ai
+      REDIS_URL: redis://localhost:6380
+      JWT_SECRET: ci-test-secret-key
+      # neptune-engine test env vars
+      TEST_PG_HOST: localhost
+      TEST_PG_PORT: "5433"
+      TEST_PG_USER: postgres
+      TEST_PG_PASSWORD: postgres
+      TEST_PG_DATABASE: claude_test
+      TEST_REDIS_HOST: localhost
+      TEST_REDIS_PORT: "6380"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Create test database for neptune-engine
+        run: |
+          PGPASSWORD=postgres psql -h localhost -p 5433 -U postgres -c "CREATE DATABASE claude_test;"
+
+      - name: Run database migrations
+        working-directory: neptune-ai/server
+        run: bun run db:migrate
+
+      - name: Test neptune-ai/server
+        working-directory: neptune-ai/server
+        run: bun test
+
+      - name: Test neptune-engine
+        working-directory: neptune-engine
+        run: bun test
