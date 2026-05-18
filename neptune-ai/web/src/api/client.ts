@@ -1,6 +1,6 @@
 import { getStoredToken, useAuthStore } from '../stores/auth';
 
-export const API_BASE = '/api/v1';
+export const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3002/api/v1';
 
 export function getAuthHeaders(): Record<string, string> {
   const token = getStoredToken();
