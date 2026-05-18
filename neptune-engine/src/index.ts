@@ -1,7 +1,7 @@
 /**
  * Claude Code Framework - 公共导出层
  *
- * 本文件作为框架核心（claude-code/src/）的统一导出层，供 CLI 宿主（neptune-cli/src/）引用
+ * 本文件作为框架核心（claude-code/src/）的统一导出层，供上层产品引用
  *
  * 分层组织：
  * - 第一层：Engine SDK（已完善的分层导出）

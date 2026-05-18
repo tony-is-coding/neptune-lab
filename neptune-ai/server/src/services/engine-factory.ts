@@ -116,7 +116,7 @@ export class ClaudeCodeEngineFactory implements EngineFactory {
                         ...(this.defaultModel ? {model: this.defaultModel, defaultModel: this.defaultModel} : {}),
                     },
                 },
-            } as any);
+            });
 
             // 5. 创建 SDK Session
             const sdkSessionId = await engine.createSession({

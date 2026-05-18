@@ -7,8 +7,7 @@
  * 3. query 埋点
  * 4. 工具执行埋点
  *
- * 注意：tracingProvider/metricsProvider 尚未正式加入 AgentEngineConfig，
- * 使用 as any 绕过类型检查，待接口接入后移除。
+ * AgentEngineConfig 已正式支持 tracingProvider/metricsProvider 字段。
  */
 
 import {describe, test, expect, beforeEach} from 'bun:test'
@@ -41,7 +40,7 @@ describe('AgentEngine 可观测性埋点', () => {
 			const engine = AgentEngine.create({
 				systemPrompt: '测试',
 				tracingProvider: customTracing,
-			} as any)
+			})
 
 			// 不应抛出错误
 			expect(() => engine.getStats()).not.toThrow()
@@ -55,7 +54,7 @@ describe('AgentEngine 可观测性埋点', () => {
 			const engine = AgentEngine.create({
 				systemPrompt: '测试',
 				metricsProvider: customMetrics,
-			} as any)
+			})
 
 			// 不应抛出错误
 			expect(() => engine.getStats()).not.toThrow()
@@ -71,7 +70,7 @@ describe('AgentEngine 可观测性埋点', () => {
 				systemPrompt: '测试',
 				tracingProvider: customTracing,
 				metricsProvider: customMetrics,
-			} as any)
+			})
 
 			// 不应抛出错误
 			expect(() => engine.getStats()).not.toThrow()
@@ -92,7 +91,7 @@ describe('AgentEngine 可观测性埋点', () => {
 			const engine = AgentEngine.create({
 				systemPrompt: '测试',
 				metricsProvider,
-			} as any)
+			})
 
 			const sessionId = await engine.createSession({workspace: uniqueWorkspace()})
 
@@ -112,7 +111,7 @@ describe('AgentEngine 可观测性埋点', () => {
 			const engine = AgentEngine.create({
 				systemPrompt: '测试',
 				metricsProvider,
-			} as any)
+			})
 
 			await engine.createSession({workspace: uniqueWorkspace()})
 			await engine.createSession({workspace: uniqueWorkspace()})
@@ -132,7 +131,7 @@ describe('AgentEngine 可观测性埋点', () => {
 			const engine = AgentEngine.create({
 				systemPrompt: '测试',
 				metricsProvider,
-			} as any)
+			})
 
 			const sessionId = await engine.createSession({workspace: uniqueWorkspace()})
 			await engine.destroySession(sessionId)
@@ -158,7 +157,7 @@ describe('AgentEngine 可观测性埋点', () => {
 			engine = AgentEngine.create({
 				systemPrompt: '测试',
 				metricsProvider,
-			} as any)
+			})
 		})
 
 		test('query 记录 query.started 计数', async () => {
@@ -216,7 +215,7 @@ describe('AgentEngine 可观测性埋点', () => {
 			const engine = AgentEngine.create({
 				systemPrompt: '测试',
 				metricsProvider,
-			} as any)
+			})
 
 			// 模拟 tool_use 事件
 			const eventBus = engine.getEventBus()
@@ -245,7 +244,7 @@ describe('AgentEngine 可观测性埋点', () => {
 			const engine = AgentEngine.create({
 				systemPrompt: '测试',
 				metricsProvider,
-			} as any)
+			})
 
 			// 模拟 tool_use 和 tool_result 事件
 			const eventBus = engine.getEventBus()
@@ -275,7 +274,7 @@ describe('AgentEngine 可观测性埋点', () => {
 			const engine = AgentEngine.create({
 				systemPrompt: '测试',
 				metricsProvider,
-			} as any)
+			})
 
 			const eventBus = engine.getEventBus()
 			eventBus.emit('tool_use', {toolName: 'ToolA', input: {}})
@@ -313,7 +312,7 @@ describe('AgentEngine 可观测性埋点', () => {
 			const engine = AgentEngine.create({
 				systemPrompt: '测试',
 				metricsProvider: NoOpMetricsProvider.getInstance(),
-			} as any)
+			})
 
 			const sessionId = await engine.createSession({workspace: uniqueWorkspace()})
 
@@ -330,7 +329,7 @@ describe('AgentEngine 可观测性埋点', () => {
 				systemPrompt: '测试',
 				tracingProvider: NoOpTracingProvider.getInstance(),
 				metricsProvider: NoOpMetricsProvider.getInstance(),
-			} as any)
+			})
 
 			const sessionId = await engine.createSession({workspace: uniqueWorkspace()})
 
@@ -362,7 +361,7 @@ describe('AgentEngine 可观测性埋点', () => {
 			const engine = AgentEngine.create({
 				systemPrompt: '测试',
 				metricsProvider,
-			} as any)
+			})
 
 			const sessionId = await engine.createSession({workspace: uniqueWorkspace()})
 

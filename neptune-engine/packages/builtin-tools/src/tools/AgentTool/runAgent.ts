@@ -11,7 +11,7 @@ import {
 } from 'src/constants/prompts.js'
 import type {QuerySource} from 'src/constants/querySource.js'
 import {getSystemContext, getUserContext} from 'src/context.js'
-import type {CanUseToolFn} from '../../../../../../neptune-cli/src/hooks/useCanUseTool'
+import type {CanUseToolFn} from '../../../../../src/ui/hooks/useCanUseTool'
 import {query} from 'src/query.js'
 import {getFeatureValue_CACHED_MAY_BE_STALE} from 'src/services/analytics/growthbook.js'
 import {getDumpPromptsPath} from 'src/services/api/dumpPrompts.js'

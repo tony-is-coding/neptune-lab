@@ -179,7 +179,7 @@ export const init = memoize(async (): Promise<void> => {
 		if (isEnvTruthy(process.env.CLAUDE_CODE_REMOTE)) {
 			try {
 				const {initUpstreamProxy, getUpstreamProxyEnv} = await import(
-					'../../../neptune-cli/src/upstreamproxy/upstreamproxy.js'
+					'../ui/upstreamproxy/upstreamproxy.js'
 					)
 				const {registerUpstreamProxyEnvFn} = await import(
 					'../utils/subprocessEnv.js'
@@ -238,7 +238,7 @@ export const init = memoize(async (): Promise<void> => {
 			}
 
 			// Show the invalid config dialog with the error object and wait for it to complete
-			return import('../../../neptune-cli/src/components/InvalidConfigDialog.js').then(m =>
+			return import('../ui/components/InvalidConfigDialog.js').then(m =>
 				m.showInvalidConfigDialog({error}),
 			)
 			// Dialog itself handles process.exit, so we don't need additional cleanup here

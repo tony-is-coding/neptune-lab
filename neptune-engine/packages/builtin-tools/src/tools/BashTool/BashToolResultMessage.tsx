@@ -1,9 +1,9 @@
 import React from 'react'
 import {removeSandboxViolationTags} from 'src/utils/sandbox/sandbox-ui-utils.js'
 import {KeyboardShortcutHint} from '@anthropic/ink'
-import {MessageResponse} from '../../../../../../neptune-cli/src/components/MessageResponse'
-import {OutputLine} from '../../../../../../neptune-cli/src/components/shell/OutputLine'
-import {ShellTimeDisplay} from '../../../../../../neptune-cli/src/components/shell/ShellTimeDisplay'
+import {MessageResponse} from '../../../../../src/ui/components/MessageResponse'
+import {OutputLine} from '../../../../../src/ui/components/shell/OutputLine'
+import {ShellTimeDisplay} from '../../../../../src/ui/components/shell/ShellTimeDisplay'
 import {Box, Text} from '@anthropic/ink'
 import type {Out as BashOut} from './BashTool.js'
 

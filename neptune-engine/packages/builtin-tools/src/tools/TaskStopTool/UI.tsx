@@ -1,5 +1,5 @@
 import React from 'react'
-import {MessageResponse} from '../../../../../../neptune-cli/src/components/MessageResponse'
+import {MessageResponse} from '../../../../../src/ui/components/MessageResponse'
 import {Text, stringWidth} from '@anthropic/ink'
 import {truncateToWidthNoEllipsis} from 'src/utils/format.js'
 import type {Output} from './TaskStopTool.js'

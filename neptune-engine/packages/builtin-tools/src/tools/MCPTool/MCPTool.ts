@@ -2,7 +2,7 @@ import {z} from 'zod/v4'
 import {buildTool, type ToolDef} from 'src/Tool.js'
 import {lazySchema} from 'src/utils/lazySchema.js'
 import type {PermissionResult} from 'src/utils/permissions/PermissionResult.js'
-import {isOutputLineTruncated} from '../../../../../../neptune-cli/src/terminal'
+import {isOutputLineTruncated} from '../../../../../src/ui/terminal'
 import {DESCRIPTION, PROMPT} from './prompt.js'
 import {
 	renderToolResultMessage,

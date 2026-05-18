@@ -661,7 +661,7 @@ export async function teleportResumeCodeSession(
 
 
 // NOTE: handleTeleportPrerequisites and teleportToRemoteWithErrorHandling
-// have been moved to neptune-cli/src/teleportUI.tsx (CLI UI dependency)
+// have been moved to src/ui/components/ (UI dependency)
 
 /**
  * Teleport to a remote session using the Sessions API.
