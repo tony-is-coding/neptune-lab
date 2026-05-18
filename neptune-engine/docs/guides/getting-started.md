@@ -524,7 +524,7 @@ const engine = AgentEngine.create({
 
 - 查看 [API 文档](./api/) 了解完整 API
 - 浏览 [示例代码](./examples/) 学习更多用法
-- 阅读 [架构设计](./architecture-design.md) 了解实现细节
-- 查看 [项目目标](./project-purpose.md) 了解项目愿景
+- 阅读 [架构设计](../architecture.md) 了解实现细节
+- 查看 [项目目标](../architecture.md#一项目目标) 了解项目愿景
 
 有问题或建议？欢迎提交 Issue 或 PR！

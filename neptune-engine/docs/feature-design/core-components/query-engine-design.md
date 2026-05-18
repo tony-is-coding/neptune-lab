@@ -4,7 +4,7 @@
 
 > **说明**：本文档是对 Claude Code 原始 QueryEngine（`src/QueryEngine.ts` + `src/query.ts`）的分析文档。
 > 我们**直接使用**原始 QueryEngine，不自建替代。AgentEngine 通过桥接层调用原始 QueryEngine.submitMessage()。
-> 详见 [架构设计 — 包装不替代原则](../../architecture-design.md)。
+> 详见 [架构设计 — 包装不替代原则](../../architecture.md)。
 
 ---
 

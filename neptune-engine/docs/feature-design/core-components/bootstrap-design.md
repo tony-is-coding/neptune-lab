@@ -201,7 +201,7 @@ const sessionId = await engine.createSession({ workspace: '/tmp/test' })
 
 ## 七、相关文档
 
-- [架构设计](../../architecture-design.md) — 整体架构分层与模块职责
+- [架构设计](../../architecture.md) — 整体架构分层与模块职责
 - [Engine Facade 设计](engine-facade-design.md) — Session 管理门面详细设计
 - [Event Bus 设计](event-bus-design.md) — 事件总线详细设计
 - [Extension 模型设计](extension-model-design.md) — Tool/Skill 扩展点设计

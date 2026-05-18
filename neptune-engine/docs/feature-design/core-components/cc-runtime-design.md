@@ -342,7 +342,7 @@ console.assert(runtime === mock, 'Should use mock runtime')
 
 ## 十、相关文档
 
-- [架构设计文档](../../../architecture-design.md)
+- [架构设计文档](../../architecture.md)
 - [分层架构标准](../../../architecture-layering-standard.md)
 - [SessionContext 设计文档](./session-context-design.md)（待创建）
 - [Bootstrap 设计文档](./bootstrap-design.md)

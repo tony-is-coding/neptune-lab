@@ -235,6 +235,6 @@ const state: EngineStateData = engineState.data
 
 ## 七、相关文档
 
-- [架构设计文档](../../../architecture-design.md)
+- [架构设计文档](../../architecture.md)
 - [分层架构标准](../../../architecture-layering-standard.md)
 - [AppState 解耦优化](../../../../auto-upgrade/v5/01-optimizer-research.md#优化-6appstate-解耦)
