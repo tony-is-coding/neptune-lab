@@ -7,12 +7,12 @@
 
 import * as React from 'react'
 import type {ToolResultBlockParam} from '@anthropic-ai/sdk/resources/messages/messages.mjs'
-import {FallbackToolUseErrorMessage} from '../../../../../../neptune-cli/src/components/FallbackToolUseErrorMessage'
+import {FallbackToolUseErrorMessage} from '../../../../../src/ui/components/FallbackToolUseErrorMessage'
 import {
 	FallbackToolUseRejectedMessage
-} from '../../../../../../neptune-cli/src/components/FallbackToolUseRejectedMessage'
+} from '../../../../../src/ui/components/FallbackToolUseRejectedMessage'
 import {Box, Text} from '@anthropic/ink'
-import {useShortcutDisplay} from '../../../../../../neptune-cli/src/keybindings/useShortcutDisplay'
+import {useShortcutDisplay} from '../../../../../src/ui/keybindings/useShortcutDisplay'
 import type {TaskType} from 'src/Task.js'
 import {jsonParse} from 'src/utils/slowOperations.js'
 import type {ThemeName} from 'src/utils/theme.js'

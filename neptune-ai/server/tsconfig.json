@@ -21,5 +21,5 @@
     }
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "../../neptune-engine", "../../neptune-cli"]
+  "exclude": ["node_modules", "../../neptune-engine"]
 }

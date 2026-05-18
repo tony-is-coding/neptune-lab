@@ -115,7 +115,7 @@ export const ConfigTool = buildTool({
 		// voiceEnabled as an unknown setting so no voice-specific strings leak.
 		if (feature('VOICE_MODE') && setting === 'voiceEnabled') {
 			const {isVoiceGrowthBookEnabled} = await import(
-				'../../../../../../neptune-cli/src/voice/voiceModeEnabled.js'
+				'../../../../../src/ui/voice/voiceModeEnabled.js'
 				)
 			if (!isVoiceGrowthBookEnabled()) {
 				return {
@@ -235,7 +235,7 @@ export const ConfigTool = buildTool({
 			finalValue === true
 		) {
 			const {isVoiceModeEnabled} = await import(
-				'../../../../../../neptune-cli/src/voice/voiceModeEnabled.js'
+				'../../../../../src/ui/voice/voiceModeEnabled.js'
 				)
 			if (!isVoiceModeEnabled()) {
 				const {isAnthropicAuthEnabled} = await import('src/utils/auth.js')

@@ -6,22 +6,22 @@ import type {
 
 type BetaContentBlock = ContentBlock | ToolResultBlockParam
 import * as React from 'react'
-import {ConfigurableShortcutHint} from '../../../../../../neptune-cli/src/components/ConfigurableShortcutHint'
+import {ConfigurableShortcutHint} from '../../../../../src/ui/components/ConfigurableShortcutHint'
 import {
 	CtrlOToExpand,
 	SubAgentProvider,
-} from '../../../../../../neptune-cli/src/components/CtrlOToExpand'
+} from '../../../../../src/ui/components/CtrlOToExpand'
 import {Byline, KeyboardShortcutHint} from '@anthropic/ink'
 import type {z} from 'zod/v4'
-import {AgentProgressLine} from '../../../../../../neptune-cli/src/components/AgentProgressLine'
-import {FallbackToolUseErrorMessage} from '../../../../../../neptune-cli/src/components/FallbackToolUseErrorMessage'
+import {AgentProgressLine} from '../../../../../src/ui/components/AgentProgressLine'
+import {FallbackToolUseErrorMessage} from '../../../../../src/ui/components/FallbackToolUseErrorMessage'
 import {
 	FallbackToolUseRejectedMessage
-} from '../../../../../../neptune-cli/src/components/FallbackToolUseRejectedMessage'
-import {Markdown} from '../../../../../../neptune-cli/src/components/Markdown'
-import {Message as MessageComponent} from '../../../../../../neptune-cli/src/components/Message'
-import {MessageResponse} from '../../../../../../neptune-cli/src/components/MessageResponse'
-import {ToolUseLoader} from '../../../../../../neptune-cli/src/components/ToolUseLoader'
+} from '../../../../../src/ui/components/FallbackToolUseRejectedMessage'
+import {Markdown} from '../../../../../src/ui/components/Markdown'
+import {Message as MessageComponent} from '../../../../../src/ui/components/Message'
+import {MessageResponse} from '../../../../../src/ui/components/MessageResponse'
+import {ToolUseLoader} from '../../../../../src/ui/components/ToolUseLoader'
 import {Box, Text} from '@anthropic/ink'
 import {getDumpPromptsPath} from 'src/services/api/dumpPrompts.js'
 import {findToolByName, type Tools} from 'src/Tool.js'

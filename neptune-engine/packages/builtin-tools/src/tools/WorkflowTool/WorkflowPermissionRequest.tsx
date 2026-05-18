@@ -4,15 +4,15 @@ import {getTheme} from 'src/utils/theme.js'
 import {env} from 'src/utils/env.js'
 import {shouldShowAlwaysAllowOptions} from 'src/utils/permissions/permissionsLoader.js'
 import {logUnaryEvent} from 'src/utils/unaryLogging.js'
-import {PermissionDialog} from '../../../../../../neptune-cli/src/components/permissions/PermissionDialog'
+import {PermissionDialog} from '../../../../../src/ui/components/permissions/PermissionDialog'
 import {
 	PermissionPrompt,
 	type PermissionPromptOption,
-} from '../../../../../../neptune-cli/src/components/permissions/PermissionPrompt'
-import type {PermissionRequestProps} from '../../../../../../neptune-cli/src/components/permissions/PermissionRequest'
+} from '../../../../../src/ui/components/permissions/PermissionPrompt'
+import type {PermissionRequestProps} from '../../../../../src/ui/components/permissions/PermissionRequest'
 import {
 	PermissionRuleExplanation
-} from '../../../../../../neptune-cli/src/components/permissions/PermissionRuleExplanation'
+} from '../../../../../src/ui/components/permissions/PermissionRuleExplanation'
 
 type OptionValue = 'yes' | 'yes-dont-ask-again' | 'no'
 

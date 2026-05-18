@@ -22,7 +22,9 @@
 ## 关键目录
 
 - `src/` — 核心 SDK 源码（engine/ 为框架包装层）
-- `docs/` — 设计文档、API 文档
+- `docs/architecture.md` — 架构设计（唯一权威）
+- `docs/feature-design/` — 功能设计文档
+- `docs/guides/` — 使用指南
 
 ## 如何开发
 
