@@ -4,7 +4,7 @@
 > 最后更新：2026-04-29（V21 完成 · V7 技术债收尾 + V7.5 全局状态解耦）
 > 驱动方式：基于代码深度扫描发现的架构缺陷和优化点，推导执行路线图
 > 策略：先分离再治理，分阶段递进交付
-> 当前状态：V1-V7.5 ✅ 全部完成 · V8-V9 待启动
+> 当前状态：V1-V7.5 ✅ 全部完成
 > 架构纲领：[ARCHITECTURE.md](../ARCHITECTURE.md) — 项目定位 + 架构原则 + 目标架构 + 研发规约
 
 ---
@@ -77,7 +77,7 @@ V6 完成了统一存储抽象。`engine/storage/`（18 文件）现在包含：
 - `IMemoryStore` + InMemory 实现
 - `ISessionContentStore` + InMemory 实现
 
-**遗留**：无 PG/Redis Backend 实现。分布式场景需 V8 推进。
+**遗留**：无 PG/Redis Backend 实现。当前不在项目范畴内。
 
 ### 缺陷 8：日志仅文本格式，无结构化输出
 
@@ -134,10 +134,8 @@ V6 完成了统一存储抽象。`engine/storage/`（18 文件）现在包含：
               V6 状态外化+可观测性  → 为分布式部署奠基
               ──── V6 100% 完成（V18 实现）────
               V7 SDK成熟度+技术债+启动路径统一 → 生产级成熟度
-              V7.5 全局状态解耦     → 为无状态化奠基（V8 前置）
-              V8 分布式基础设施     → 多实例部署能力
-              V9 可观测性导出+生产加固 → 生产就绪
-| M9 | V9 完成 | 可观测性导出 + 生产加固 | 📋 待启动 |
+              V7.5 全局状态解耦     → SDK 具备云无状态化基础
+              ──── V7.5 100% 完成 ────
 
 ---
 
@@ -263,20 +261,12 @@ V1 CLI外化 ──→ V2 分层治理 ──→ V3 能力补齐
                                                     │
                                               V7.5 全局状态解耦
                                               (bootstrap/state → SessionContext ALS)
-                                                    │
-                                              V8 分布式基础设施
-                                              (PG/Redis Backend + 分布式锁)
-                                                    │
-                                              V9 可观测性导出 + 生产加固
-                                              (OTLP/Prometheus + 模型路由)
 ```
 
 - V1-V5 完成里程碑 M1-M5（SDK 核心构建 + 交付验收）
 - V6 完成里程碑 M6（状态外化 + 可观测性 + 配置归一化）
 - V7 清除技术债 + 启动路径统一，SDK 达到生产级成熟度
-- V7.5 全局状态解耦，SDK 具备云无状态化基础（V8 硬性前置）
-- V8 建立分布式基础设施，支持多实例部署
-- V9 可观测性真实导出，SDK 生产就绪
+- V7.5 全局状态解耦，SDK 具备云无状态化基础（当前路线图终点）
 
 ---
 
@@ -377,12 +367,10 @@ V6 ✅ 状态外化 + 可观测性 + 配置归一化（V18 实现）
  ↓
 V7 📋 SDK 成熟度 + 技术债清理
  ↓
-V8 📋 分布式基础设施（PG/Redis + 分布式锁）
- ↓
-V9 📋 可观测性导出 + 生产加固（OTLP/Prometheus + 模型路由）
+V7.5 📋 全局状态解耦（当前路线图终点）
 ```
 
-V6 是 M6 里程碑的基础版本。V7 清除技术债后，V8 建立分布式基础设施，V9 完成生产加固。
+V6 是 M6 里程碑的基础版本。V7 清除技术债后，V7.5 完成全局状态解耦，SDK 具备云无状态化基础。
 
 ### 门禁条件
 
@@ -510,7 +498,7 @@ V1-V19 完成了 SDK 核心能力构建，但积累了以下技术债：
 ### 回退建议
 
 - KR3 失败 → 穿透依赖不阻塞，可降至 < 70 继续推进
-- KR5 失败 → lint:layers 可延后到 V8
+- KR5 失败 → lint:layers 可延后，不阻塞核心交付
 - KR9 失败 → `validateEngineConfig` 先移出即可，initializeEngine 删除可延后
 - KR11 失败 → EngineFacade 可保留，不影响核心功能，作为技术债记录
 
@@ -520,7 +508,7 @@ V1-V19 完成了 SDK 核心能力构建，但积累了以下技术债：
 
 > **里程碑**：M7.5 — 消除全局状态单例，SDK 具备云无状态化基础
 > **前置条件**：V7 完成（SDK 成熟度 + 启动路径统一）
-> **定位**：V8 分布式基础设施的**硬性前置**——不解耦全局状态，多实例部署无法实现
+> **定位**：消除全局状态单例，SDK 具备云无状态化基础
 
 ### 背景与问题
 
@@ -612,98 +600,3 @@ Phase 3（KR4-KR5）：完善 + 降级审计
 - KR2 失败 → 保留 `getXxx()` 的全局 STATE 读取作为 fallback，新增 `getXxxFromContext()` 函数渐进替换
 - KR3 失败 → 成本/Token 指标可在 query 结束时聚合到 ISessionStore，不必实时写入 SessionContext
 - KR5 失败 → 审计可延后，per-session 字段逐步迁移即可
-
-### 对后续版本的影响
-
-**V8 前置依赖**：V7.5 KR1+KR2 是 V8 的硬性准入条件。不解耦全局状态：
-- 多实例部署时 STATE 会被最后一个实例覆盖
-- Session 恢复时无法区分不同 session 的上下文
-- 分布式锁无法保护正确的作用域
-
-**V9 受益**：可观测性导出（OTLP/Prometheus）需要 per-session 的 trace/metrics 上下文传播，SessionContext ALS 化后 traceId/sessionId 可自动传播。
-
----
-
-## 十三、V8：分布式基础设施
-
-> **里程碑**：M8 — SDK 具备多实例部署能力
-> **前置条件**：V7 完成（SDK 成熟度） + **V7.5 完成（全局状态解耦）**
-
-### 背景与问题
-
-V6 完成了状态外化（IBackend + InMemory/Filesystem/Composite），但存储后端只有本地实现。多实例部署需要：
-1. **PG/Redis Backend**：多实例共享 Session 状态
-2. **分布式锁**：多实例并发写同一 Session 时防冲突
-3. **Session 迁移**：实例故障时 Session 可被其他实例接管
-
-### Objective
-
-SDK 具备多实例部署能力，支持 PG/Redis 存储，Session 可跨实例恢复。
-
-### Key Results
-
-| # | Key Result | 优先级 | 验证标准 |
-|---|-----------|--------|---------|
-| KR1 | **PostgreSQL Backend** | P0 | ISessionStore 接口对接 PostgreSQL，CRUD + list 验证通过 |
-| KR2 | **Redis Backend** | P1 | 高频读写场景（activeQueries/sessions 缓存）对接 Redis |
-| KR3 | **分布式锁接口 + 实现** | P0 | ILock 接口 + RedisLock 实现，多实例并发写保护验证通过 |
-| KR4 | **Session 迁移机制** | P1 | 实例故障时 Session 可被其他实例重建，数据完整性验证通过 |
-| KR5 | **分布式集成测试** | P1 | 2+ 实例共享状态，并发操作无冲突 |
-
-### 架构决策
-
-| 决策 | 选择 | 理由 |
-|------|------|------|
-| PG 库 | pg (node-postgres) | 生态成熟，TypeScript 支持好 |
-| Redis 库 | ioredis | 性能优，支持 Lua 脚本（分布式锁） |
-| 锁实现 | Redlock 算法 | 多实例安全，无单点故障 |
-
-### 门禁条件
-
-1. KR1 通过（PG Backend 可用）
-2. KR3 通过（分布式锁可用）
-3. KR5 通过（多实例集成测试通过）
-
-### 回退建议
-
-- KR1 失败 → 先用 SQLite 网络挂载共享，PG 可延后
-- KR4 失败 → Session 迁移可降级为"最后 N 次 Session 可恢复"
-
----
-
-## 十四、V9：可观测性导出 + 生产加固
-
-> **里程碑**：M9 — SDK 生产就绪
-> **前置条件**：V8 完成（分布式基础设施）
-
-### 背景与问题
-
-V6 完成了可观测性接口（ITracingProvider/IMetricsProvider），但只有 NoOp 和 InMemory 实现。生产环境需要真实导出：
-1. **OTLP Tracing**：链路追踪数据可被 Jaeger/Tempo 消费
-2. **Prometheus Metrics**：指标可被 Prometheus 抓取
-3. **模型路由**：根据任务特征自动选择最优 Provider/Model
-4. **性能基线**：建立性能指标基线，支撑容量规划
-
-### Objective
-
-可观测性具备真实导出能力，模型路由就绪，SDK 通过生产级压力测试。
-
-### Key Results
-
-| # | Key Result | 优先级 | 验证标准 |
-|---|-----------|--------|---------|
-| KR1 | **OTLP Tracing 导出** | P0 | OpenTelemetry Protocol 导出，Jaeger/Tempo 可消费 |
-| KR2 | **Prometheus Metrics 导出** | P0 | /metrics 端点暴露，Prometheus 可抓取 |
-| KR3 | **模型路由策略接口** | P1 | IModelRouter 接口 + TaskTypeRouter 默认实现（按任务特征选 Provider） |
-| KR4 | **生产级 Provider 调优** | P2 | 超时/重试/熔断参数可配置化，默认值基于生产负载调优 |
-| KR5 | **压力测试 + 性能基线** | P1 | 10 并发 Session、单 Session < 100MB、Session 切换 < 100ms |
-
-### 门禁条件
-
-1. KR1 通过（Tracing 可被外部系统消费）
-2. KR5 通过（性能指标达标）
-
-### 回退建议
-
-- KR1 失败 → 先用 ConsoleTracingProvider 过渡
-- KR3 失败 → 模型路由可延后，手动配置 Provider 已可用
