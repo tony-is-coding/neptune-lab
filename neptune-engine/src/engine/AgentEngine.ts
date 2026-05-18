@@ -58,6 +58,10 @@ import type {ISessionContentStore} from './storage/ISessionContentStore.js'
 import {InMemorySessionContentStore} from './storage/InMemorySessionContentStore.js'
 import type {QueryEvent, SDKMessage} from './types/query-events.js'
 import type {EngineEventMap} from './types/engine-events.js'
+import type {ITracingProvider} from './observability/ITracingProvider.js'
+import type {IMetricsProvider} from './observability/IMetricsProvider.js'
+import {NoOpTracingProvider} from './observability/NoOpTracingProvider.js'
+import {NoOpMetricsProvider} from './observability/NoOpMetricsProvider.js'
 import {LogUtil} from './log/LogUtil.js'
 import {asSessionId} from './types/ids.js'
 import type {
@@ -252,6 +256,10 @@ export interface AgentEngineConfig {
 	sessionStore?: ISessionStore
 	/** Session 内容存储（可选，默认使用 InMemorySessionContentStore） */
 	sessionContentStore?: ISessionContentStore
+	/** Tracing Provider（可选，默认使用 NoOpTracingProvider） */
+	tracingProvider?: ITracingProvider
+	/** Metrics Provider（可选，默认使用 NoOpMetricsProvider） */
+	metricsProvider?: IMetricsProvider
 }
 
 /**
@@ -328,6 +336,10 @@ export class AgentEngine {
 	private sessionContentStore: ISessionContentStore
 	/** Session 持久化存储（可选） */
 	private sessionStore?: ISessionStore
+	/** Tracing Provider */
+	private tracingProvider: ITracingProvider
+	/** Metrics Provider */
+	private metricsProvider: IMetricsProvider
 
 	private constructor(sessionManager: SessionManager, eventBus: EventBus, config: AgentEngineConfig, ccRuntime: CCRuntime) {
 		this.sessionManager = sessionManager
@@ -336,6 +348,11 @@ export class AgentEngine {
 		this.ccRuntime = ccRuntime
 		this.sessionContentStore = config.sessionContentStore ?? new InMemorySessionContentStore()
 		this.sessionStore = config.sessionStore
+		this.tracingProvider = config.tracingProvider ?? NoOpTracingProvider.getInstance()
+		this.metricsProvider = config.metricsProvider ?? NoOpMetricsProvider.getInstance()
+
+		// Register metrics event listeners
+		this.setupMetricsListeners()
 	}
 
 	// ========== 静态工厂 ==========
@@ -426,6 +443,7 @@ export class AgentEngine {
 
 		// 生命周期事件：Session 创建成功
 		this.eventBus.emit('session:created', {sessionId, workspace})
+		this.metricsProvider.counter('session.created').increment()
 
 		return sessionId
 	}
@@ -519,6 +537,7 @@ export class AgentEngine {
 		if (workspace) {
 			this.eventBus.emit('session:destroyed', {sessionId, workspace})
 		}
+		this.metricsProvider.counter('session.destroyed').increment()
 	}
 
 	// ========== 会话恢复 ==========
@@ -641,6 +660,7 @@ export class AgentEngine {
 
 		// 标记 session 为活跃状态
 		this.activeQueries.set(sessionId, true)
+		this.metricsProvider.counter('query.started').increment()
 
 		try {
 			// 1. 验证 session 存在且可用
@@ -756,8 +776,10 @@ export class AgentEngine {
 					}
 				}),
 			)
+		} catch (error) {
+			this.metricsProvider.counter('query.failed').increment()
+			throw error
 		} finally {
-			// 发送 query:complete 事件（在清理前）
 			const ctx = this.sessionContexts.get(sessionId)
 			if (ctx && Object.keys(ctx.modelUsage).length > 0) {
 				try {
@@ -959,6 +981,26 @@ export class AgentEngine {
 	}
 
 	// ========== 内部方法 ==========
+
+	/**
+	 * 注册 metrics 事件监听器（tool_use / tool_result）
+	 */
+	private setupMetricsListeners(): void {
+		this.eventBus.on('tool_use', (payload: unknown) => {
+			const p = payload as { toolName?: string }
+			this.metricsProvider.counter('tool.execution').increment()
+			if (p?.toolName) {
+				this.metricsProvider.counter(`tool.execution.${p.toolName}`).increment()
+			}
+		})
+		this.eventBus.on('tool_result', (payload: unknown) => {
+			const p = payload as { toolName?: string }
+			this.metricsProvider.counter('tool.completed').increment()
+			if (p?.toolName) {
+				this.metricsProvider.counter(`tool.completed.${p.toolName}`).increment()
+			}
+		})
+	}
 
 	private assertNotDestroyed(): void {
 		if (this.destroyed) {
