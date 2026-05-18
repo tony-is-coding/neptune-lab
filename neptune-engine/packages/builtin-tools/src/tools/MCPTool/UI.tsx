@@ -3,11 +3,11 @@ import figures from 'figures'
 import * as React from 'react'
 import type {z} from 'zod/v4'
 import {ProgressBar} from '@anthropic/ink'
-import {MessageResponse} from '../../../../../../neptune-cli/src/components/MessageResponse'
+import {MessageResponse} from '../../../../../src/ui/components/MessageResponse'
 import {
 	linkifyUrlsInText,
 	OutputLine,
-} from '../../../../../../neptune-cli/src/components/shell/OutputLine'
+} from '../../../../../src/ui/components/shell/OutputLine'
 import {Ansi, Box, Text, stringWidth} from '@anthropic/ink'
 import {createHyperlink} from 'src/utils/hyperlink.js'
 import type {ToolProgressData} from 'src/Tool.js'

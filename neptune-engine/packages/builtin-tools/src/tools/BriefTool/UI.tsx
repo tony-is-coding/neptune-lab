@@ -1,6 +1,6 @@
 import figures from 'figures'
 import React from 'react'
-import {Markdown} from '../../../../../../neptune-cli/src/components/Markdown'
+import {Markdown} from '../../../../../src/ui/components/Markdown'
 import {BLACK_CIRCLE} from 'src/constants/figures.js'
 import {Box, Text} from '@anthropic/ink'
 import type {ProgressMessage} from 'src/types/message.js'

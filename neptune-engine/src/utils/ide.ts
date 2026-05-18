@@ -31,8 +31,8 @@ import {lt} from './semver.js'
 // Lazy: IdeOnboardingDialog.tsx pulls React/ink; only needed in interactive onboarding path
 /* eslint-disable @typescript-eslint/no-require-imports */
 const ideOnboardingDialog =
-	(): typeof import('../../../neptune-cli/src/components/IdeOnboardingDialog.js') =>
-		require('../../../neptune-cli/src/components/IdeOnboardingDialog.js')
+	(): typeof import('../ui/components/IdeOnboardingDialog.js') =>
+		require('../ui/components/IdeOnboardingDialog.js')
 
 import {createAbortController} from './abortController.js'
 import {logForDebugging} from './debug.js'

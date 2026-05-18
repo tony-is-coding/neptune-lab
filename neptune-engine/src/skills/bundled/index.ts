@@ -3,7 +3,7 @@ import {shouldAutoEnableClaudeInChrome} from 'src/utils/claudeInChrome/setup.js'
 import {registerBatchSkill} from './batch.js'
 import {registerClaudeInChromeSkill} from './claudeInChrome.js'
 import {registerDebugSkill} from './debug.js'
-// keybindings skill moved to CLI (neptune-cli/src/keybindings/bundledKeybindings.ts)
+// keybindings skill moved to UI layer (src/ui/keybindings/)
 import {registerLoremIpsumSkill} from './loremIpsum.js'
 import {registerRememberSkill} from './remember.js'
 import {registerSimplifySkill} from './simplify.js'

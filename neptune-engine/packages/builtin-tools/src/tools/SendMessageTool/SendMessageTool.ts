@@ -1,7 +1,7 @@
 import {feature} from 'bun:bundle'
 import {z} from 'zod/v4'
 import {isReplBridgeActive} from '../../../../../src/bootstrap/state.js'
-import {getReplBridgeHandle} from '../../../../../../neptune-cli/src/bridge/replBridgeHandle'
+import {getReplBridgeHandle} from '../../../../../src/ui/bridge/replBridgeHandle'
 import type {Tool, ToolUseContext} from '../../../../../src/Tool.js'
 import {buildTool, type ToolDef} from '../../../../../src/Tool.js'
 import {findTeammateTaskByAgentId} from '../../../../../src/tasks/InProcessTeammateTask/InProcessTeammateTask.js'
@@ -770,7 +770,7 @@ export const SendMessageTool: Tool<InputSchema, SendMessageToolOutput> =
 					}
 					/* eslint-disable @typescript-eslint/no-require-imports */
 					const {postInterClaudeMessage} =
-						require('../../../../../../neptune-cli/src/bridge/peerSessions') as typeof import('../../../../../../neptune-cli/src/bridge/peerSessions')
+						require('../../../../../src/ui/bridge/peerSessions') as typeof import('../../../../../src/ui/bridge/peerSessions')
 					/* eslint-enable @typescript-eslint/no-require-imports */
 					const result = await postInterClaudeMessage(
 						addr.target,

@@ -1,5 +1,5 @@
 import React from 'react'
-import {MessageResponse} from '../../../../../../neptune-cli/src/components/MessageResponse'
+import {MessageResponse} from '../../../../../src/ui/components/MessageResponse'
 import {Text} from '@anthropic/ink'
 import {jsonStringify} from 'src/utils/slowOperations.js'
 import type {Input, Output} from './ConfigTool.js'

@@ -39,7 +39,7 @@ import {
 	getSessionId,
 } from 'src/bootstrap/state.js'
 import {COMMAND_MESSAGE_TAG} from 'src/constants/xml.js'
-import type {CanUseToolFn} from '../../../../../../neptune-cli/src/hooks/useCanUseTool'
+import type {CanUseToolFn} from '../../../../../src/ui/hooks/useCanUseTool'
 import {
 	type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
 	type AnalyticsMetadata_I_VERIFIED_THIS_IS_PII_TAGGED,

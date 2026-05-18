@@ -1,5 +1,5 @@
 import React from 'react'
-import {MessageResponse} from '../../../../../../neptune-cli/src/components/MessageResponse'
+import {MessageResponse} from '../../../../../src/ui/components/MessageResponse'
 import {TOOL_SUMMARY_MAX_LENGTH} from 'src/constants/toolLimits.js'
 import {Box, Text} from '@anthropic/ink'
 import type {ProgressMessage} from 'src/types/message.js'
