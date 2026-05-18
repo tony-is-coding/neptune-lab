@@ -1,338 +1,515 @@
-# Agent Engine SDK — 架构与规范
+# Agent Engine 架构设计
 
-> 本文档是 SDK 的纲领性文件，定义了定位、架构原则、目标架构和研发规约。
-> 详细功能设计见 `docs/feature-design/`，执行路线图见 `docs/okr-roadmap.md`。
+> 更新时间：2026-04-29（V21 完成 · V7 技术债收尾 + V7.5 全局状态解耦）
+> 覆盖 `src/` 目录全部模块
+
+**核心文档**：
+- [SDK 纲领文档](./ARCHITECTURE.md) — 项目定位 + 架构原则 + 目标架构 + 研发规约（首要参考）
+- [OKR 路线图](okr-roadmap.md) — 版本交付计划与 KR 验收标准
 
 ---
 
-## 一、项目定位
+## 一、项目目标
 
-### 核心定义
+将 Claude Code 的核心 Agent 能力从 CLI 宿主中解耦，沉淀为通用 **Agent Engine SDK**，使其可以：
 
-将 Claude Code 的核心 Agent 能力从 CLI 宿主中解耦，沉淀为通用 **Agent Engine SDK**，使其可以嵌入任意应用。
+- 嵌入业务应用（Express/Koa/Electron）、随宿主进程启动
+- 被 CLI / Web / App 服务端复用，提供标准 Agent 能力
+- 支持多 Session 并发、暂停/恢复、事件监听
 
-### 三条底线原则
+核心原则：**包装不替代** — 框架的核心是扩展 Claude Code，不是从头构建。
+
+详细目标与用户画像见 [project-purpose.md](project-purpose.md)。
+
+---
+
+## 二、整体架构图
+
+### 2.1 架构全景图（框架内外分层）
+
+```
+╔══════════════════════════════════════════════════════════════════════════════════╗
+║                          ▲ 框架外 — 开发者应用 ▲                                ║
+║                                                                                  ║
+║   ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐        ║
+║   │  Web App │  │Desktop App│  │   CLI    │  │ 自动化脚本 │  │ 任务系统  │        ║
+║   │ Express  │  │ Electron │  │ readline │  │ CI/CD   │  │ 后台队列  │        ║
+║   │ Koa      │  │ Tauri    │  │ 交互式   │  │ 定时任务 │  │ BullMQ  │        ║
+║   └────┬─────┘  └────┬─────┘  └────┬─────┘  └────┬─────┘  └────┬─────┘        ║
+║        │              │              │              │              │              ║
+║   ┌────┴──────────────┴──────────────┴──────────────┴──────────────┘              ║
+║   │                     传输层 & 端侧实现（开发者自行构建）                         ║
+║   │   HTTP/REST · SSE · WebSocket · 进程内直调 · 标准输入输出                      ║
+║   └──────────────────────────┬───────────────────────────────────┘                ║
+║                              │ 调用 SDK                                          ║
+╠══════════════════════════════╪════════════════════════════════════════════════════╣
+║                              ▼                                                   ║
+║                  ┌───────────────────────┐                                       ║
+║                  │   AgentEngine SDK     │  框架对外的唯一接口                     ║
+║                  │                       │                                      ║
+║                  │  create(config)       │  静态工厂创建引擎                      ║
+║                  │  createSession()      │  创建会话                             ║
+║                  │  query(id, input)     │  执行查询 → AsyncGenerator<Message>   ║
+║                  │  on(type, handler)    │  事件监听（透传 CC 原始事件）            ║
+║                  │  loadSession()        │  从 transcript 恢复会话                ║
+║                  │  destroy()            │  销毁引擎                              ║
+║                  └───────────┬───────────┘                                       ║
+║                              │                                                   ║
+║  ┌───────────────────────────┼────────────────────────────────────────────────┐  ║
+║  │ ▼ 框架内 — 内部同心圆 ▼   │                                                │  ║
+║  │                           │                                                │  ║
+║  │  ┌────────────────────────┼──────────────────────────────────────────┐     │  ║
+║  │  │ Extension 扩展层（用户可选注入）                                      │     │  ║
+║  │  │                                                                      │     │  ║
+║  │  │  ToolExtension[]    用户自定义工具，适配为 CC Tool 类型              │     │  ║
+║  │  │  SkillExtension[]   用户自定义技能，加载到 workspace                │     │  ║
+║  │  │  systemPrompt       系统提示词（字符串或异步函数）                   │     │  ║
+║  │  │  memoryRoot         记忆存储根目录，支持用户级隔离                  │     │  ║
+║  │  │                                                                      │     │  ║
+║  │  │  → 未来可扩展：ContextHook / PermissionHook / Middleware ...         │     │  ║
+║  │  │                                                                      │     │  ║
+║  │  └─────────────────────────────────────────────────────────────────────┘     │  ║
+║  │                                                                              │  ║
+║  │  ┌───────────────────────────────────────────────────────────────────────┐   │  ║
+║  │  │ 框架核心层（我们的包装层）                          engine/ (172文件)  │   │  ║
+║  │  │                                                                       │   │  ║
+║  │  │  AgentEngine      统一入口：工厂、Session 管理、query、事件、生命周期  │   │  ║
+║  │  │  SessionManager   Session 注册表：并发限制、状态查询                  │   │  ║
+║  │  │  Session          纯数据实体：sessionId · workspace · status · meta   │   │  ║
+║  │  │  EventBus         发布/订阅事件总线：透传 CC Message + 生命周期事件   │   │  ║
+║  │  │  Bridge           构造 QueryEngineConfig，适配 Extension Tool         │   │  ║
+║  │  │  ToolAdapter      CoreTool/Tool 互转工具（通用适配器）                │   │  ║
+║  │  │                                                                       │   │  ║
+║  │  │  ─── 辅助模块 ─────────────────────────────────────────────────────   │   │  ║
+║  │  │  SessionStore     可选元数据持久化（InMemory / SQLite）               │   │  ║
+║  │  │  LogUtil          统一日志系统（收敛 console，结构化输出）            │   │  ║
+║  │  │  SkillLoader      将 SkillExtension 加载到 workspace/.claude/skills/ │   │  ║
+║  │  │  TranscriptParser JSONL 解析器（会话恢复 fallback）                  │   │  ║
+║  │  │  PermissionDelegate 权限委托（ReadOnly + RBAC + Audit）              │   │  ║
+║  │  │  ProviderAdapter  LLM Provider 适配（7 Provider + CircuitBreaker）   │   │  ║
+║  │  │  EngineState      零 React 核心状态                                  │   │  ║
+║  │  │  IBackend         通用存储抽象（InMemory/Filesystem/Composite）      │   │  ║
+║  │  │  ITracingProvider 可观测性接口（NoOp + InMemory 实现）               │   │  ║
+║  │  │  IConfigProvider  配置归一化（UnifiedConfig + Diagnostics）          │   │  ║
+║  │  │                                                                       │   │  ║
+║  │  └───────────────────────────────────────────────────────────────────────┘   │  ║
+║  │                                                                              │  ║
+║  │  ┌───────────────────────────────────────────────────────────────────────┐   │  ║
+║  │  │ CC 原始能力（直接使用，不改不替代）                                    │   │  ║
+║  │  │                                                                       │   │  ║
+║  │  │  QueryEngine.ts  对话状态管理器 (1320行)                             │   │  ║
+║  │  │  query.ts        核心 Agent Loop：LLM API 流式调用、工具调度 (1773行)│   │  ║
+║  │  │  tools.ts + /*   55+ 内置工具：FileEdit · Bash · Grep · Agent ...    │   │  ║
+║  │  │  canUseTool()    权限检查：用户授权、工具白名单                       │   │  ║
+║  │  │  transcript.jsonl 会话内容持久化：仅追加、parent-UUID 链              │   │  ║
+║  │  │  context.ts      上下文构建：git status · CLAUDE.md · memory         │   │  ║
+║  │  │  services/api/*  多 Provider：Anthropic · OpenAI · Gemini · Grok     │   │  ║
+║  │  │  AppState        应用状态：消息历史、工具列表、权限状态              │   │  ║
+║  │  │                                                                       │   │  ║
+║  │  └───────────────────────────────────────────────────────────────────────┘   │  ║
+║  └──────────────────────────────────────────────────────────────────────────────┘  ║
+║  ▲ 框架内 ▲                                                                        ║
+╚════════════════════════════════════════════════════════════════════════════════════╝
+
+图例：
+  ╔══╗ 框架外边界    ║═║ 框架内边界    ┌──┐ 同心圆层
+  SDK   唯一交互入口 — 开发者通过 SDK 与框架交互，不直接接触内部实现
+```
+
+### 2.2 模块依赖关系（src/ 内部完整依赖链）
+
+```
+AgentEngine (SDK 入口) ─ engine/AgentEngine.ts
+├── SessionManager ─ engine/SessionManager.ts
+│   │   ├── Session (纯数据实体)
+│   │   ├── SessionStore ─ engine/storage/
+│   │   │   ├── InMemorySessionStore
+│   │   │   └── SQLiteSessionStore
+│   │   ├── SessionContext ─ engine/session/SessionContext.ts (AsyncLocalStorage)
+│   │   ├── TokenBudgetManager ─ engine/session/TokenBudgetManager.ts
+│   │   └── TranscriptParser ─ engine/session/TranscriptParser.ts
+│   ├── EventBus ─ engine/events/EventBus.ts (推+拉双路)
+│   ├── OriginalQueryEngineBridge ─ engine/bridge/
+│   │   └── CCRuntime ─ engine/cc-runtime/ (统一访问 CC 内部模块)
+│   │       └── QueryEngine.ts (CC 原始对话状态管理)
+│   │           └── query.ts (CC 原始 Agent Loop)
+│   │               ├── services/api/claude.ts (LLM API 流式调用)
+│   │               │   ├── services/api/withRetry.ts (重试策略)
+│   │               │   └── utils/auth.ts → Provider 路由
+│   │               ├── services/compact/compact.ts (上下文压缩)
+│   │               ├── services/tools/toolExecution.ts (工具执行调度)
+│   │               │   └── Tool.ts → tools.ts → @claude-code-best/builtin-tools (55+ 工具)
+│   │               ├── utils/systemPromptType.ts (系统提示词)
+│   │               ├── memdir/memdir.ts (记忆加载)
+│   │               └── bootstrap/state.ts (进程全局状态)
+│   ├── ProviderAdapter ─ engine/provider/（V19 运行时已接入）
+│   │   ├── AnthropicProvider → services/api/claude.ts (firstParty)
+│   │   ├── BedrockProvider → services/api/claude.ts (Bedrock SDK)
+│   │   ├── VertexProvider → services/api/claude.ts (Vertex SDK)
+│   │   ├── FoundryProvider → services/api/claude.ts (Foundry SDK)
+│   │   ├── OpenAIProvider → services/api/openai/ (Ollama/DeepSeek/vLLM)
+│   │   ├── GeminiProvider → services/api/gemini/
+│   │   ├── GrokProvider → services/api/grok/
+│   │   ├── CircuitBreaker → 熔断保护 + 指数退避重试
+│   │   └── ProviderConfigs → 7 Provider 独立配置类型（discriminated union）
+│   ├── IBackend ─ engine/storage/ (通用存储抽象)
+│   │   ├── InMemoryBackend (内存实现)
+│   │   ├── FilesystemBackend (文件系统实现，原子写入)
+│   │   ├── CompositeBackend (LRU 混合缓存路由)
+│   │   ├── ISessionStore + InMemory/SQLite 实现
+│   │   ├── IMemoryStore + InMemory 实现
+│   │   └── ISessionContentStore + InMemory 实现
+│   ├── OffloadStrategy ─ engine/context/ (上下文卸载)
+│   ├── PermissionDelegate ─ engine/permissions/
+│   │   ├── ReadOnlyPermissionDelegate (只读策略)
+│   │   ├── RBACPermissionDelegate (角色权限策略)
+│   │   └── AuditPermissionDelegate (审计日志策略)
+│   └── ToolAdapter ─ engine/tools/ToolAdapter.ts
+│       └── Tool.ts ↔ tools.ts (CoreTool/UITool 互转)
+├── EngineState ─ engine/types/CoreAppState.ts (零 React 核心状态)
+├── LogUtil ─ engine/log/ (结构化日志)
+│   ├── JsonLogFormatter (JSON 格式输出)
+│   └── MDC (上下文诊断信息传播)
+├── SkillLoader ─ engine/skill/ (SkillExtension → workspace)
+├── HookCore ─ engine/hooks/ (零 UI Hook 执行)
+├── Observability ─ engine/observability/
+│   ├── ITracingProvider (NoOpTracingProvider 零开销默认)
+│   └── IMetricsProvider (NoOpMetricsProvider + InMemoryMetricsProvider)
+├── ConfigProvider ─ engine/config/
+│   ├── IConfigProvider (NoOpConfigProvider)
+│   ├── UnifiedConfig (配置归一化)
+│   └── ConfigDiagnostics (配置诊断)
+├── CompatLayer ─ engine/compat/ (Feature Flag SDK 兼容)
+├── ContextOffload ─ engine/context/ (DefaultOffloadStrategy)
+└── Analytics ─ engine/analytics/ (NoOpAnalyticsSink)
+
+─── 支撑服务（被 CC 原始能力调用）───
+
+services/mcp/ ─── MCP 协议 (client/config/auth, 工具发现与注册)
+services/api/ ─── 多 Provider API (Claude/Bedrock/Vertex/OpenAI/Grok)
+services/compact/ ─── 上下文压缩 (auto-compact/micro-compact)
+services/tools/ ─── 工具执行引擎 (StreamingToolExecutor, hook 生命周期)
+services/analytics/ ─── 分析统计 (GrowthBook, 事件追踪)
+services/oauth/ ─── OAuth 2.0 PKCE 认证
+services/langfuse/ ─── Langfuse 可观测性
+services/SessionMemory/ ─── 会话记忆提取
+services/plugins/ ─── 插件管理
+
+utils/model/ ─── LLM 模型路由 (provider 选择、token 计费)
+utils/permissions/ ─── 权限规则 (canUseTool、规则匹配、危险检测)
+utils/hooks/ ─── Hook 系统 (注册表、HTTP/Prompt/Agent 执行器)
+utils/settings/ ─── 配置管理 (加载/验证/MDM)
+utils/git/ ─── Git 操作 (status/diff/blame)
+utils/auth.ts ─── 认证 (API Key/OAuth/3P)
+utils/config.ts ─── 全局/项目配置读写
+utils/bash/ ─── Bash 解析 (AST/管道/heredoc)
+utils/swarm/ ─── Swarm 多 Agent 编排
+utils/computerUse/ ─── 计算机使用 (截图/键鼠)
+utils/teleport/ ─── Teleport 远程会话
+utils/processUserInput/ ─── 用户输入处理 (斜杠命令/管道)
+utils/suggestions/ ─── 命令/目录补全
+utils/plugins/ ─── 插件加载/市场管理
+
+─── 基础层（被所有上层引用）───
+
+types/ ─── TypeScript 类型 (Command·Hook·Message·Tool·Permission·Plugin)
+constants/ ─── 全局常量 (prompts 55K行·apiLimits·oauth·betas)
+bootstrap/ ─── 启动引导 + state.ts 进程单例 (sessionId·CWD·projectRoot)
+```
+
+---
+
+## 三、架构设计原则
+
+> **真相来源**: [ARCHITECTURE-PRINCIPLES.md](../.claude/skills/improve-codebase-architecture/ARCHITECTURE-PRINCIPLES.md)
+> 以下为摘要视图，完整定义（含 Why/Scope/Since）见上方链接。
+
+### 强制原则（违反即阻塞）
 
 | # | 原则 | 说明 |
 |---|------|------|
-| 1 | **包装不替代** | 框架的核心是扩展 Claude Code，不是从头构建。Agent Loop / Query Engine 核心不改。 |
-| 2 | **最小改动现有代码** | 优先包裹和外扩，核心 agent loop 尽量不变。 |
-| 3 | **渐进式推进** | 每个版本做到位再继续，不设硬性截止时间。 |
+| P1 | **包装不替代** | 禁止自建 QueryEngine、工具 handler、LLM 调用层、权限系统、会话存储 |
+| P2 | **单向分层依赖** | L0 ← L1 ← L2 ← L3，禁止反向 import |
+| P3 | **核心状态零 React** | engine/ 和 state/AppStateStore 零 React 依赖 |
+| P4 | **事件完全透传** | 不自建事件模型，直接转发 CC 原始 Message |
+| P5 | **权限委托不硬编码** | 权限行为通过 PermissionDelegate 注入 |
 
-### 用户与场景
-
-| 用户类型 | 核心场景 |
-|----------|---------|
-| **SDK 集成者** | 嵌入 Agent 到 Express/Koa/Electron 应用，随宿主进程启动 |
-| **平台开发者** | 基于 SDK 构建上层平台（多租户、任务调度、权限管理） |
-| **CLI 维护者** | 维护现有 CLI（基于 SDK 的上层宿主） |
-| **DevOps/SRE** | 使用 SDK 构建自动化流水线、监控 Agent 执行 |
-
-### 终极目标
-
-`claude-code/` 目录只包含 SDK 核心代码。外部项目通过 workspace 引用即可使用 Agent 能力。SDK 做到可独立发布、零 UI 依赖、多 Session 并发。
-
----
-
-## 二、架构原则
-
-### 2.1 强制原则
-
-| # | 原则 | 说明 | 违反后果 |
-|---|------|------|---------|
-| A1 | **包装不替代** | Agent Loop / Query Engine / Tool System 核心不改，只做外包装 | 一票否决 |
-| A2 | **核心状态零 React** | engine/ 零 React 依赖，可在服务端/CI 独立运行 | 阻塞发布 |
-| A3 | **事件完全透传** | 不自建事件模型，直接转发 CC 原始 Message | 数据丢失 |
-| A4 | **归纳而非发明** | 基于现有代码归纳分层，不重新发明已有设计 | 过度设计 |
-| A5 | **状态外化** | SDK 不持有跨 query 的进程内状态，通过可插拔 StorageProvider 外化 | 无法分布 |
-| A6 | **Provider 模式** | 框架定义"做什么"（测量/存储/格式），Provider 实现"怎么做" | 耦合 |
-
-### 2.2 建议原则
+### 建议原则（推荐遵循）
 
 | # | 原则 | 说明 |
 |---|------|------|
-| G1 | **目录扁平** | 按模块平铺，不做深度层级嵌套 |
-| G2 | **接口开放，实现可插拔** | 框架定义接口，用户注入自定义实现 |
-| G3 | **会话是一等公民** | Session 有独立的完整存储通道（元信息 + 内容分开） |
-| G4 | **实体与驱动分离** | 存储实体（Session/Memory）和存储驱动（InMemory/SQLite/PG）是独立维度 |
-| G5 | **权限委托不硬编码** | 权限行为通过 PermissionDelegate 注入，由宿主决定策略 |
+| P6 | **Session = Workspace** | Session 与工作目录一对一映射 |
+| P7 | **配置化启动** | `AgentEngine.create(config)` 静态工厂，Extension 模型 |
+| P8 | **框架轻量** | 框架只提供 SDK + EventBus，不内置 HTTP/SSE/CLI |
+| P9 | **存储分层** | 框架管 Session 元数据，CC 管 transcript 内容 |
+| P10 | **命令接口解耦** | CLI 通过 ICommandProvider 注入命令实现 |
+| P11 | **组件注册模式** | 框架定义注册点，CLI 注册 UI 组件 |
 
-### 2.3 关键架构决策记录
+### 补充原则（v1-v21 提炼）
 
-以下决策经深入讨论确认，后续实现以此为准：
-
-| 决策 | 选择 | 理由 | 替代方案（否决） |
-|------|------|------|----------------|
-| 分布式策略 | **状态外化**，SDK 本身无状态 | SDK 做到无状态，宿主系统自行决定分布式方案 | SDK 内建分布式协调（过度设计） |
-| 可观测性 | **Provider 模式**：框架定义 trace/metrics，Provider 导出 | 宿主已有 OTLP/Prometheus，SDK 提供接入点 | SDK 自建 ITracer/IMeter 接口（重复造轮子） |
-| 存储架构 | **实体与驱动分离**：不同存储实体有不同接口 | Session 和 Memory 是不同生命周期、不同隔离模型 | 统一 IStorageBackend（过度抽象） |
-| 目录组织 | **扁平化 + 按模块目录**，不做层级重组 | 当前 engine/ 按模块分目录已清晰，重组风险高 | 按 7 层重组目录（高风险零收益） |
-| 架构与 OKR | **分离**：架构文档描述目标态，OKR 描述执行路径 | 架构变更慢，OKR 变更快，混在一起导致文档失焦 | 合并到一个文档（已证实行不通） |
+| # | 原则 | 说明 |
+|---|------|------|
+| P12 | **全局状态隔离** | AsyncLocalStorage 按会话隔离，不使用裸全局变量 |
+| P13 | **Provider 可插拔** | ProviderRegistry + ProviderAdapter 机制，运行时按配置激活 |
+| P14 | **深化优先于广化** | 发现浅模块时优先深化，而非横向拆分 |
+| P15 | **渐进式改造** | 每阶段必须可验证：测试通过 + 回归通过 + 准入门禁 |
 
 ---
 
-## 三、目标架构
+## 四、项目目录说明
 
-### 3.1 架构全景图
-
-```
-┌──────────────────────────────────────────────────────────────────┐
-│                     ▲ 框架外 — 开发者应用 ▲                       │
-│                                                                    │
-│   Web App · Desktop App · CLI · 任务系统 · CI/CD                  │
-│                          │ SDK API                                │
-├──────────────────────────┼───────────────────────────────────────┤
-│                          ▼                                        │
-│                                                                    │
-│  ┌── L1 编排层 ─────────────────────────────────────────────┐    │
-│  │  会话编排 · Query 路由 · 权限管控 · 多租户                 │    │
-│  │  AgentEngine · EngineFacade · SessionManager · Session    │    │
-│  └──────────────────────────────────────────────────────────┘    │
-│                          │                                        │
-│  ┌── L2 大脑层 ─────────────────────────────────────────────┐    │
-│  │  Agent Loop · 上下文构建 · 记忆注入 · Token 预算           │    │
-│  │  QueryEngine(CC 原始) · query.ts(CC 原始) · bridge/       │    │
-│  │  SessionContext · TokenBudgetManager · TranscriptParser   │    │
-│  └──────────────────────────────────────────────────────────┘    │
-│                          │                                        │
-│  ┌── L3 双手层 ─────────────────────────────────────────────┐    │
-│  │  Tools · Skills · MCP · Sandbox                            │    │
-│  │  ToolAdapter · SkillLoader · tools.ts · services/mcp/     │    │
-│  └──────────────────────────────────────────────────────────┘    │
-│                          │                                        │
-│  ┌── L4 扩展层 ─────────────────────────────────────────────┐    │
-│  │  Hook · Plugin · 事件过滤                                  │    │
-│  │  HookContext · HookCore · EventBus                         │    │
-│  └──────────────────────────────────────────────────────────┘    │
-│                          │                                        │
-│  ┌── L5 模型层 ─────────────────────────────────────────────┐    │
-│  │  LLM Provider · 熔断 · 重试 · Token 计费                  │    │
-│  │  ProviderAdapter · ProviderRegistry · CircuitBreaker       │    │
-│  │  adapters/（7 个 Provider 实现）                           │    │
-│  └──────────────────────────────────────────────────────────┘    │
-│                          │                                        │
-│  ┌── L6 基础设施层 ─────────────────────────────────────────┐    │
-│  │  TracingProvider · MetricsProvider · Logger · Config       │    │
-│  │  log/（EngineLogger · LogProvider · MDC · JsonLogFormat）  │    │
-│  └──────────────────────────────────────────────────────────┘    │
-│                          │                                        │
-│  ┌── L7 存储层 ─────────────────────────────────────────────┐    │
-│  │  SessionStore · MemoryStore · Backend<T>                   │    │
-│  │  实体：ISessionStore · IMemoryStore · ISessionContentStore │    │
-│  │  驱动：InMemory · Filesystem · SQLite · PG/Redis(用户)     │    │
-│  └──────────────────────────────────────────────────────────┘    │
-│                                                                    │
-└──────────────────────────────────────────────────────────────────┘
-```
-
-### 3.2 层级定义
-
-| 层 | 名称 | 为什么独立 | 变更频率 | 核心文件 |
-|----|------|-----------|---------|---------|
-| L1 | 编排层 | 会话管理是企业级应用核心关注点，与执行解耦 | 高 | AgentEngine.ts · EngineFacade.ts · SessionManager.ts |
-| L2 | 大脑层 | Agent Loop 是系统核心，变更代价最高，必须隔离保护 | 极低 | QueryEngine.ts · query.ts(CC 原始) · bridge/ |
-| L3 | 双手层 | Agent 与外部世界交互手段，按需独立扩展 | 中 | tools.ts · ToolAdapter.ts · services/mcp/ |
-| L4 | 扩展层 | 用户自定义注入点，不与核心耦合 | 低 | HookContext.ts · EventBus.ts |
-| L5 | 模型层 | LLM Provider 可替换，切换不影响上层 | 低 | ProviderAdapter.ts · adapters/ |
-| L6 | 基础设施层 | 横切关注点，所有层都可能需要 | 低 | log/ · TracingProvider(待建) |
-| L7 | 存储层 | 最底层依赖，上层所有状态最终落到这里 | 极低 | storage/ · ISessionStore · IBackend |
-
-**层级组织规则**：SDK 整体在 `claude-code/` 目录下，模块间可互相引用。分层的目标是目录归属清晰、关注点分离，不是强制禁止引用。
-
-### 3.3 存储层设计
-
-存储层区分**存储实体**（存什么）和**存储驱动**（怎么存）：
+### 4.1 src/ 目录树
 
 ```
-存储实体（定义数据结构和生命周期）    存储驱动（实现后端能力）
-├── ISessionStore（会话元信息）     ├── InMemoryBackend（开发调试）
-├── ISessionContentStore（内容）    ├── FilesystemBackend（单实例）
-├── IMemoryStore（用户级记忆）      ├── SQLiteSessionStore（轻量生产）
-└── IBackend<T>（通用 KV）          └── 用户自定义：PG/Redis/OSS...
+src/
+├── engine/             (172)  Agent Engine SDK 核心 [L2] — SDK 对外统一接口层
+│   ├── AgentEngine.ts         SDK 主入口 (create/query/on/destroy)
+│   ├── EngineFacade.ts        (V21 已删除，AgentEngine 直接持有 SessionManager)
+│   ├── SessionManager.ts      会话创建/销毁/恢复
+│   ├── Session.ts             纯数据实体
+│   ├── EngineState.ts         引擎状态 (零 React)
+│   ├── bridge/                桥接 CC 原始 QueryEngine
+│   ├── events/                EventBus 推+拉双路
+│   ├── permissions/           PermissionDelegate 权限委托
+│   ├── provider/              LLM Provider 适配（7 Provider + CircuitBreaker + 配置类型）
+│   ├── session/               SessionContext, TokenBudget, TranscriptParser
+│   ├── storage/               ISessionStore + IBackend（InMemory/SQLite/Filesystem/Composite）
+│   ├── tools/                 ToolAdapter (CoreTool↔Tool 互转) + ToolRegistry
+│   ├── hooks/                 零 UI Hook 执行
+│   ├── log/                   LogUtil 结构化日志（MDC + JsonLogFormatter）
+│   ├── skill/                 SkillExtension 加载器
+│   ├── cc-runtime/            CC 原始模块统一访问入口
+│   ├── observability/         ITracingProvider + IMetricsProvider（NoOp + InMemory）
+│   ├── config/                IConfigProvider 配置归一化（UnifiedConfig + Diagnostics）
+│   ├── state/                 状态管理模块
+│   ├── analytics/             分析统计模块
+│   ├── compat/                Feature Flag 兼容层
+│   ├── context/               上下文卸载策略（DefaultOffloadStrategy）
+│   ├── types/                 类型屏障文件（15 屏障 + 5 内部类型）
+│   ├── helpers/               辅助工具函数
+│   └── bootstrap/             框架核心启动函数 (V21: initializeEngine 已废弃)
+│
+├── query.ts             (1773) 核心 Agent Loop — LLM API 调用与工具调度
+├── QueryEngine.ts       (1320) 对话状态管理器，封装 query()
+├── Tool.ts               (815) Tool 类型接口与工具查找
+├── tools.ts              (392) 工具注册表，55+ 工具组装
+├── commands.ts           (461) 命令接口 + 注入机制 + 纯框架函数（V9 精简）
+├── context.ts            (189) 上下文构建 (git status, CLAUDE.md)
+├── history.ts            (464) 对话历史管理
+├── cost-tracker.ts       (323) API 费用追踪
+├── Task.ts               (125) 任务类型系统
+├── tasks.ts               (39) 任务注册表
+├── index.ts              (134) 框架公共导出层
+│
+├── query/                 (5)  查询子系统 [L2] — QueryContext、AbstractQuery、QuerySource 等
+├── bootstrap/            (2)  启动引导 [L0] — bridgeConfig + state.ts 进程单例
+├── types/                (35)  TypeScript 类型定义 [L1] — Message·Tool·Permission·Plugin·Command 等
+├── constants/            (22)  全局常量 [L1] — prompts(55K)·apiLimits·oauth·systemPrompt 等
+├── services/            (284)  服务层 [L3]
+│   ├── api/             (~95)  API 客户端 — claude.ts(128K), gemini/, grok/, openai/
+│   ├── mcp/             (~50)  MCP 协议 — client.ts(119K), config.ts(51K), auth.ts(89K)
+│   ├── tools/            (~7)  工具执行引擎 — toolExecution, StreamingToolExecutor
+│   ├── compact/         (~28)  上下文压缩 (auto-compact, micro-compact)
+│   ├── analytics/       (~10)  分析统计 (GrowthBook, 事件追踪)
+│   ├── oauth/           (~12)  OAuth 2.0 PKCE 认证
+│   ├── plugins/          (~3)  插件安装/管理
+│   ├── langfuse/          (6)  Langfuse 可观测性
+│   ├── lsp/               (8)  LSP 语言服务集成
+│   ├── SessionMemory/     (3)  会话记忆
+│   ├── extractMemories/   (2)  记忆提取
+│   ├── teamMemorySync/    (5)  团队记忆同步
+│   ├── contextCollapse/   (3)  上下文折叠
+│   ├── settingsSync/      (2)  设置跨设备同步
+│   ├── remoteManagedSettings/ (4)  远程托管设置
+│   ├── policyLimits/      (2)  策略限制
+│   ├── tips/              (7)  使用提示
+│   ├── AgentSummary/      会话摘要生成
+│   ├── PromptSuggestion/  命令建议
+│   ├── autoDream/         自动 Dream 模式
+│   ├── skillSearch/       技能搜索
+│   ├── toolUseSummary/    工具使用统计
+│   └── sessionTranscript/ 会话记录处理
+│
+├── utils/               (816)  工具函数 [L2-L3]
+│   ├── bash/             (19)  Bash 命令解析
+│   ├── computerUse/      (20)  计算机使用 (截图/键鼠)
+│   ├── permissions/      (30)  权限规则匹配
+│   ├── model/            (20)  LLM 模型管理与路由
+│   ├── plugins/          (47)  插件加载与管理
+│   ├── settings/         (21)  配置读写验证
+│   ├── swarm/            (17)  Swarm 多 Agent 编排
+│   ├── hooks/            (20)  Hook 注册与执行
+│   ├── shell/            (13)  Shell 集成
+│   ├── suggestions/       (8)  命令/目录补全
+│   ├── teleport/          (7)  Teleport 远程会话
+│   ├── processUserInput/  (7)  斜杠命令解析
+│   ├── git/               (6)  Git 操作封装
+│   ├── secureStorage/    (10)  安全凭据存储
+│   ├── telemetry/        (12)  OpenTelemetry 遥测
+│   ├── deepLink/          (9)  深度链接处理
+│   ├── claudeInChrome/    (9)  Chrome 浏览器集成
+│   ├── background/        远程会话后台支持
+│   ├── dxt/               文本差异化工具
+│   ├── filePersistence/   文件持久化
+│   ├── github/            GitHub API 集成
+│   ├── mcp/               MCP 相关工具
+│   ├── memory/            记忆管理
+│   ├── messages/          消息处理工具
+│   ├── powershell/        PowerShell 支持
+│   ├── sandbox/           沙箱环境
+│   ├── skills/            技能相关工具
+│   ├── task/              任务工具
+│   ├── todo/              TODO 管理
+│   ├── ultraplan/         UltraPlan 规划
+│   └── vendor/            第三方库
+│
+├── tasks/                (14)  任务系统 [L3]
+│   ├── LocalMainSessionTask.ts (15K)  本地主会话任务
+│   ├── LocalAgentTask/           本地 Agent 任务
+│   ├── LocalShellTask/           Shell 命令任务
+│   ├── LocalWorkflowTask/        工作流任务
+│   ├── RemoteAgentTask/          远程 Agent 任务
+│   ├── InProcessTeammateTask/    进程内队友
+│   └── DreamTask/                Dream 模式
+│
+├── skills/               (28)  技能系统 [L3] — MCP 技能构建器、bundled 内置技能
+├── state/                 (8)  应用状态管理 [L3] — AppState、AppStateStore、Selectors
+├── entrypoints/          (17)  程序入口 [L3] — CLI 启动入口、SDK 类型定义、状态初始化
+├── memdir/                (9)  记忆目录系统 [L3] — MEMORY.md 管理、自动记忆
+├── assistant/             (5)  助手会话管理 [L3] — Assistant 会话封装
+├── coordinator/           (2)  多 Agent 协调 [L3] — coordinatorMode (19K)
+├── proactive/             (2)  主动建议 [L3] — 主动提示系统
+├── plugins/               (2)  内置插件注册 [L3]
+├── schemas/               (2)  JSON Schema 验证 [L1]
+├── outputStyles/          (1)  输出样式加载 [CLI 专用]
+└── jobs/                  (1)  作业分类 [CLI 专用]
+
+─── V8 已删除的模块 ───
+
+buddy/                   (已删除) → V8 删除：纯 CLI 娱乐功能
+
+─── V9 已删除/迁移的模块 ───
+
+context/                 (已迁移) → V9 全部迁移到 claude-code-cli/src/context/
+commands.ts 精简          → V9 命令注册迁移到 CLI commandRegistry.ts，框架仅保留接口+注入
+engine/bootstrap/         → V9 新增 initializeEngine.ts 框架核心启动函数（V21 已废弃并删除）
 ```
 
-**会话是一等公民**：Session 的元信息（轻量结构化）和内容（追加型 transcript）分开存储。
+### 4.2 层级速查
 
-**记忆是用户隔离的**：记忆存储按用户维度（`memoryRoot/{userId}/`），与 Session 存储是不同接口和不同生命周期。
-
-### 3.4 可观测性设计
-
-采用 **Provider 模式**：框架定义关键 trace 和 metrics 的埋点，Provider 决定导出到哪。
-
-| Provider | 框架内建的测量点 | 默认实现 | 用户可注入 |
-|----------|----------------|---------|-----------|
-| **TracingProvider** | query 生命周期、tool_call、provider 调用 | NoOpTracingProvider（零开销） | OTLP · Console · Datadog |
-| **MetricsProvider** | token 用量、延迟、并发数、费用 | InMemoryMetricsProvider | OTLP · Prometheus |
-| **LogProvider** | 日志输出 | ConsoleLogProvider | ✅ 已实现（FileLogStore · JsonLogFormatter） |
-| **ConfigProvider** | 配置归一化 | — | 待实现 |
-
-**关键原则**：SDK 内部的 trace/metrics 是**内禀的**——SDK 知道一个 query 从开始到结束应该有哪些关键节点。Provider 只是决定这些数据发给谁。
-
-### 3.5 状态外化
-
-SDK 的 7 个进程内 Map（sessions、sessionMetadata、activeQueries 等）需要迁移到可插拔的 StorageProvider，使 SDK 做到无状态：
-
-- 基于 SDK 构建的系统能多实例部署
-- 存储引擎可选：开发用 InMemory，生产用 PG/Redis
-- 实例重启后可从存储恢复状态
+| 层级 | 代号 | 对应目录/文件 |
+|------|------|---------------|
+| L0 | 进程单例 | bootstrap/, state.ts |
+| L1 | 类型常量 | types/, constants/, schemas/ |
+| L2 | 核心引擎 | engine/, query/, QueryEngine.ts, query.ts, Tool.ts, tools.ts |
+| L3 | 服务工具 | services/, utils/, tasks/, skills/, state/, 其余所有 |
 
 ---
 
-## 四、现有代码归属
+## 五、关键设计及流程
 
-### 4.1 已实现模块（按层级）
+### 5.1 桥接设计
 
-#### L1 编排层
+AgentEngine 通过 `OriginalQueryEngineBridge` 连接 CC 原始 QueryEngine，职责：
 
-| 文件 | 行数 | 职责 |
-|------|------|------|
-| engine/AgentEngine.ts | 909 | SDK 统一入口 |
-| engine/EngineFacade.ts | 196 | Session 管理门面 |
-| engine/SessionManager.ts | 160 | Session 注册表 |
-| engine/Session.ts | 117 | Session 纯数据实体 |
-| engine/types.ts | 87 | Session 类型定义 |
-| engine/errors.ts | 53 | EngineError 统一错误码 |
-| engine/index.ts | 204 | 公共 API 导出 |
-| engine/EngineState.ts | 422 | 核心运行时状态（零 React） |
+1. 为每个 Session 构造 `QueryEngineConfig`（cwd、tools、canUseTool、AppState）
+2. 将用户的 `ToolExtension` 适配为 CC `Tool` 类型，合并到工具列表
+3. 原始 QueryEngine 产出的 `Message` 同时 yield 和 emit（双路输出）
 
-#### L2 大脑层
+### 5.2 事件体系
 
-| 文件 | 行数 | 职责 |
-|------|------|------|
-| src/QueryEngine.ts | ~1320 | CC 原始对话状态管理器（不改） |
-| src/query.ts | ~1773 | CC 原始 Agent Loop（不改） |
-| engine/bridge/ | 263 | 桥接 AgentEngine → CC QueryEngine |
-| engine/session/ | 760 | SessionContext + TokenBudget + TranscriptParser |
-| engine/cc-runtime/ | 503 | CC 运行时抽象 |
-| engine/bootstrap/ | 718 | 引擎初始化 |
-| engine/helpers/ | 303 | collectText + waitForResult |
-| engine/context/ | 139 | OffloadStrategy 上下文卸载 |
+EventBus 同时支持两种消费模式，**不自建事件模型，直接转发 CC 原始 Message**：
 
-#### L3 双手层
+| 模式 | API | 场景 |
+|------|-----|------|
+| 推模式 | `engine.on('assistant', handler)` | 实时 UI 更新 |
+| 拉模式 | `for await (const msg of engine.query(...))` | 批处理/脚本/测试 |
 
-| 文件 | 职责 |
-|------|------|
-| src/tools.ts (392行) | 工具注册表（55+ 工具） |
-| src/Tool.ts (815行) | Tool 类型定义 |
-| engine/tools/ToolAdapter.ts | CoreTool/Tool 互转 |
-| engine/skill/SkillLoader.ts | SkillExtension 加载 |
-| src/services/mcp/ (~50文件) | MCP 协议 |
-| src/utils/swarm/ (~13文件) | Swarm 多 Agent 编排 |
+### 5.3 存储分工
 
-#### L4 扩展层
+| 数据 | 管理方 | 格式 |
+|------|--------|------|
+| Session 元数据 | 框架 (SessionStore) | InMemory / SQLite |
+| 会话内容 | CC 原始 (transcript.jsonl) | 仅追加 JSONL |
+| Memory/CLAUDE.md | 文件系统 | Markdown |
+| Settings | 文件系统 | JSON |
 
-| 文件 | 职责 |
-|------|------|
-| engine/hooks/HookContext.ts | Hook 核心上下文 |
-| engine/hooks/HookCore.ts | Hook 执行 |
-| engine/events/EventBus.ts | 发布/订阅 + Hook 拦截 |
+### 5.4 Bootstrap 启动流程
 
-#### L5 模型层
+```
+1. cli.tsx 入口 → MACRO.* 初始化
+2. init.ts → telemetry/config/trust 初始化
+3. bootstrap/hooks → 启动钩子执行
+4. AgentEngine.create(config)
+   ├── new EventBus()
+   ├── new SessionManager({ store })
+   └── ProviderAdapter + PermissionDelegate 初始化
+5. 进入交互/非交互模式
+```
 
-| 文件 | 职责 |
-|------|------|
-| engine/provider/ProviderAdapter.ts | Provider 统一接口 |
-| engine/provider/ProviderRegistry.ts | Provider 注册表 |
-| engine/provider/CircuitBreaker.ts | 熔断器 |
-| engine/provider/adapters/*.ts | 7 个 Provider 实现 |
+### 5.5 查询数据流
 
-#### L6 基础设施层
+```
+用户输入 → processUserInput (斜杠命令解析)
+  → QueryEngine.query()
+    → query.ts (构建 API 请求: system prompt + messages + tools)
+      → services/api/claude.ts (调用 LLM API, 流式)
+        → 流式响应处理:
+          ├── text_delta → 文本输出
+          ├── tool_use → canUseTool() → tools/[ToolName]/ → tool_result
+          └── message_stop → 查询结束
+        → 双路输出:
+          ├── EventBus.emit() — 推模式
+          └── yield — 拉模式
+```
 
-| 文件 | 职责 | 状态 |
-|------|------|------|
-| engine/log/*（13文件） | 日志系统（Logger · Provider · Store · Formatter · MDC） | ✅ 完整 |
-| TracingProvider | 链路追踪 | ❌ 待建 |
-| MetricsProvider | 指标采集 | ❌ 待建 |
-| ConfigProvider | 配置归一化 | ❌ 待建 |
+### 5.6 会话恢复流程
 
-#### L7 存储层
+```
+engine.loadSession({ workspace })
+  → 定位 transcript.jsonl
+  → 解析 JSONL → Message[]
+  → 创建新 Session (绑定 workspace)
+  → 首次 query 时作为 initialMessages 传入
+```
 
-| 文件 | 职责 | 状态 |
-|------|------|------|
-| engine/storage/ISessionStore.ts | Session 持久化接口 | ✅ 已实现 |
-| engine/storage/IBackend.ts | 通用 KV 存储接口 | ✅ 已实现 |
-| engine/storage/InMemorySessionStore.ts | 内存 Session | ✅ 已实现 |
-| engine/storage/SQLiteSessionStore.ts | SQLite Session | ✅ 已实现 |
-| engine/storage/InMemoryBackend.ts | 内存通用后端 | ✅ 已实现 |
-| engine/storage/FilesystemBackend.ts | 文件系统后端 | ✅ 已实现 |
-| engine/storage/CompositeBackend.ts | 组合后端 | ✅ 已实现 |
-| IMemoryStore | 记忆存储 | ❌ 待建 |
-| ISessionContentStore | 会话内容存储 | ❌ 待建 |
+### 5.7 MCP 连接建立
 
-### 4.2 已有接口（不需要重新设计）
-
-以下接口在现有代码中已定义并实现：
-
-| 层级 | 关键接口 |
-|------|---------|
-| L1 | AgentEngineConfig · QueryOptions · EngineStats · SessionConfig · EngineErrorCode |
-| L2 | CCRuntime(17方法) · SessionContext(39字段) · TokenBudgetState · OffloadStrategy |
-| L3 | ToolAdapter · SkillExtension · QueryEvent(5种事件) |
-| L4 | HookContext · HookResult · HookExecutor · EngineEventMap |
-| L5 | ProviderAdapter · LLMMessage · LLMTool · LLMRuntime · CircuitBreakerState |
-| L6 | EngineLogger · LogLevel · LogProvider · LogStore · LogFormatter · MDCContext |
-| L7 | ISessionStore · IBackend\<T\> |
+```
+配置加载 → config.ts 解析 mcpServers
+  → auth.ts (OAuth 认证, 如有)
+  → client.ts (启动 MCP 进程)
+  → 枚举 MCP server 工具
+  → 注册到 tools.ts 工具列表
+  → mcpSkillBuilders 构建技能
+```
 
 ---
 
-## 五、研发规约
+## 六、文档索引
 
-### 5.1 开发纪律
+### 核心组件设计
+- [Engine Facade](feature-design/core-components/engine-facade-design.md)
+- [SessionManager](feature-design/core-components/session-manager-design.md)
+- [Session](feature-design/core-components/session-design.md)
+- [Event Bus](feature-design/core-components/event-bus-design.md)
+- [Bootstrap](feature-design/core-components/bootstrap-design.md)
+- [数据流](feature-design/core-components/data-flow-design.md)
+- [Extension 模型](feature-design/core-components/extension-model-design.md)
+- [EngineState](feature-design/core-components/engine-state-design.md)
+- [HookCore](feature-design/core-components/hook-core-design.md)
+- [CCRuntime](feature-design/core-components/cc-runtime-design.md)
 
-| 规约 | 说明 |
-|------|------|
-| **TDD** | 先写测试再写实现，测试代码放在 `__tests__/` |
-| **验证原则** | 不接受"感觉没问题"，结论来自自动化测试或可重复的验证步骤 |
-| **渐进式** | 每阶段满足结构验证 + 行为验证 + 目检证 |
-| **配置化启动** | `AgentEngine.create(config)` 静态工厂，llm 唯一必填 |
+### 存储层
+- [Session Store](feature-design/storage-layer/session-store-design.md)
 
-### 5.2 架构变更规约
+### CC 原始能力研究
+- [QueryEngine 分析](feature-design/core-components/query-engine-design.md)
+- [Context Compactor](feature-design/core-components/context-compactor-design.md)
+- [记忆与会话内容](feature-design/core-components/memory-and-session-content-design.md)
 
-| 规约 | 说明 |
-|------|------|
-| **架构文档先行** | 架构变更先更新本文档，再实施代码 |
-| **OKR 独立维护** | 执行计划在 `docs/okr-roadmap.md`，不在架构文档中 |
-| **归纳优先** | 先分析现有代码，再决定是否需要新设计 |
-| **新建模块按层级放置** | 新模块归入明确的层级目录 |
-
-### 5.3 代码规范
-
-| 规约 | 说明 |
-|------|------|
-| **核心模块零 React** | engine/ 目录下禁止引入 React |
-| **类型安全** | 生产代码禁止 `as any`，优先用类型守卫或补充 interface |
-| **tsc 零错误** | `bunx tsc --noEmit` 必须通过 |
-| **事件透传** | 不自建事件模型，直接转发 CC 原始 Message |
-
-### 5.4 文档规范
-
-| 规约 | 说明 |
-|------|------|
-| **核心文档在 docs/** | 架构设计、功能设计放 docs/，不散落到其他位置 |
-| **事实准确** | 文档内容基于实际代码，不凭空编造 |
-| **架构与 OKR 分离** | 架构文档描述目标态（变化慢），OKR 描述执行路径（变化快） |
-| **不重复创建** | 已有文档保持更新，不新建替代文档 |
-
-### 5.5 现有文档索引
-
-| 文档 | 位置 | 内容 |
-|------|------|------|
-| 项目目标 | `docs/project-purpose.md` | 用户画像、使用场景、成功标准 |
-| 架构设计 | `docs/architecture-design.md` | 架构图、模块依赖、数据流 |
-| OKR 路线图 | `docs/okr-roadmap.md` | 版本交付计划、KR 验收标准 |
-| 功能设计 | `docs/feature-design/` | 各组件详细设计文档 |
-| 技术参考 | `claude-code/CLAUDE.md` | claude-code 目录技术细节 |
-| 项目规范 | `CLAUDE.md`（根目录） | 开发流程、文档管理规范 |
-
----
-
-## 六、术语
-
-| 术语 | 含义 |
-|------|------|
-| **CC** | Claude Code — 被包装的原始代码（src/ 下的原始实现） |
-| **SDK** | Agent Engine SDK — 本项目的产品（engine/ 包装层 + CC 原始能力） |
-| **宿主** | 嵌入 SDK 的上层应用（Express、Electron、CLI） |
-| **Provider** | 框架定义接口、用户注入实现的模式（LogProvider、TracingProvider） |
-| **实体与驱动** | 存储设计中，实体定义数据结构，驱动实现后端能力 |
-| **状态外化** | SDK 不持有进程内状态，通过 StorageProvider 持久化 |
+### 项目管理
+- [项目目标](project-purpose.md) — 定位、用户画像、场景、成功标准
+- [分层架构标准](architecture-layering-standard.md) — L0-L4 定义与 Import 规则
+- [OKR 路线图](okr-roadmap.md) — 版本交付路线图
+- [CLI 使用说明](cli-usage.md) — CLI 包使用与导入路径规则
