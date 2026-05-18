@@ -71,6 +71,8 @@ import type {
 } from './provider/types/ProviderConfigs.js'
 import type {ProviderRegistry} from './provider/ProviderRegistry.js'
 import type {CircuitBreakerConfig} from './provider/CircuitBreaker.js'
+import type {ITracingProvider} from './observability/ITracingProvider.js'
+import type {IMetricsProvider} from './observability/IMetricsProvider.js'
 
 // ============================================================
 // 类型定义
@@ -252,6 +254,10 @@ export interface AgentEngineConfig {
 	sessionStore?: ISessionStore
 	/** Session 内容存储（可选，默认使用 InMemorySessionContentStore） */
 	sessionContentStore?: ISessionContentStore
+	/** Tracing Provider（可选，默认使用 NoOpTracingProvider） */
+	tracingProvider?: ITracingProvider
+	/** Metrics Provider（可选，默认使用 NoOpMetricsProvider） */
+	metricsProvider?: IMetricsProvider
 }
 
 /**
@@ -328,6 +334,8 @@ export class AgentEngine {
 	private sessionContentStore: ISessionContentStore
 	/** Session 持久化存储（可选） */
 	private sessionStore?: ISessionStore
+	/** Metrics Provider（可选） */
+	private metricsProvider?: IMetricsProvider
 
 	private constructor(sessionManager: SessionManager, eventBus: EventBus, config: AgentEngineConfig, ccRuntime: CCRuntime) {
 		this.sessionManager = sessionManager
@@ -336,6 +344,22 @@ export class AgentEngine {
 		this.ccRuntime = ccRuntime
 		this.sessionContentStore = config.sessionContentStore ?? new InMemorySessionContentStore()
 		this.sessionStore = config.sessionStore
+		this.metricsProvider = config.metricsProvider
+
+		// Wire up tool metrics via EventBus
+		if (this.metricsProvider) {
+			const metrics = this.metricsProvider
+			this.eventBus.on('tool_use', (payload: unknown) => {
+				const event = payload as { toolName: string }
+				metrics.counter('tool.execution').increment()
+				metrics.counter(`tool.execution.${event.toolName}`).increment()
+			})
+			this.eventBus.on('tool_result', (payload: unknown) => {
+				const event = payload as { toolName: string }
+				metrics.counter('tool.completed').increment()
+				metrics.counter(`tool.completed.${event.toolName}`).increment()
+			})
+		}
 	}
 
 	// ========== 静态工厂 ==========
@@ -427,6 +451,11 @@ export class AgentEngine {
 		// 生命周期事件：Session 创建成功
 		this.eventBus.emit('session:created', {sessionId, workspace})
 
+		// Metrics: session.created
+		if (this.metricsProvider) {
+			this.metricsProvider.counter('session.created').increment()
+		}
+
 		return sessionId
 	}
 
@@ -514,6 +543,11 @@ export class AgentEngine {
 		clearTokenBudgetState(asSessionId(sessionId))
 
 		await this.sessionManager.destroySession(sessionId)
+
+		// Metrics: session.destroyed
+		if (this.metricsProvider) {
+			this.metricsProvider.counter('session.destroyed').increment()
+		}
 
 		// 生命周期事件：Session 销毁成功
 		if (workspace) {
@@ -642,6 +676,11 @@ export class AgentEngine {
 		// 标记 session 为活跃状态
 		this.activeQueries.set(sessionId, true)
 
+		// Metrics: query.started
+		if (this.metricsProvider) {
+			this.metricsProvider.counter('query.started').increment()
+		}
+
 		try {
 			// 1. 验证 session 存在且可用
 			const session = this.sessionManager.getSession(sessionId)
@@ -756,6 +795,12 @@ export class AgentEngine {
 					}
 				}),
 			)
+		} catch (queryError) {
+			// Metrics: query.failed
+			if (this.metricsProvider) {
+				this.metricsProvider.counter('query.failed').increment()
+			}
+			throw queryError
 		} finally {
 			// 发送 query:complete 事件（在清理前）
 			const ctx = this.sessionContexts.get(sessionId)
