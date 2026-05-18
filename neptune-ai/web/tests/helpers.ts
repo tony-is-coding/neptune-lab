@@ -78,7 +78,7 @@ export function printReport(diag: Diagnostics, finalUrl: string, stored: string 
  * 测试配置常量
  */
 export const DEV_URL = 'http://localhost:1420';
-export const API_URL = 'http://localhost:3000/api/v1';
+export const API_URL = 'http://localhost:3002/api/v1';
 export const TEST_USER = {
   email: 'terrence@neptune.ai',
   password: 'Neptune2024!',

@@ -25,7 +25,7 @@ test.describe('Smoke Tests', () => {
     printReport(diag, page.url(), stored);
   });
 
-  test('unauthenticated user is redirected to /login', async ({ page }) => {
+  test('unauthenticated user triggers auto-login on protected route', async ({ page }) => {
     const diag = attachDiagnostics(page);
 
     // 确保没有 auth 状态
