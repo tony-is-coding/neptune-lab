@@ -140,5 +140,5 @@ export ANTHROPIC_API_KEY=your-api-key
 
 - [快速开始指南](../getting-started.md)
 - [API 文档](../api/)
-- [架构设计](../architecture-design.md)
-- [项目目标](../project-purpose.md)
+- [架构设计](../architecture.md)
+- [项目目标](../architecture.md#一项目目标)

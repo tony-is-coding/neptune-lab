@@ -265,7 +265,7 @@ const executor: HookExecutor = createHookCore({ ... })
 
 ## 八、相关文档
 
-- [架构设计文档](../../../architecture-design.md)
+- [架构设计文档](../../architecture.md)
 - [分层架构标准](../../../architecture-layering-standard.md)
 - [Hook 系统 UI 解耦优化](../../../../auto-upgrade/v3/01-optimizer-research.md#优化-14hook-系统-ui-解耦)
 - [HookContext 设计文档](./hook-context-design.md)（待创建）
