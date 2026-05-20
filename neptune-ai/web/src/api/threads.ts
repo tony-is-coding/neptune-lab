@@ -1,18 +1,20 @@
-import type { Thread } from '../types/chat'
+import type {
+  ApiErrorEnvelope,
+  ChatConnectedEvent,
+  ChatDoneEvent,
+  ChatErrorEvent,
+  ChatMessageEvent,
+  ListThreadsResponse,
+  ReplyToQuestionRequest,
+  ThreadDto as Thread,
+  ThreadHistoryResponse,
+  ThreadTasksResponse,
+} from '@shared/neptune-ai'
 import { API_BASE, getAuthHeaders, handleUnauthorized } from './client'
 import { getStoredToken } from '../stores/auth'
+import {parseSSEChunk} from './sse-parser'
 
 // === Thread CRUD ===
-
-/** Thread 列表接口返回结构 */
-export interface ListThreadsResponse {
-  data: Thread[]
-  meta: {
-    count: number
-    limit: number
-    offset: number
-  }
-}
 
 /** 获取 Agent 的 Thread 列表 */
 export async function listThreads(
@@ -110,10 +112,7 @@ export async function deleteThread(
 export async function getThreadHistory(
   agentId: string,
   threadId: string,
-): Promise<{
-  data: unknown[]
-  meta: unknown
-}> {
+): Promise<ThreadHistoryResponse> {
   const res = await fetch(
     `${API_BASE}/agents/${agentId}/threads/${threadId}/history`,
     {
@@ -129,7 +128,7 @@ export async function getThreadHistory(
 export async function getThreadTasks(
   agentId: string,
   threadId: string,
-): Promise<{ data: Array<{ id: string; subject: string; status: string; activeForm?: string }> }> {
+): Promise<ThreadTasksResponse> {
   const res = await fetch(
     `${API_BASE}/agents/${agentId}/threads/${threadId}/tasks`,
     { headers: getAuthHeaders() },
@@ -144,7 +143,7 @@ export async function replyToQuestion(
   agentId: string,
   threadId: string,
   toolUseId: string,
-  answers: Record<string, string>,
+  answers: ReplyToQuestionRequest['answers'],
 ): Promise<void> {
   const res = await fetch(
     `${API_BASE}/agents/${agentId}/threads/${threadId}/reply`,
@@ -162,9 +161,10 @@ export async function replyToQuestion(
 
 /** SSE 事件回调 */
 export interface SSECallbacks {
-  onEvent: (event: { type: string; data: unknown }) => void
-  onError?: (error: Error) => void
-  onDone?: () => void
+  onEvent: (event: ChatMessageEvent) => void
+  onError?: (error: Error, event?: ChatErrorEvent) => void
+  onDone?: (event?: ChatDoneEvent) => void
+  onConnected?: (event: ChatConnectedEvent) => void
 }
 
 /**
@@ -193,7 +193,17 @@ export function sendThreadMessage(
   })
     .then(async (res) => {
       if (!res.ok) {
-        callbacks.onError?.(new Error(`Chat failed: ${res.status}`))
+        let envelope: Partial<ApiErrorEnvelope> = {};
+        try {
+          envelope = await res.json();
+        } catch {
+          envelope = {};
+        }
+        if (res.status === 401) {
+          callbacks.onError?.(new Error(envelope.message || '登录已过期，请重新登录'))
+          return
+        }
+        callbacks.onError?.(new Error(envelope.message || `Chat failed: ${res.status}`))
         return
       }
 
@@ -216,47 +226,32 @@ export function sendThreadMessage(
         }
 
         buffer += decoder.decode(value, { stream: true })
-        const lines = buffer.split('\n')
-        buffer = lines.pop() || ''
+        const parsedChunk = parseSSEChunk('', buffer)
+        buffer = parsedChunk.buffer
 
-        let currentEvent = ''
-        for (const line of lines) {
-          if (line.startsWith('event: ')) {
-            currentEvent = line.slice(7)
-          } else if (line.startsWith('data: ')) {
-            const dataStr = line.slice(6)
-            try {
-              const parsed = JSON.parse(dataStr)
-              if (currentEvent === 'done') {
-                callbacks.onDone?.()
-              } else if (currentEvent === 'error') {
-                callbacks.onError?.(
-                  new Error(
-                    (parsed as { message?: string }).message || 'SSE error',
-                  ),
-                )
-              } else if (currentEvent === 'message') {
-                // Backend sends content events as `event: message`
-                // with actual type in `data.type`
-                const subType = (parsed as { type?: string }).type || 'text'
-                callbacks.onEvent({ type: subType, data: parsed })
-              } else if (currentEvent === 'connected') {
-                // Connection confirmation, ignore
-              } else {
-                // Fallback: use SSE event name directly
-                callbacks.onEvent({ type: currentEvent, data: parsed })
-              }
-            } catch {
-              // 解析失败的 data 行忽略
-            }
+        for (const frame of parsedChunk.frames) {
+          const parsed = frame.data as Record<string, unknown>
+          if (frame.event === 'done') {
+            callbacks.onDone?.({ type: 'done', ...(parsed as Omit<ChatDoneEvent, 'type'>) })
+          } else if (frame.event === 'error') {
+            const event = { type: 'error', ...(parsed as Omit<ChatErrorEvent, 'type'>) } as ChatErrorEvent
+            callbacks.onError?.(new Error(event.message || 'SSE error'), event)
+          } else if (frame.event === 'message') {
+            callbacks.onEvent(parsed as unknown as ChatMessageEvent)
+          } else if (frame.event === 'connected') {
+            callbacks.onConnected?.({ type: 'connected', ...(parsed as Omit<ChatConnectedEvent, 'type'>) })
+          } else {
+            callbacks.onEvent({ ...parsed, type: frame.event } as unknown as ChatMessageEvent)
           }
         }
       }
     })
     .catch((err) => {
-      if (err.name !== 'AbortError') {
-        callbacks.onError?.(err)
+      if (err.name === 'AbortError') {
+        callbacks.onError?.(new Error('已停止生成'))
+        return
       }
+      callbacks.onError?.(err)
     })
 
   return controller

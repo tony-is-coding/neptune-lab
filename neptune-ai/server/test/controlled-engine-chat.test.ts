@@ -99,10 +99,13 @@ describe('Controlled Engine chat SSE', () => {
         });
 
         expect(chatRes.statusCode).toBe(200);
+        expect(chatRes.headers['x-request-id']).toBeTruthy();
         const events = parseSSE(chatRes.payload);
         const messageEvents = events.filter(evt => evt.event === 'message').map(evt => evt.data);
 
-        expect(events.some(evt => evt.event === 'connected')).toBe(true);
+        const connected = events.find(evt => evt.event === 'connected');
+        expect(connected).toBeDefined();
+        expect(connected?.data.requestId).toBe(chatRes.headers['x-request-id']);
         expect(messageEvents.some(evt => evt.type === 'thinking')).toBe(true);
         expect(messageEvents.some(evt => evt.type === 'tool_use' && evt.name === 'E2EControlledTool')).toBe(true);
         expect(messageEvents.some(evt => evt.type === 'tool_result')).toBe(true);
@@ -110,6 +113,7 @@ describe('Controlled Engine chat SSE', () => {
 
         const done = events.find(evt => evt.event === 'done');
         expect(done).toBeDefined();
+        expect(done?.data.requestId).toBe(chatRes.headers['x-request-id']);
         expect(done?.data).toHaveProperty('usage');
 
         const historyRes = await app.inject({

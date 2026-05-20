@@ -225,6 +225,8 @@ async function createProviderWithConfig(
 export async function buildQueryEngineConfig(config: UnifiedConfig, runtime?: CCRuntime): Promise<QueryEngineConfig> {
 	const ccRuntime = runtime ?? getGlobalCCRuntime()
 	const {cwd, systemPrompt, toolExtensions, provider} = config
+	const isHeadlessRuntime =
+		(ccRuntime as unknown as {isHeadless?: boolean}).isHeadless === true
 
 	// 构造 CoreAppState（SDK/headless 模式，零 UI 依赖）
 	let appState: CoreAppState & Record<string, unknown> = createDefaultCoreAppState() as CoreAppState & Record<string, unknown>
@@ -300,7 +302,7 @@ export async function buildQueryEngineConfig(config: UnifiedConfig, runtime?: CC
 	// T7 完成：集成 CircuitBreaker、executeWithRetry 和自定义 Provider 注入
 	// T6 完成：支持从 provider.config 传入 API Key、BaseURL 等配置
 	let customDeps: QueryDeps | undefined
-	if (provider?.type) {
+	if (provider?.type && !isHeadlessRuntime) {
 		// T7: 传入 providerRegistry 以支持自定义 Provider 注入
 		const providerAdapter = await createProviderWithConfig(
 			provider.type,
@@ -411,6 +413,8 @@ export async function buildQueryEngineConfig(config: UnifiedConfig, runtime?: CC
 		...(provider?.config?.model ? {userSpecifiedModel: provider.config.model as string} : {}),
 		// fallbackModel
 		...(config.fallbackModel ? {fallbackModel: config.fallbackModel} : {}),
+		// Headless runtime consumes provider directly and avoids loading CLI QueryEngine.
+		...(provider ? {provider} : {}),
 		// 注入 customDeps（Provider 运行时接入）
 		...(customDeps ? {customDeps} : {}),
 	}

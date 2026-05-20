@@ -22,111 +22,19 @@
  * - { type: 'plan_done', planId, status, duration, completedAt }
  */
 
-// ===== 前端 SSE 事件类型定义 =====
+import type {
+    ChatMessageEvent,
+    ChatPlanCreatedEvent,
+    ChatPlanDoneEvent,
+    ChatPlanStepEvent,
+    ChatStreamEvent,
+} from '@shared/neptune-ai';
 
-export interface SSETextEvent {
-    type: 'text';
-    content: string;
-    /**
-     * 是否为增量内容
-     * - true: 内容应追加到前一个 text block
-     * - false/undefined: 内容作为新的 text block
-     */
-    isDelta?: boolean;
-}
-
-export interface SSEToolUseEvent {
-    type: 'tool_use';
-    id: string;
-    name: string;
-    input: Record<string, unknown>;
-    status: string;
-}
-
-export interface SSEToolResultEvent {
-    type: 'tool_result';
-    toolUseId: string;
-    output: unknown;
-}
-
-export interface SSEToolStatusEvent {
-    type: 'tool_status';
-    id: string;
-    status: string;
-}
-
-export interface SSEThinkingEvent {
-    type: 'thinking';
-    content: string;
-    isDelta?: boolean;
-}
-
-export interface SSEAskUserEvent {
-    type: 'ask_user';
-    id: string;
-    questions: Array<{
-        question: string;
-        header?: string;
-        options: Array<{ label: string; description?: string }>;
-        multiSelect?: boolean;
-    }>;
-}
-
-export interface SSEErrorEvent {
-    type: 'error';
-    message: string;
-}
-
-export interface SSEDoneEvent {
-    type: 'done';
-    usage?: Record<string, unknown>;
-}
-
-// ===== Plan SSE 事件类型 =====
-
-export interface SSEPlanCreatedEvent {
-    type: 'plan_created';
-    planId: string;
-    title: string;
-    totalSteps: number;
-    createdAt: string;
-}
-
-export interface SSEPlanStepEvent {
-    type: 'plan_step';
-    planId: string;
-    stepId: string;
-    stepNumber: number;
-    subject: string;
-    status: 'pending' | 'in_progress' | 'completed' | 'failed';
-    activeForm?: string;
-    updatedAt: string;
-}
-
-export interface SSEPlanDoneEvent {
-    type: 'plan_done';
-    planId: string;
-    status: 'completed' | 'failed';
-    summary?: string;
-    duration: number;
-    completedAt: string;
-}
-
-export type SSEPlanEvent =
-    | SSEPlanCreatedEvent
-    | SSEPlanStepEvent
-    | SSEPlanDoneEvent;
-
-export type SSEEvent =
-    | SSETextEvent
-    | SSEThinkingEvent
-    | SSEToolUseEvent
-    | SSEToolResultEvent
-    | SSEToolStatusEvent
-    | SSEAskUserEvent
-    | SSEErrorEvent
-    | SSEDoneEvent
-    | SSEPlanEvent;
+export type SSEPlanCreatedEvent = ChatPlanCreatedEvent;
+export type SSEPlanStepEvent = ChatPlanStepEvent;
+export type SSEPlanDoneEvent = ChatPlanDoneEvent;
+export type SSEPlanEvent = ChatPlanCreatedEvent | ChatPlanStepEvent | ChatPlanDoneEvent;
+export type SSEEvent = ChatStreamEvent;
 
 // ===== 辅助函数 =====
 
@@ -181,7 +89,7 @@ function extractErrorMessage(event: Record<string, unknown>): string {
  * - tool_use -> { type: 'tool_use', ... }
  * - tool_result -> { type: 'tool_result', ... } + { type: 'tool_status', ... }
  */
-export function mapSSEEvent(sdkEvent: Record<string, unknown>): SSEEvent[] {
+export function mapSSEEvent(sdkEvent: Record<string, unknown>): ChatMessageEvent[] {
     const eventType = sdkEvent.type as string;
 
     switch (eventType) {
@@ -265,7 +173,7 @@ export function mapSSEEvent(sdkEvent: Record<string, unknown>): SSEEvent[] {
                 }];
             }
 
-            const events: SSEEvent[] = [{
+            const events: ChatMessageEvent[] = [{
                 type: 'tool_use',
                 id: toolId,
                 name: toolName,
@@ -281,12 +189,12 @@ export function mapSSEEvent(sdkEvent: Record<string, unknown>): SSEEvent[] {
                 if (docExtensions.includes(ext)) {
                     const fileName = filePath.split('/').pop() || filePath;
                     events.push({
-                        type: 'artifact' as any,
+                        type: 'artifact',
                         id: `artifact-${toolId}`,
                         title: fileName,
                         fileType: ext,
                         content: String(input.content),
-                    } as any);
+                    });
                 }
             }
 
@@ -294,7 +202,7 @@ export function mapSSEEvent(sdkEvent: Record<string, unknown>): SSEEvent[] {
         }
 
         case 'tool_result': {
-            const events: SSEEvent[] = [];
+            const events: ChatMessageEvent[] = [];
             const toolUseId = String(sdkEvent.toolUseId || sdkEvent.tool_use_id || '');
 
             events.push({

@@ -38,8 +38,15 @@ test.describe('Controlled model chat', () => {
     await expect(textarea).toBeVisible({timeout: 15000});
 
     const prompt = `controlled browser dispatch ${Date.now()}`;
+    const chatResponsePromise = page.waitForResponse(response =>
+      response.url().includes(`/api/v1/agents/${agent.id}/threads/${thread.id}/chat`) &&
+      response.request().method() === 'POST',
+    );
     await textarea.fill(prompt);
     await textarea.press('Enter');
+    const chatResponse = await chatResponsePromise;
+    expect(chatResponse.status()).toBe(200);
+    expect(chatResponse.headers()['x-request-id']).toBeTruthy();
 
     await expect(page.getByText(prompt, {exact: true})).toBeVisible({timeout: 15000});
     await expect(page.getByText(/E2E OK: controlled model dispatch is healthy/).first()).toBeVisible({timeout: 30000});

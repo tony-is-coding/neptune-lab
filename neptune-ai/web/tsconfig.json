@@ -18,6 +18,12 @@
     "paths": {
       "@/*": [
         "./*"
+      ],
+      "@shared/neptune-ai": [
+        "../../shared/types/neptune-ai/index.ts"
+      ],
+      "@shared/neptune-ai/*": [
+        "../../shared/types/neptune-ai/*"
       ]
     },
     "allowImportingTsExtensions": true,

@@ -23,6 +23,8 @@ import type {
 import {DEFAULT_MACROS} from './CCRuntime.js'
 import type {Tools} from '../../Tool.js'
 import type {ToolRegistry} from '../../ToolRegistry.js'
+import {HeadlessToolRegistry} from './HeadlessToolRegistry.js'
+import {HeadlessQueryEngine} from './HeadlessQueryEngine.js'
 
 // ============================================================
 // DefaultCCRuntime 实现
@@ -222,6 +224,14 @@ export class DefaultCCRuntime implements CCRuntime {
 	}
 }
 
+class HeadlessCCRuntime extends DefaultCCRuntime {
+	readonly isHeadless = true
+
+	createQueryEngine(config: QueryEngineConfig): QueryEngineWrapper {
+		return new HeadlessQueryEngine(config)
+	}
+}
+
 // ============================================================
 // 简单 FileStateCache 降级实现
 // ============================================================
@@ -281,6 +291,18 @@ interface CCRuntimeFileStateValue {
 /** 创建默认 CCRuntime 实例 */
 export function createDefaultCCRuntime(): CCRuntime {
 	return new DefaultCCRuntime()
+}
+
+/**
+ * Create a server-safe CCRuntime Adapter that uses SDK/headless tools.
+ *
+ * This keeps host-specific tool selection behind the CCRuntime Seam so product
+ * callers do not need to know which builtin tools import UI renderers.
+ */
+export function createHeadlessCCRuntime(): DefaultCCRuntime {
+	const runtime = new HeadlessCCRuntime()
+	runtime.setToolRegistry(new HeadlessToolRegistry())
+	return runtime
 }
 
 /** 全局单例（按需使用） */

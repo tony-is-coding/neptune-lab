@@ -47,6 +47,19 @@ export function getTracingProvider(): ITracingProvider {
 }
 
 /**
+ * 为一次请求创建独立 TracingProvider。
+ *
+ * LangfuseTracingProvider 内部维护当前 trace/span/generation 引用；
+ * chat dispatch 必须使用请求级实例，避免并发请求覆盖彼此状态。
+ */
+export function createTracingProviderForRequest(): ITracingProvider {
+    if (langfuseInstance) {
+        return new LangfuseTracingProvider(langfuseInstance);
+    }
+    return NoOpTracingProvider.getInstance();
+}
+
+/**
  * 获取 MetricsProvider（注入 Engine 用）
  */
 export function getMetricsProvider(): IMetricsProvider {

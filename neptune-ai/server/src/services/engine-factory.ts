@@ -10,7 +10,7 @@
  *   - instructions → 写入 workspace/CLAUDE.md → CC 自动读取
  */
 
-import {AgentEngine} from 'claude-code-best/engine';
+import {AgentEngine, createHeadlessCCRuntime} from 'claude-code-best/engine';
 import type {EngineFactory, QueryableEngine} from './thread-manager.js';
 import {TenantPermissionDelegate} from './permission-delegate.js';
 import {createLogger} from '../utils/logger.js';
@@ -50,7 +50,7 @@ export class ClaudeCodeEngineFactory implements EngineFactory {
         memoryRoot: string;
         workspace: string;
         tools: string[];
-        mcpServerUrls: string[];
+        mcpServers: Array<{ name: string; url: string }>;
         tenantId: string;
     }): Promise<{
         engine: QueryableEngine;
@@ -81,7 +81,7 @@ export class ClaudeCodeEngineFactory implements EngineFactory {
             {
                 tenantId: params.tenantId,
                 workspace: params.workspace,
-                mcpServers: params.mcpServerUrls,
+                mcpServers: params.mcpServers.map(server => server.name),
             },
             {
                 tools: params.tools,
@@ -90,7 +90,12 @@ export class ClaudeCodeEngineFactory implements EngineFactory {
 
         try {
             // 4. 创建 Engine 实例
+            const runtime = createHeadlessCCRuntime();
+            const systemPrompt = [params.identityOverride, params.instructions]
+                .filter(Boolean)
+                .join('\n\n');
             const engine = AgentEngine.create({
+                systemPrompt: systemPrompt || undefined,
                 // identity: 精确替换 CC 身份前缀
                 identityOverride: params.identityOverride,
                 // memory: 用户级记忆隔离
@@ -102,7 +107,7 @@ export class ClaudeCodeEngineFactory implements EngineFactory {
                     // skills: Engine 内部写入 .claude/skills/，CC 自动发现
                     skills: skillExtensions.length > 0 ? skillExtensions : undefined,
                     permissions: {
-                        bypassPermissions: true,
+                        delegate: permissionDelegate,
                     },
                 },
                 options: {
@@ -116,7 +121,7 @@ export class ClaudeCodeEngineFactory implements EngineFactory {
                         ...(this.defaultModel ? {model: this.defaultModel, defaultModel: this.defaultModel} : {}),
                     },
                 },
-            });
+            }, runtime);
 
             // 5. 创建 SDK Session
             const sdkSessionId = await engine.createSession({

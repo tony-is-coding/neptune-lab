@@ -42,6 +42,21 @@ export default defineConfig({
       dependencies: ['auth'],
     },
     {
+      name: 'advanced-chat',
+      testMatch: 'advanced-chat.spec.ts',
+      dependencies: ['auth'],
+    },
+    {
+      name: 'sse-recovery',
+      testMatch: 'sse-recovery.spec.ts',
+      dependencies: ['auth'],
+    },
+    {
+      name: 'thread-stability',
+      testMatch: 'thread-stability.spec.ts',
+      dependencies: ['auth'],
+    },
+    {
       name: 'api-alignment',
       testMatch: 'api-alignment.spec.ts',
       dependencies: ['smoke'],

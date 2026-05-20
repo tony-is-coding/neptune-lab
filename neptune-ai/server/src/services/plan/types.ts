@@ -4,12 +4,19 @@
  * 定义 Plan 数据结构和 SSE 事件类型，用于 Plan 模式的后端实现。
  */
 
+import type {
+    ChatPlanCreatedEvent,
+    ChatPlanDoneEvent,
+    ChatPlanStepEvent,
+    PlanTaskStatus,
+} from '@shared/neptune-ai';
+
 // ===== Plan 数据结构 =====
 
 /**
  * Plan 步骤状态
  */
-export type StepStatus = 'pending' | 'in_progress' | 'completed' | 'failed';
+export type StepStatus = PlanTaskStatus;
 
 /**
  * Plan 状态
@@ -70,69 +77,10 @@ export interface Plan {
 
 // ===== SSE Plan 事件类型 =====
 
-/**
- * Plan 创建事件
- * 当 Agent 首次调用 TaskCreate 工具时触发
- */
-export interface SSEPlanCreatedEvent {
-    type: 'plan_created';
-    /** Plan ID */
-    planId: string;
-    /** Plan 标题 */
-    title: string;
-    /** 总步骤数 */
-    totalSteps: number;
-    /** 创建时间（ISO 8601） */
-    createdAt: string;
-}
-
-/**
- * Plan 步骤更新事件
- * 当步骤状态变化时触发
- */
-export interface SSEPlanStepEvent {
-    type: 'plan_step';
-    /** Plan ID */
-    planId: string;
-    /** 步骤 ID */
-    stepId: string;
-    /** 步骤序号 */
-    stepNumber: number;
-    /** 步骤标题 */
-    subject: string;
-    /** 步骤状态 */
-    status: StepStatus;
-    /** 进行中描述 */
-    activeForm?: string;
-    /** 更新时间（ISO 8601） */
-    updatedAt: string;
-}
-
-/**
- * Plan 完成事件
- * 当所有步骤完成或 Plan 失败时触发
- */
-export interface SSEPlanDoneEvent {
-    type: 'plan_done';
-    /** Plan ID */
-    planId: string;
-    /** Plan 状态 */
-    status: 'completed' | 'failed';
-    /** 完成摘要 */
-    summary?: string;
-    /** 执行时长（毫秒） */
-    duration: number;
-    /** 完成时间（ISO 8601） */
-    completedAt: string;
-}
-
-/**
- * Plan SSE 事件联合类型
- */
-export type SSEPlanEvent =
-    | SSEPlanCreatedEvent
-    | SSEPlanStepEvent
-    | SSEPlanDoneEvent;
+export type SSEPlanCreatedEvent = ChatPlanCreatedEvent;
+export type SSEPlanStepEvent = ChatPlanStepEvent;
+export type SSEPlanDoneEvent = ChatPlanDoneEvent;
+export type SSEPlanEvent = SSEPlanCreatedEvent | SSEPlanStepEvent | SSEPlanDoneEvent;
 
 // ===== SDK TaskCreate/TaskUpdate 事件类型 =====
 

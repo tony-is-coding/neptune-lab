@@ -1,4 +1,5 @@
 import type {FastifyInstance} from 'fastify';
+import {randomUUID} from 'crypto';
 import {readFileSync} from 'fs';
 import {join} from 'path';
 import {threadManager} from '../services/thread-manager';
@@ -6,6 +7,8 @@ import {mapSSEEvent} from '../services/sse-event-mapper';
 import {transformHistory} from '../services/history-transformer';
 import {createLogger} from '../utils/logger';
 import {resolveTranscriptPath, resolveTranscriptPaths} from '../utils/transcript-resolver';
+import type {ChatConnectedEvent, ChatDoneEvent, ChatErrorEvent, ChatRequestContext} from '@shared/neptune-ai';
+import {sendApiError} from '../utils/api-error';
 
 const log = createLogger('routes:sessions');
 
@@ -30,11 +33,20 @@ export async function sessionRoutes(fastify: FastifyInstance) {
         const {agentId} = request.params as { agentId: string };
         const {content} = request.body as { content: string };
         const user = request.user;
+        const requestId = randomUUID();
+        reply.header('X-Request-Id', requestId);
 
         // 验证 content
         if (!content) {
-            return reply.status(400).send({error: 'MISSING_CONTENT', message: '缺少 content 参数'});
+            return sendApiError(reply, 400, {error: 'MISSING_CONTENT', message: '缺少 content 参数', requestId});
         }
+
+        const requestContext: Omit<ChatRequestContext, 'threadId'> = {
+            requestId,
+            tenantId: user.tenantId,
+            userId: user.userId,
+            agentId,
+        };
 
         // 设置 SSE 响应头
         reply.raw.writeHead(200, {
@@ -42,10 +54,17 @@ export async function sessionRoutes(fastify: FastifyInstance) {
             'Cache-Control': 'no-cache',
             'Connection': 'keep-alive',
             'X-Accel-Buffering': 'no',
+            'X-Request-Id': requestId,
         });
 
         // 连接确认
-        reply.raw.write(`event: connected\ndata: ${JSON.stringify({agentId, timestamp: Date.now()})}\n\n`);
+        const connectedEvent: ChatConnectedEvent = {
+            type: 'connected',
+            requestId,
+            threadId: '',
+            timestamp: Date.now(),
+        };
+        reply.raw.write(`event: connected\ndata: ${JSON.stringify({...connectedEvent, agentId})}\n\n`);
 // Note: X-Accel-Buffering: no + Cache-Control: no-cache ensures real-time delivery
 
         // 创建 AbortController 用于取消操作
@@ -65,6 +84,7 @@ export async function sessionRoutes(fastify: FastifyInstance) {
                 user.userId,
                 agentId,
                 content,
+                requestContext,
             );
 
             // 用于过滤重复的 assistant 事件
@@ -80,6 +100,15 @@ export async function sessionRoutes(fastify: FastifyInstance) {
 
                 // 检查是否为 Plan 事件（已经是 SSE 格式）
                 const eventType = (sdkEvent as any).type;
+                let usage: Record<string, unknown> = {};
+                if (eventType === 'dispatch_done') {
+                    usage = ((sdkEvent as any).usage || {}) as Record<string, unknown>;
+                    if (!abortController.signal.aborted) {
+                        const doneEvent: ChatDoneEvent = {type: 'done', requestId, usage};
+                        reply.raw.write(`event: done\ndata: ${JSON.stringify(doneEvent)}\n\n`);
+                    }
+                    continue;
+                }
                 if (eventType === 'plan_created' || eventType === 'plan_step' || eventType === 'plan_done') {
                     // Plan 事件直接发送
                     reply.raw.write(`event: message\ndata: ${JSON.stringify(sdkEvent)}\n\n`);
@@ -114,23 +143,16 @@ export async function sessionRoutes(fastify: FastifyInstance) {
                 }
             }
 
-            // 只有未被取消时才发送 done 事件
-            if (!abortController.signal.aborted) {
-                const usage = threadManager.getLastUsage();
-                if (usage) {
-                    reply.raw.write(`event: done\ndata: ${JSON.stringify({usage})}\n\n`);
-                } else {
-                    reply.raw.write(`event: done\ndata: ${JSON.stringify({})}\n\n`);
-                }
-                // Note: X-Accel-Buffering: no + Cache-Control: no-cache ensures real-time delivery
-            }
         } catch (error) {
             // 只有未被取消时才发送错误
             if (!abortController.signal.aborted) {
-                reply.raw.write(`event: error\ndata: ${JSON.stringify({
+                const errorEvent: ChatErrorEvent = {
+                    type: 'error',
                     error: 'QUERY_ERROR',
-                    message: String(error)
-                })}\n\n`);
+                    message: String(error),
+                    requestId,
+                };
+                reply.raw.write(`event: error\ndata: ${JSON.stringify(errorEvent)}\n\n`);
                 // Note: X-Accel-Buffering: no + Cache-Control: no-cache ensures real-time delivery
             }
         }

@@ -42,6 +42,8 @@ export interface TracingProcessorConfig {
     userId: string;
     tenantId: string;
     agentId: string;
+    requestId?: string;
+    sdkSessionId?: string;
     userInput: string;
     systemPrompt?: string;
 }
@@ -55,6 +57,7 @@ export class TracingEventProcessor {
     private userInput: string;
     private systemPrompt: string;
     private config: TracingProcessorConfig;
+    private baseMetadata: Record<string, unknown>;
 
     // Turn/Round 状态
     private roundIndex = 0;
@@ -91,7 +94,18 @@ export class TracingEventProcessor {
         this.userInput = config.userInput;
         this.systemPrompt = config.systemPrompt || '';
         this.config = config;
+        this.baseMetadata = {
+            requestId: config.requestId,
+            threadId: config.threadId,
+            agentId: config.agentId,
+            tenantId: config.tenantId,
+            userId: config.userId,
+            sdkSessionId: config.sdkSessionId,
+            model: config.model,
+        };
         this.currentRoundStartTime = performance.now();
+
+        this.provider.setObservationMetadata(this.baseMetadata);
 
         // 初始化 trace
         this.provider.setTraceContext({
@@ -99,7 +113,7 @@ export class TracingEventProcessor {
             sessionId: config.threadId,
             userId: config.userId,
             input: config.userInput,
-            metadata: {agentId: config.agentId, tenantId: config.tenantId},
+            metadata: this.baseMetadata,
         });
 
         // 开始 turn span

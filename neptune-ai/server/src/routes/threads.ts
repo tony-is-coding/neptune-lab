@@ -12,6 +12,7 @@
  */
 
 import type {FastifyInstance} from 'fastify';
+import {randomUUID} from 'crypto';
 import {readFileSync, appendFileSync, existsSync} from 'fs';
 import {join} from 'path';
 import {threadManager} from '../services/thread-manager';
@@ -20,8 +21,32 @@ import {transformHistory} from '../services/history-transformer';
 import {roleMiddleware} from '../middleware/auth';
 import {createLogger} from '../utils/logger';
 import {resolveTranscriptPath, resolveTranscriptPaths} from '../utils/transcript-resolver';
+import type {ChatConnectedEvent, ChatDoneEvent, ChatErrorEvent, ChatRequestContext} from '@shared/neptune-ai';
+import {sendApiError} from '../utils/api-error';
+import {agentTemplateService} from '../services/agent-template';
 
 const log = createLogger('routes:threads');
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function notFoundEnvelope(message: string) {
+    return {error: 'NOT_FOUND', message};
+}
+
+async function canAccessAgent(agentId: string, tenantId: string): Promise<boolean> {
+    if (!UUID_RE.test(agentId)) return false;
+    return agentTemplateService.belongsToTenant(agentId, tenantId);
+}
+
+function isValidId(id: string): boolean {
+    return UUID_RE.test(id);
+}
+
+async function getOwnedThread(agentId: string, threadId: string, tenantId: string) {
+    if (!isValidId(agentId) || !isValidId(threadId)) return null;
+    const thread = await threadManager.get(threadId);
+    if (!thread || thread.tenantId !== tenantId || thread.templateId !== agentId) return null;
+    return thread;
+}
 
 /**
  * 将 events.jsonl 的事件数组转换为前端 ChatMessage 格式
@@ -71,6 +96,61 @@ function eventsToMessages(events: Array<Record<string, unknown>>): Array<{
             currentAssistantBlocks.push({type: 'thinking', content: String(event.content || ''), duration: 0});
         } else if (type === 'text') {
             currentAssistantBlocks.push({type: 'text', content: String(event.content || '')});
+        } else if (type === 'ask_user') {
+            const questions = Array.isArray(event.questions) ? event.questions : [];
+            currentAssistantBlocks.push({
+                type: 'ask_user',
+                id: String(event.id || ''),
+                questions,
+                answered: Boolean(event.answered),
+                answers: event.answers || undefined,
+            });
+        } else if (type === 'plan_step') {
+            const planId = String(event.planId || '');
+            const existingPlan = currentAssistantBlocks.find((block): block is {type: string; id: string; todos: Array<Record<string, unknown>>} =>
+                typeof block === 'object' &&
+                block !== null &&
+                (block as any).type === 'plan' &&
+                (block as any).id === planId &&
+                Array.isArray((block as any).todos)
+            );
+            const todo = {
+                content: String(event.subject || ''),
+                status: String(event.status || 'pending'),
+                activeForm: event.activeForm ? String(event.activeForm) : undefined,
+            };
+            if (existingPlan) {
+                const existingIndex = existingPlan.todos.findIndex(t => t.content === todo.content);
+                if (existingIndex >= 0) {
+                    existingPlan.todos[existingIndex] = todo;
+                } else {
+                    existingPlan.todos.push(todo);
+                }
+            } else {
+                currentAssistantBlocks.push({
+                    type: 'plan',
+                    id: planId,
+                    todos: [{
+                    content: String(event.subject || ''),
+                    status: String(event.status || 'pending'),
+                    activeForm: event.activeForm ? String(event.activeForm) : undefined,
+                    }],
+                });
+            }
+        } else if (type === 'tool_use' && event.name === 'TodoWrite') {
+            // TodoWrite → plan block
+            const input = event.input as Record<string, unknown> | undefined;
+            if (input?.todos && Array.isArray(input.todos)) {
+                currentAssistantBlocks.push({
+                    type: 'plan',
+                    id: String(event.id || ''),
+                    todos: (input.todos as Array<Record<string, unknown>>).map(t => ({
+                        content: String(t.content || ''),
+                        status: String(t.status || 'pending'),
+                        activeForm: t.activeForm ? String(t.activeForm) : undefined,
+                    })),
+                });
+            }
         } else if (type === 'tool_use') {
             currentAssistantBlocks.push({
                 type: 'tool_use',
@@ -87,20 +167,6 @@ function eventsToMessages(events: Array<Record<string, unknown>>): Array<{
                 fileType: String(event.fileType || ''),
                 content: String(event.content || ''),
             });
-        } else if (type === 'tool_use' && event.name === 'TodoWrite') {
-            // TodoWrite → plan block
-            const input = event.input as Record<string, unknown> | undefined;
-            if (input?.todos && Array.isArray(input.todos)) {
-                currentAssistantBlocks.push({
-                    type: 'plan',
-                    id: String(event.id || ''),
-                    todos: (input.todos as Array<Record<string, unknown>>).map(t => ({
-                        content: String(t.content || ''),
-                        status: String(t.status || 'pending'),
-                        activeForm: t.activeForm ? String(t.activeForm) : undefined,
-                    })),
-                });
-            }
         }
     }
 
@@ -119,6 +185,10 @@ export async function threadRoutes(fastify: FastifyInstance) {
         const user = request.user;
 
         try {
+            if (!(await canAccessAgent(agentId, user.tenantId))) {
+                return reply.status(404).send(notFoundEnvelope('Agent 模板不存在'));
+            }
+
             const thread = await threadManager.create({
                 tenantId: user.tenantId,
                 userId: user.userId,
@@ -128,8 +198,9 @@ export async function threadRoutes(fastify: FastifyInstance) {
 
             reply.status(201).send(thread);
         } catch (error) {
+            if (reply.sent || reply.raw.headersSent) return;
             log.error('Request failed', {detail: (error as Error).message});
-            reply.status(500).send({
+            return reply.status(500).send({
                 error: 'INTERNAL_ERROR',
                 message: '创建 Thread 失败',
             });
@@ -150,6 +221,10 @@ export async function threadRoutes(fastify: FastifyInstance) {
         const user = request.user;
 
         try {
+            if (!(await canAccessAgent(agentId, user.tenantId))) {
+                return reply.status(404).send(notFoundEnvelope('Agent 模板不存在'));
+            }
+
             const result = await threadManager.list(agentId, user.userId, {
                 status,
                 limit: limit ? parseInt(limit, 10) : 50,
@@ -158,8 +233,9 @@ export async function threadRoutes(fastify: FastifyInstance) {
 
             reply.send(result);
         } catch (error) {
+            if (reply.sent || reply.raw.headersSent) return;
             log.error('Request failed', {detail: (error as Error).message});
-            reply.status(500).send({
+            return reply.status(500).send({
                 error: 'INTERNAL_ERROR',
                 message: '获取 Thread 列表失败',
             });
@@ -178,17 +254,8 @@ export async function threadRoutes(fastify: FastifyInstance) {
         const user = request.user;
 
         try {
-            const thread = await threadManager.get(threadId);
-
+            const thread = await getOwnedThread(agentId, threadId, user.tenantId);
             if (!thread) {
-                return reply.status(404).send({
-                    error: 'NOT_FOUND',
-                    message: 'Thread 不存在',
-                });
-            }
-
-            // 验证归属：thread 必须属于当前用户的租户和 agent
-            if (thread.tenantId !== user.tenantId || thread.templateId !== agentId) {
                 return reply.status(404).send({
                     error: 'NOT_FOUND',
                     message: 'Thread 不存在',
@@ -222,14 +289,8 @@ export async function threadRoutes(fastify: FastifyInstance) {
 
         try {
             // 先验证 thread 存在且属于当前租户
-            const existing = await threadManager.get(threadId);
+            const existing = await getOwnedThread(agentId, threadId, user.tenantId);
             if (!existing) {
-                return reply.status(404).send({
-                    error: 'NOT_FOUND',
-                    message: 'Thread 不存在',
-                });
-            }
-            if (existing.tenantId !== user.tenantId || existing.templateId !== agentId) {
                 return reply.status(404).send({
                     error: 'NOT_FOUND',
                     message: 'Thread 不存在',
@@ -239,8 +300,9 @@ export async function threadRoutes(fastify: FastifyInstance) {
             const thread = await threadManager.update(threadId, {title, status});
             reply.send(thread);
         } catch (error) {
+            if (reply.sent || reply.raw.headersSent) return;
             log.error('Request failed', {detail: (error as Error).message});
-            reply.status(500).send({
+            return reply.status(500).send({
                 error: 'INTERNAL_ERROR',
                 message: '更新 Thread 失败',
             });
@@ -265,11 +327,8 @@ export async function threadRoutes(fastify: FastifyInstance) {
             });
 
             // 先验证 thread 存在且属于当前租户
-            const existing = await threadManager.get(threadId);
+            const existing = await getOwnedThread(agentId, threadId, user.tenantId);
             if (!existing) {
-                return sendNotFound();
-            }
-            if (existing.tenantId !== user.tenantId || existing.templateId !== agentId) {
                 return sendNotFound();
             }
 
@@ -300,44 +359,52 @@ export async function threadRoutes(fastify: FastifyInstance) {
         };
         const {content} = request.body as { content?: string };
         const user = request.user;
+        const requestId = randomUUID();
+        reply.header('X-Request-Id', requestId);
 
         // 验证 content
         if (!content) {
-            return reply.status(400).send({
+            return sendApiError(reply, 400, {
                 error: 'MISSING_CONTENT',
                 message: '缺少 content 参数',
+                requestId,
             });
         }
 
         // 获取 Thread 并验证
-        const thread = await threadManager.get(threadId);
+        const thread = await getOwnedThread(agentId, threadId, user.tenantId);
         if (!thread) {
-            return reply.status(404).send({
+            return sendApiError(reply, 404, {
                 error: 'NOT_FOUND',
                 message: 'Thread 不存在',
-            });
-        }
-        if (thread.tenantId !== user.tenantId || thread.templateId !== agentId) {
-            return reply.status(404).send({
-                error: 'NOT_FOUND',
-                message: 'Thread 不存在',
+                requestId,
             });
         }
 
         // 验证状态
         if (thread.status === 'running') {
-            return reply.status(409).send({
+            return sendApiError(reply, 409, {
                 error: 'CONFLICT',
                 message: 'Thread 正在执行中',
+                requestId,
             });
         }
         if (thread.status === 'completed') {
-            return reply.status(400).send({
+            return sendApiError(reply, 400, {
                 error: 'BAD_REQUEST',
                 message: 'Thread 已结束 (completed)',
+                requestId,
             });
         }
         // error 状态允许重试（engine 可能因 server 重启丢失）
+
+        const chatContext: ChatRequestContext = {
+            requestId,
+            tenantId: user.tenantId,
+            userId: user.userId,
+            agentId,
+            threadId,
+        };
 
         // 设置 SSE 响应头
         reply.raw.writeHead(200, {
@@ -345,10 +412,12 @@ export async function threadRoutes(fastify: FastifyInstance) {
             'Cache-Control': 'no-cache',
             'Connection': 'keep-alive',
             'X-Accel-Buffering': 'no',
+            'X-Request-Id': requestId,
         });
 
         // 连接确认
-        reply.raw.write(`event: connected\ndata: ${JSON.stringify({threadId, timestamp: Date.now()})}\n\n`);
+        const connectedEvent: ChatConnectedEvent = {type: 'connected', requestId, threadId, timestamp: Date.now()};
+        reply.raw.write(`event: connected\ndata: ${JSON.stringify(connectedEvent)}\n\n`);
         // Note: X-Accel-Buffering: no + Cache-Control: no-cache ensures real-time delivery
 
         // 创建 AbortController 用于取消操作
@@ -371,14 +440,16 @@ export async function threadRoutes(fastify: FastifyInstance) {
         };
 
         // 写入 user message
-        persistEvent({_role: 'user', content});
+        persistEvent({_meta: 'request', requestId, threadId, agentId, tenantId: user.tenantId, userId: user.userId});
+        persistEvent({_role: 'user', requestId, content});
 
         // 用于收集完整文本（不存增量 delta，只存最终合并文本）
         let currentText = '';
         let currentThinking = '';
+        let dispatchUsage: Record<string, unknown> = {};
 
         try {
-            const stream = threadManager.dispatch(threadId, content);
+            const stream = threadManager.dispatch(threadId, content, chatContext);
 
             // 用于过滤重复的 assistant 事件
             let hasReceivedStreamDelta = false;
@@ -389,9 +460,14 @@ export async function threadRoutes(fastify: FastifyInstance) {
                 }
                 // 检查是否为 Plan 事件（已经是 SSE 格式）
                 const eventType = (sdkEvent as any).type;
+                if (eventType === 'dispatch_done') {
+                    dispatchUsage = ((sdkEvent as any).usage || {}) as Record<string, unknown>;
+                    continue;
+                }
                 if (eventType === 'plan_created' || eventType === 'plan_step' || eventType === 'plan_done') {
                     // Plan 事件直接发送
                     reply.raw.write(`event: message\ndata: ${JSON.stringify(sdkEvent)}\n\n`);
+                    persistEvent(sdkEvent);
                     // Note: X-Accel-Buffering: no + Cache-Control: no-cache ensures real-time delivery
                     continue;
                 }
@@ -490,6 +566,9 @@ export async function threadRoutes(fastify: FastifyInstance) {
 
                 for (const event of sseEvents) {
                     reply.raw.write(`event: message\ndata: ${JSON.stringify(event)}\n\n`);
+                    if (event.type === 'ask_user' || event.type === 'artifact') {
+                        persistEvent(event);
+                    }
                     // Note: X-Accel-Buffering: no + Cache-Control: no-cache ensures real-time delivery
                 }
             }
@@ -504,16 +583,19 @@ export async function threadRoutes(fastify: FastifyInstance) {
             persistEvent({_meta: 'done'});
 
             if (!abortController.signal.aborted) {
-                const usage = threadManager.getLastUsage();
-                reply.raw.write(`event: done\ndata: ${JSON.stringify({usage: usage || {}})}\n\n`);
+                const doneEvent: ChatDoneEvent = {type: 'done', requestId, usage: dispatchUsage};
+                reply.raw.write(`event: done\ndata: ${JSON.stringify(doneEvent)}\n\n`);
                 // Note: X-Accel-Buffering: no + Cache-Control: no-cache ensures real-time delivery
             }
         } catch (error) {
             if (!abortController.signal.aborted) {
-                reply.raw.write(`event: error\ndata: ${JSON.stringify({
+                const errorEvent: ChatErrorEvent = {
+                    type: 'error',
                     error: 'QUERY_ERROR',
-                    message: String(error)
-                })}\n\n`);
+                    message: String(error),
+                    requestId,
+                };
+                reply.raw.write(`event: error\ndata: ${JSON.stringify(errorEvent)}\n\n`);
                 // Note: X-Accel-Buffering: no + Cache-Control: no-cache ensures real-time delivery
             }
         }
@@ -544,8 +626,8 @@ export async function threadRoutes(fastify: FastifyInstance) {
         }
 
         // 验证 Thread 归属
-        const thread = await threadManager.get(threadId);
-        if (!thread || thread.tenantId !== user.tenantId || thread.templateId !== agentId) {
+        const thread = await getOwnedThread(agentId, threadId, user.tenantId);
+        if (!thread) {
             return reply.status(404).send({
                 error: 'NOT_FOUND',
                 message: 'Thread 不存在',
@@ -575,8 +657,8 @@ export async function threadRoutes(fastify: FastifyInstance) {
         const user = request.user;
 
         try {
-            const thread = await threadManager.get(threadId);
-            if (!thread || thread.tenantId !== user.tenantId || thread.templateId !== agentId) {
+            const thread = await getOwnedThread(agentId, threadId, user.tenantId);
+            if (!thread) {
                 return reply.status(404).send({error: 'NOT_FOUND', message: 'Thread 不存在'});
             }
 
@@ -603,14 +685,8 @@ export async function threadRoutes(fastify: FastifyInstance) {
         const user = request.user;
 
         try {
-            const thread = await threadManager.get(threadId);
+            const thread = await getOwnedThread(agentId, threadId, user.tenantId);
             if (!thread) {
-                return reply.status(404).send({
-                    error: 'NOT_FOUND',
-                    message: 'Thread 不存在',
-                });
-            }
-            if (thread.tenantId !== user.tenantId || thread.templateId !== agentId) {
                 return reply.status(404).send({
                     error: 'NOT_FOUND',
                     message: 'Thread 不存在',

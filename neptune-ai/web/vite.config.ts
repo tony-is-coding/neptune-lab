@@ -13,6 +13,7 @@ export default defineConfig(({mode}) => {
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
+        '@shared/neptune-ai': path.resolve(__dirname, '../../shared/types/neptune-ai/index.ts'),
       },
     },
     server: {

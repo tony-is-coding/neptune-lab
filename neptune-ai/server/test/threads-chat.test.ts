@@ -106,6 +106,8 @@ describe('旧 API 兼容性', () => {
             expect(res.statusCode).toBe(400);
             const body = res.json();
             expect(body).toHaveProperty('error', 'MISSING_CONTENT');
+            expect(body.requestId).toBeTruthy();
+            expect(res.headers['x-request-id']).toBe(body.requestId);
         });
 
         test('未认证应该返回 401', async () => {
@@ -125,6 +127,9 @@ describe('旧 API 兼容性', () => {
                 payload: {content: ''},
             });
             expect(res.statusCode).toBe(400);
+            const body = res.json();
+            expect(body.requestId).toBeTruthy();
+            expect(res.headers['x-request-id']).toBe(body.requestId);
         });
 
         test('路由存在（有 Engine factory 时返回 SSE 流或 500，不是 404）', async () => {
@@ -200,6 +205,9 @@ describe('旧 API 兼容性', () => {
                 payload: {content: 'test'},
             });
             expect(newRes.statusCode).toBe(404);
+            const body = newRes.json();
+            expect(body.requestId).toBeTruthy();
+            expect(newRes.headers['x-request-id']).toBe(body.requestId);
         });
 
         test('旧 history 和新 thread history 都存在', async () => {

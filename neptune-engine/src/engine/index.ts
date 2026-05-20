@@ -83,6 +83,7 @@ export type {ConfigSourceType} from './config/index.js'
 
 export {AgentEngine} from './AgentEngine.js'
 export type {AgentEngineConfig, QueryOptions, EngineStats, ProviderConfig, ProviderType} from './AgentEngine.js'
+export {createHeadlessCCRuntime} from './cc-runtime/DefaultCCRuntime.js'
 export type {
 	SessionStatus,
 	SessionConfig,

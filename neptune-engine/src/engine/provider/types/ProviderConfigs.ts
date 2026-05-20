@@ -5,7 +5,7 @@
  * 这些配置类型会被 ProviderConfig discriminated union 引用。
  */
 
-import type {BaseProviderConfig} from '../adapters/BaseProvider.js'
+import type {BaseProviderConfig} from './BaseProviderConfig.js'
 
 // ============================================================
 // Anthropic Provider 配置
