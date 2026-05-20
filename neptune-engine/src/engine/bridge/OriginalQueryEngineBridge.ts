@@ -29,7 +29,6 @@ import type {UnifiedConfig} from '../config/UnifiedConfig.js'
 import {getGlobalProviderRegistry} from '../provider/ProviderRegistry.js'
 import type {ProviderAdapter} from '../provider/ProviderAdapter.js'
 import type {QueryDeps} from '../../query/deps.js'
-import {productionDeps} from '../../query/deps.js'
 import {EngineError, EngineErrorCode} from '../errors.js'
 import type {SDKTool} from '../types/tool-extension.js'
 
@@ -309,6 +308,7 @@ export async function buildQueryEngineConfig(config: UnifiedConfig, runtime?: CC
 			{providerRegistry: config.providerRegistry}
 		)
 		if (providerAdapter) {
+			const {productionDeps} = await import('../../query/deps.js')
 			const originalDeps = productionDeps()
 
 			// 获取 Provider 的 CircuitBreaker（通过 unknown 中间类型避免类型错误）

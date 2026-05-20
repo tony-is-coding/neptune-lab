@@ -14,7 +14,6 @@
  */
 
 import type {ProviderQueryParams, ProviderMessage} from '../ProviderAdapter.js'
-import {queryModelWithStreaming} from '../../../services/api/claude.js'
 import type {Message} from '../../../types/message.js'
 import {asSystemPrompt} from '../../../utils/systemPromptType.js'
 import type {SystemPrompt} from '../../../utils/systemPromptType.js'
@@ -57,6 +56,8 @@ export class AnthropicProvider extends BaseProvider<AnthropicProviderConfig> {
 		this.applyConfig()
 
 		try {
+			const {queryModelWithStreaming} = await import('../../../services/api/claude.js')
+
 			// 1. 参数转换：ProviderQueryParams → CC 所需格式
 			const systemPrompt = this.buildSystemPrompt(params.systemPrompt)
 			const messages = this.normalizeMessages(params.messages)

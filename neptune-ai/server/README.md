@@ -63,14 +63,16 @@ bun run dev
 
 ## 数据库 Schema
 
-### 核心表
+### 核心表 (8 张)
 
 - **tenants**: 租户信息、配额、计费规则
 - **users**: 用户信息、角色、所属租户
-- **agent_templates**: Agent 模板配置（systemPrompt/tools/skills/MCP）
-- **sessions**: Session 元数据（状态/归属/token用量）
-- **messages**: 对话内容
-- **billing_records**: 计费记录
+- **agent_templates**: Agent 模板配置（systemPrompt/promptConfig/tools/skills/MCP）
+- **sessions**: Session/Thread 元数据（状态/归属/workspace）
+- **billing_records**: 计费记录（token 用量 + 费用）
+- **documents**: Agent 文档/知识库/记忆文件
+- **skills**: 技能模板（租户级）
+- **agent_skills**: Agent-Skill 多对多关联
 
 ## API 端点
 
@@ -96,9 +98,15 @@ bun run dev
 - 使用中文注释
 - 所有函数和复杂逻辑必须有 JSDoc 注释
 
-## 下一步
+## 已实现模块
 
-- [ ] 任务 #7: 认证模块 - JWT 签发/验证/中间件
-- [ ] 任务 #8: 租户/用户/Agent 模板 CRUD
-- [ ] 任务 #9: Session 生命周期 + SSE Bridge
-- [ ] 任务 #10: CostAggregator 基础计费
+- ✅ 认证模块 (JWT + bcrypt)
+- ✅ 租户/用户/Agent 模板 CRUD
+- ✅ Thread 生命周期 + SSE 流式对话
+- ✅ Session 兼容层（委托 ThreadManager）
+- ✅ CostAggregator 计费
+- ✅ Skills CRUD + Agent-Skill 关联
+- ✅ 文档/知识库管理
+- ✅ Plan Mode（PlanManager 任务计划可视化）
+- ✅ Langfuse 可观测性集成
+- ✅ Prompt 模块化组装（PromptAssembler）

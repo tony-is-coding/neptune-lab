@@ -259,33 +259,30 @@ export async function threadRoutes(fastify: FastifyInstance) {
         const user = request.user;
 
         try {
+            const sendNotFound = () => reply.status(404).send({
+                error: 'NOT_FOUND',
+                message: 'Thread 不存在',
+            });
+
             // 先验证 thread 存在且属于当前租户
             const existing = await threadManager.get(threadId);
             if (!existing) {
-                return reply.status(404).send({
-                    error: 'NOT_FOUND',
-                    message: 'Thread 不存在',
-                });
+                return sendNotFound();
             }
             if (existing.tenantId !== user.tenantId || existing.templateId !== agentId) {
-                return reply.status(404).send({
-                    error: 'NOT_FOUND',
-                    message: 'Thread 不存在',
-                });
+                return sendNotFound();
             }
 
             const success = await threadManager.delete(threadId);
             if (!success) {
-                return reply.status(404).send({
-                    error: 'NOT_FOUND',
-                    message: 'Thread 不存在',
-                });
+                return sendNotFound();
             }
 
-            reply.status(204).send();
+            return reply.status(204).send();
         } catch (error) {
+            if (reply.sent || reply.raw.headersSent) return;
             log.error('Request failed', {detail: (error as Error).message});
-            reply.status(500).send({
+            return reply.status(500).send({
                 error: 'INTERNAL_ERROR',
                 message: '删除 Thread 失败',
             });

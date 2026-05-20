@@ -13,8 +13,8 @@ test.describe('API 对齐诊断', () => {
   test('/skills 页面 API 调用诊断', async ({ page }) => {
     const diag = attachDiagnostics(page);
 
-    await page.goto('/skills');
-    await page.waitForLoadState('networkidle');
+    await page.goto('/skills', { waitUntil: 'domcontentloaded' });
+    await expect(page.locator('body')).toContainText(/Skills|No skills|Search skills/i);
 
     // 收集所有 API 请求
     const apiRequests = diag.requests.filter(r => r.includes('/api/'));
@@ -40,8 +40,8 @@ test.describe('API 对齐诊断', () => {
   test('/ (首页) Agent 列表 API 调用诊断', async ({ page }) => {
     const diag = attachDiagnostics(page);
 
-    await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.goto('/', { waitUntil: 'domcontentloaded' });
+    await expect(page.locator('[data-testid="primary-sidebar"]')).toBeVisible({ timeout: 10000 });
 
     const apiRequests = diag.requests.filter(r => r.includes('/api/'));
     const agentRequests = apiRequests.filter(r => r.includes('/agents'));
@@ -65,8 +65,7 @@ test.describe('API 对齐诊断', () => {
   test('/collaborate Agent + Thread API 调用诊断', async ({ page }) => {
     const diag = attachDiagnostics(page);
 
-    await page.goto('/collaborate');
-    await page.waitForLoadState('networkidle');
+    await page.goto('/collaborate', { waitUntil: 'domcontentloaded' });
     await page.waitForTimeout(3000);
 
     const apiRequests = diag.requests.filter(r => r.includes('/api/'));
@@ -96,8 +95,8 @@ test.describe('API 对齐诊断', () => {
   test('/agents 页面 API 调用诊断', async ({ page }) => {
     const diag = attachDiagnostics(page);
 
-    await page.goto('/agents');
-    await page.waitForLoadState('networkidle');
+    await page.goto('/agents', { waitUntil: 'domcontentloaded' });
+    await expect(page.locator('body')).toContainText(/All Agents|Create Agent/i);
 
     const apiRequests = diag.requests.filter(r => r.includes('/api/'));
 

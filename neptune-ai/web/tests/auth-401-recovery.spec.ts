@@ -6,7 +6,7 @@ test.describe('401 自动恢复', () => {
     const diag = attachDiagnostics(page);
 
     // 注入无效 token（模拟旧 bug 遗留）
-    await page.goto('/login');
+    await page.goto('/login', { waitUntil: 'domcontentloaded' });
     await page.evaluate(() => {
       localStorage.setItem('neptune-auth', JSON.stringify({
         state: {
@@ -19,8 +19,9 @@ test.describe('401 自动恢复', () => {
     });
 
     // 访问首页，应该触发 401，然后自动跳转登录页
-    await page.goto('/');
-    await page.waitForTimeout(3000);
+    await page.goto('/', { waitUntil: 'domcontentloaded' });
+    await page.waitForURL(url => url.pathname === '/login', { waitUntil: 'domcontentloaded' });
+    await expect(page.locator('text=Welcome back')).toBeVisible({ timeout: 10000 });
 
     // 应该被重定向到登录页
     expect(page.url()).toContain('/login');
@@ -36,7 +37,7 @@ test.describe('401 自动恢复', () => {
   });
 
   test('token=undefined 字符串时也能正确处理', async ({ page }) => {
-    await page.goto('/login');
+    await page.goto('/login', { waitUntil: 'domcontentloaded' });
     await page.evaluate(() => {
       localStorage.setItem('neptune-auth', JSON.stringify({
         state: {
@@ -48,8 +49,9 @@ test.describe('401 自动恢复', () => {
       }));
     });
 
-    await page.goto('/');
-    await page.waitForTimeout(2000);
+    await page.goto('/', { waitUntil: 'domcontentloaded' });
+    await page.waitForURL(url => url.pathname === '/login', { waitUntil: 'domcontentloaded' });
+    await expect(page.locator('text=Welcome back')).toBeVisible({ timeout: 10000 });
 
     // token 是 undefined，isAuthenticated 应该是 true 但 getStoredToken 返回 null
     // getAuthHeaders 会返回空对象，不发 Authorization header

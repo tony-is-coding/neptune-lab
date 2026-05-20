@@ -37,6 +37,11 @@ export default defineConfig({
       dependencies: ['auth'],
     },
     {
+      name: 'controlled-chat',
+      testMatch: 'controlled-chat.spec.ts',
+      dependencies: ['auth'],
+    },
+    {
       name: 'api-alignment',
       testMatch: 'api-alignment.spec.ts',
       dependencies: ['smoke'],

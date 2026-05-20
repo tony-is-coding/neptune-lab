@@ -861,8 +861,23 @@ export function getThreadManager(): ThreadManager {
         // 仅在 NEPTUNE_LLM_API_KEY 存在时注入 EngineFactory
         // 测试环境不需要真实 Engine，dispatch() 会因缺少 factory 而抛错
         let engineFactory: EngineFactory | undefined;
+        const engineMode = process.env.NEPTUNE_ENGINE_MODE || process.env.NEPTUNE_ENGINE_DRIVER;
+        const useControlledEngine = engineMode === 'controlled' || process.env.NEPTUNE_MOCK_LLM === '1';
+
+        if (useControlledEngine) {
+            try {
+                const {ControlledEngineFactory} = require('./controlled-engine-factory.js') as typeof import('./controlled-engine-factory.js');
+                engineFactory = new ControlledEngineFactory();
+                log.info('Controlled EngineFactory enabled');
+            } catch (error) {
+                log.warn('Controlled EngineFactory load failed, dispatch unavailable', {
+                    detail: (error as Error).message,
+                });
+            }
+        }
+
         const apiKey = process.env.NEPTUNE_LLM_API_KEY;
-        if (apiKey) {
+        if (!engineFactory && apiKey) {
             // 动态 import 避免测试环境加载 claude-code-best/engine 模块
             try {
                 const {ClaudeCodeEngineFactory} = require('./engine-factory.js') as typeof import('./engine-factory.js');
