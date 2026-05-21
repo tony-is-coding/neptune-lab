@@ -10,7 +10,7 @@
  *   - instructions → 写入 workspace/CLAUDE.md → CC 自动读取
  */
 
-import {AgentEngine, createHeadlessCCRuntime} from '@neptune/engine-product/engine';
+import {AgentEngine, createHeadlessCCRuntime} from '@neptune/engine';
 import type {EngineFactory, QueryableEngine} from './thread-manager.js';
 import {TenantPermissionDelegate} from './permission-delegate.js';
 import {createLogger} from '../utils/logger.js';

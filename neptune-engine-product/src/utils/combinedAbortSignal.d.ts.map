@@ -1,0 +1,1 @@
+{"version":3,"file":"combinedAbortSignal.d.ts","sourceRoot":"","sources":["combinedAbortSignal.ts"],"names":[],"mappings":"AAEA;;;;;;;;;;;GAWG;AACH,wBAAgB,yBAAyB,CACxC,MAAM,EAAE,WAAW,GAAG,SAAS,EAC/B,IAAI,CAAC,EAAE;IAAE,OAAO,CAAC,EAAE,WAAW,CAAC;IAAC,SAAS,CAAC,EAAE,MAAM,CAAA;CAAE,GAClD;IAAE,MAAM,EAAE,WAAW,CAAC;IAAC,OAAO,EAAE,MAAM,IAAI,CAAA;CAAE,CAgC9C"}

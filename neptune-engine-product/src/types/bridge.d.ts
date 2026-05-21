@@ -1,0 +1,27 @@
+import type { PermissionUpdate } from '../utils/permissions/PermissionUpdateSchema.js';
+/**
+ * Bridge permission response type for bidirectional permission checks
+ * between bridge and framework.
+ */
+export type BridgePermissionResponse = {
+    behavior: 'allow' | 'deny';
+    updatedInput?: Record<string, unknown>;
+    updatedPermissions?: PermissionUpdate[];
+    message?: string;
+};
+/**
+ * Callbacks for bridge permission handling. Used by AppState to
+ * coordinate permission requests between bridge and local UI.
+ */
+export type BridgePermissionCallbacks = {
+    sendRequest(requestId: string, toolName: string, input: Record<string, unknown>, toolUseId: string, description: string, permissionSuggestions?: PermissionUpdate[], blockedPath?: string): void;
+    sendResponse(requestId: string, response: BridgePermissionResponse): void;
+    /** Cancel a pending control_request so the web app can dismiss its prompt. */
+    cancelRequest(requestId: string): void;
+    onResponse(requestId: string, handler: (response: BridgePermissionResponse) => void): () => void;
+};
+/** Type predicate for validating a parsed control_response payload
+ *  as a BridgePermissionResponse. Checks the required `behavior`
+ *  discriminant rather than using an unsafe `as` cast. */
+export declare function isBridgePermissionResponse(value: unknown): value is BridgePermissionResponse;
+//# sourceMappingURL=bridge.d.ts.map

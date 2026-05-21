@@ -1,0 +1,23 @@
+export declare const BLACK_CIRCLE: string;
+export declare const BULLET_OPERATOR = "\u2219";
+export declare const TEARDROP_ASTERISK = "\u273B";
+export declare const UP_ARROW = "\u2191";
+export declare const DOWN_ARROW = "\u2193";
+export declare const LIGHTNING_BOLT = "\u21AF";
+export declare const EFFORT_LOW = "\u25CB";
+export declare const EFFORT_MEDIUM = "\u25D0";
+export declare const EFFORT_HIGH = "\u25CF";
+export declare const EFFORT_MAX = "\u25C9";
+export declare const PLAY_ICON = "\u25B6";
+export declare const PAUSE_ICON = "\u23F8";
+export declare const REFRESH_ARROW = "\u21BB";
+export declare const CHANNEL_ARROW = "\u2190";
+export declare const INJECTED_ARROW = "\u2192";
+export declare const FORK_GLYPH = "\u2442";
+export declare const DIAMOND_OPEN = "\u25C7";
+export declare const DIAMOND_FILLED = "\u25C6";
+export declare const REFERENCE_MARK = "\u203B";
+export declare const FLAG_ICON = "\u2691";
+export declare const BLOCKQUOTE_BAR = "\u258E";
+export declare const HEAVY_HORIZONTAL = "\u2501";
+//# sourceMappingURL=figures-core.d.ts.map

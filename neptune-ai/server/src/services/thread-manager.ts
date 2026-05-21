@@ -899,7 +899,7 @@ export function getThreadManager(): ThreadManager {
 
         const apiKey = process.env.NEPTUNE_LLM_API_KEY;
         if (!engineFactory && apiKey) {
-            // 动态 import 避免测试环境加载 @neptune/engine-product/engine 模块
+            // 动态 import 避免测试环境加载 @neptune/engine 模块
             try {
                 const {ClaudeCodeEngineFactory} = require('./engine-factory.js') as typeof import('./engine-factory.js');
                 engineFactory = new ClaudeCodeEngineFactory({

@@ -1,0 +1,25 @@
+{
+  "name": "@neptune/engine",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "Neptune lightweight agent harness kernel. Currently a thin facade over @neptune/engine-product/engine; will graduate to standalone package as Stages 4-8 of the harness extraction land.",
+  "engines": {
+    "bun": ">=1.2.0"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./bootstrap": "./src/bootstrap.ts",
+    "./provider": "./src/provider.ts",
+    "./context": "./src/context.ts",
+    "./session": "./src/session.ts",
+    "./log": "./src/log.ts",
+    "./hooks": "./src/hooks.ts",
+    "./permissions": "./src/permissions.ts",
+    "./storage": "./src/storage.ts",
+    "./events": "./src/events.ts"
+  },
+  "dependencies": {
+    "@neptune/engine-product": "workspace:*"
+  }
+}

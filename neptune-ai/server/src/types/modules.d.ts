@@ -6,7 +6,7 @@ declare module 'bcrypt' {
     export function genRounds(rounds?: number): Promise<string>;
 }
 
-declare module '@neptune/engine-product/engine' {
+declare module '@neptune/engine' {
     export interface QueryEvent {
         type: string;
 
@@ -43,7 +43,7 @@ declare module '@neptune/engine-product/engine' {
     }
 }
 
-declare module '@neptune/engine-product/engine/permissions' {
+declare module '@neptune/engine/permissions' {
     export interface PermissionDelegate {
         onToolAccess(
             toolName: string,

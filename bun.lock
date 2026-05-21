@@ -11,6 +11,7 @@
       "dependencies": {
         "@fastify/cors": "^10.0.1",
         "@fastify/jwt": "^9.0.1",
+        "@neptune/engine": "workspace:*",
         "@neptune/engine-product": "workspace:*",
         "bcrypt": "^6.0.0",
         "drizzle-orm": "^0.36.4",
@@ -64,6 +65,13 @@
         "typescript": "~5.8.2",
         "vite": "^6.2.3",
         "vitest": "^4.1.6",
+      },
+    },
+    "neptune-engine": {
+      "name": "@neptune/engine",
+      "version": "0.0.1",
+      "dependencies": {
+        "@neptune/engine-product": "workspace:*",
       },
     },
     "neptune-engine-product": {
@@ -750,6 +758,8 @@
     "@napi-rs/wasm-runtime": ["@napi-rs/wasm-runtime@1.1.4", "https://registry.npmmirror.com/@napi-rs/wasm-runtime/-/wasm-runtime-1.1.4.tgz", { "dependencies": { "@tybys/wasm-util": "^0.10.1" }, "peerDependencies": { "@emnapi/core": "^1.7.1", "@emnapi/runtime": "^1.7.1" } }, "sha512-3NQNNgA1YSlJb/kMH1ildASP9HW7/7kYnRI2szWJaofaS1hWmbGI4H+d3+22aGzXXN9IJ+n+GiFVcGipJP18ow=="],
 
     "@neptune/builtin-tools": ["@neptune/builtin-tools@workspace:neptune-engine-product/packages/builtin-tools"],
+
+    "@neptune/engine": ["@neptune/engine@workspace:neptune-engine"],
 
     "@neptune/engine-product": ["@neptune/engine-product@workspace:neptune-engine-product"],
 

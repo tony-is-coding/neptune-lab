@@ -8,8 +8,8 @@
  */
 
 import {Langfuse} from 'langfuse';
-import {NoOpTracingProvider, NoOpMetricsProvider} from '@neptune/engine-product/engine';
-import type {ITracingProvider, IMetricsProvider} from '@neptune/engine-product/engine';
+import {NoOpTracingProvider, NoOpMetricsProvider} from '@neptune/engine';
+import type {ITracingProvider, IMetricsProvider} from '@neptune/engine';
 import {LangfuseTracingProvider} from './langfuse-tracing-provider';
 import {createLogger} from '../../utils/logger';
 
