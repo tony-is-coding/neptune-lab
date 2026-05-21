@@ -30,7 +30,7 @@ import type {
 import type {
 	AgentDefinition,
 	AgentDefinitionsResult,
-} from '@claude-code-best/builtin-tools/tools/AgentTool/loadAgentsDir.js'
+} from '@neptune/builtin-tools/tools/AgentTool/loadAgentsDir.js'
 import type {
 	AssistantMessage,
 	AttachmentMessage,

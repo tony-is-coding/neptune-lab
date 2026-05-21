@@ -8,14 +8,14 @@ import type {
   ToolUseBlockParam,
 } from '@anthropic-ai/sdk/resources/index.mjs'
 import * as React from 'react'
-import type { Command } from 'claude-code-best/commands.js'
+import type { Command } from '@neptune/engine-product/commands.js'
 import { useTerminalSize } from '../hooks/useTerminalSize.js'
 import { Box } from '@anthropic/ink'
-import type { Tools } from 'claude-code-best/Tool.js'
+import type { Tools } from '@neptune/engine-product/Tool.js'
 import {
   type ConnectorTextBlock,
   isConnectorTextBlock,
-} from 'claude-code-best/types/connectorText.js'
+} from '@neptune/engine-product/types/connectorText.js'
 import type {
   AssistantMessage,
   AttachmentMessage as AttachmentMessageType,
@@ -24,11 +24,11 @@ import type {
   NormalizedUserMessage,
   ProgressMessage,
   SystemMessage,
-} from 'claude-code-best/types/message.js'
-import { type AdvisorBlock, isAdvisorBlock } from 'claude-code-best/utils/advisor.js'
-import { isFullscreenEnvEnabled } from 'claude-code-best/utils/fullscreen.js'
-import { logError } from 'claude-code-best/utils/log.js'
-import type { buildMessageLookups } from 'claude-code-best/utils/messages.js'
+} from '@neptune/engine-product/types/message.js'
+import { type AdvisorBlock, isAdvisorBlock } from '@neptune/engine-product/utils/advisor.js'
+import { isFullscreenEnvEnabled } from '@neptune/engine-product/utils/fullscreen.js'
+import { logError } from '@neptune/engine-product/utils/log.js'
+import type { buildMessageLookups } from '@neptune/engine-product/utils/messages.js'
 import { CompactSummary } from './CompactSummary.js'
 import { AdvisorMessage } from './messages/AdvisorMessage.js'
 import { AssistantRedactedThinkingMessage } from './messages/AssistantRedactedThinkingMessage.js'
@@ -105,7 +105,7 @@ function MessageImpl({
       return (
         <AttachmentMessage
           addMargin={addMargin}
-          attachment={message.attachment as import('claude-code-best/utils/attachments.js').Attachment}
+          attachment={message.attachment as import('@neptune/engine-product/utils/attachments.js').Attachment}
           verbose={verbose}
           isTranscriptMode={isTranscriptMode}
         />
@@ -208,9 +208,9 @@ function MessageImpl({
       if (feature('HISTORY_SNIP')) {
         /* eslint-disable @typescript-eslint/no-require-imports */
         const { isSnipBoundaryMessage } =
-          require('../services/compact/snipProjection.js') as typeof import('claude-code-best/services/compact/snipProjection.js')
+          require('../services/compact/snipProjection.js') as typeof import('@neptune/engine-product/services/compact/snipProjection.js')
         const { isSnipMarkerMessage } =
-          require('../services/compact/snipCompact.js') as typeof import('claude-code-best/services/compact/snipCompact.js')
+          require('../services/compact/snipCompact.js') as typeof import('@neptune/engine-product/services/compact/snipCompact.js')
         /* eslint-enable @typescript-eslint/no-require-imports */
         if (isSnipBoundaryMessage(message)) {
           /* eslint-disable @typescript-eslint/no-require-imports */

@@ -1,4 +1,4 @@
-import type {PermissionDelegate} from 'claude-code-best/engine/permissions';
+import type {PermissionDelegate} from '@neptune/engine-product/engine/permissions';
 import {isAbsolute, relative, resolve} from 'path';
 
 /**

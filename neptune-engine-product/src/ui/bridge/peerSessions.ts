@@ -1,6 +1,6 @@
 import axios from 'axios'
-import { logForDebugging } from 'claude-code-best/utils/debug.js'
-import { errorMessage } from 'claude-code-best/utils/errors.js'
+import { logForDebugging } from '@neptune/engine-product/utils/debug.js'
+import { errorMessage } from '@neptune/engine-product/utils/errors.js'
 import { validateBridgeId } from './bridgeApi.js'
 import { getBridgeAccessToken } from './bridgeConfig.js'
 import { getReplBridgeHandle } from './replBridgeHandle.js'

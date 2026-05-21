@@ -50,10 +50,10 @@ import {
 	type ToolCallProgress,
 	toolMatchesName,
 } from '../../Tool.js'
-import {ListMcpResourcesTool} from '@claude-code-best/builtin-tools/tools/ListMcpResourcesTool/ListMcpResourcesTool.js'
-import {type MCPProgress, MCPTool} from '@claude-code-best/builtin-tools/tools/MCPTool/MCPTool.js'
-import {createMcpAuthTool} from '@claude-code-best/builtin-tools/tools/McpAuthTool/McpAuthTool.js'
-import {ReadMcpResourceTool} from '@claude-code-best/builtin-tools/tools/ReadMcpResourceTool/ReadMcpResourceTool.js'
+import {ListMcpResourcesTool} from '@neptune/builtin-tools/tools/ListMcpResourcesTool/ListMcpResourcesTool.js'
+import {type MCPProgress, MCPTool} from '@neptune/builtin-tools/tools/MCPTool/MCPTool.js'
+import {createMcpAuthTool} from '@neptune/builtin-tools/tools/McpAuthTool/McpAuthTool.js'
+import {ReadMcpResourceTool} from '@neptune/builtin-tools/tools/ReadMcpResourceTool/ReadMcpResourceTool.js'
 import {createAbortController} from '../../utils/abortController.js'
 import {count} from '../../utils/array.js'
 import {
@@ -122,8 +122,8 @@ import {
 	buildConnectedServer,
 	DEFAULT_CONNECTION_TIMEOUT_MS,
 	MAX_MCP_DESCRIPTION_LENGTH as PKG_MAX_MCP_DESCRIPTION_LENGTH,
-} from '@claude-code-best/mcp-client'
-import {recursivelySanitizeUnicode} from '@claude-code-best/mcp-client'
+} from '@neptune/mcp-client'
+import {recursivelySanitizeUnicode} from '@neptune/mcp-client'
 
 /* eslint-disable @typescript-eslint/no-require-imports */
 const fetchMcpSkillsForClient = feature('MCP_SKILLS')
@@ -135,7 +135,7 @@ const fetchMcpSkillsForClient = feature('MCP_SKILLS')
 import {UnauthorizedError} from '@modelcontextprotocol/sdk/client/auth.js'
 import type {AssistantMessage} from 'src/types/message.js'
 /* eslint-enable @typescript-eslint/no-require-imports */
-import {classifyMcpToolForCollapse} from '@claude-code-best/builtin-tools/tools/MCPTool/classifyForCollapse.js'
+import {classifyMcpToolForCollapse} from '@neptune/builtin-tools/tools/MCPTool/classifyForCollapse.js'
 import {clearKeychainCache} from '../../utils/secureStorage/macOsKeychainHelpers.js'
 import {sleep} from '../../utils/sleep.js'
 import {

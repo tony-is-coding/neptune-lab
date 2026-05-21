@@ -5,10 +5,10 @@ import { Ansi, Box, useTheme } from '@anthropic/ink'
 import {
   type CliHighlight,
   getCliHighlightPromise,
-} from 'claude-code-best/utils/cliHighlight.js'
-import { hashContent } from 'claude-code-best/utils/hash.js'
-import { configureMarked, formatToken } from 'claude-code-best/utils/markdown.js'
-import { stripPromptXMLTags } from 'claude-code-best/utils/messages.js'
+} from '@neptune/engine-product/utils/cliHighlight.js'
+import { hashContent } from '@neptune/engine-product/utils/hash.js'
+import { configureMarked, formatToken } from '@neptune/engine-product/utils/markdown.js'
+import { stripPromptXMLTags } from '@neptune/engine-product/utils/messages.js'
 import { MarkdownTable } from './MarkdownTable.js'
 
 type Props = {

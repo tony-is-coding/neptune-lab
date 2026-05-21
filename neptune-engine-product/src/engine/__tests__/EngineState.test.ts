@@ -57,14 +57,14 @@ mock.module("src/engine/log/index.ts", () => ({
 }));
 
 // Mock external dependencies
-mock.module("@claude-code-best/builtin-tools/tools/AgentTool/loadAgentsDir.js", () => ({
+mock.module("@neptune/builtin-tools/tools/AgentTool/loadAgentsDir.js", () => ({
 	loadAgentsDir: async () => ({
 		activeAgents: [],
 		allAgents: [],
 	}),
 }));
 
-mock.module("@claude-code-best/builtin-tools/tools/ExitPlanModeTool/ExitPlanModeV2Tool.js", () => ({
+mock.module("@neptune/builtin-tools/tools/ExitPlanModeTool/ExitPlanModeV2Tool.js", () => ({
 	AllowedPrompt: {},
 }));
 

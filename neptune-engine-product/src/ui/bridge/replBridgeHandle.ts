@@ -1,4 +1,4 @@
-import { updateSessionBridgeId } from 'claude-code-best/utils/concurrentSessions.js'
+import { updateSessionBridgeId } from '@neptune/engine-product/utils/concurrentSessions.js'
 import type { ReplBridgeHandle } from '../replBridge.js'
 import { toCompatSessionId } from './sessionIdCompat.js'
 

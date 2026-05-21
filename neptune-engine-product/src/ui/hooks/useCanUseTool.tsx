@@ -5,33 +5,33 @@ import { useCallback } from 'react'
 import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   logEvent,
-} from 'claude-code-best/services/analytics/index.js'
-import { sanitizeToolNameForAnalytics } from 'claude-code-best/services/analytics/metadata.js'
+} from '@neptune/engine-product/services/analytics/index.js'
+import { sanitizeToolNameForAnalytics } from '@neptune/engine-product/services/analytics/metadata.js'
 import type { ToolUseConfirm } from '../components/permissions/PermissionRequest.js'
 import { Text } from '@anthropic/ink'
 import type {
   ToolPermissionContext,
   Tool as ToolType,
   ToolUseContext,
-} from 'claude-code-best/Tool.js'
+} from '@neptune/engine-product/Tool.js'
 import {
   consumeSpeculativeClassifierCheck,
   peekSpeculativeClassifierCheck,
-} from '@claude-code-best/builtin-tools/tools/BashTool/bashPermissions.js'
-import { BASH_TOOL_NAME } from '@claude-code-best/builtin-tools/tools/BashTool/toolName.js'
-import type { AssistantMessage } from 'claude-code-best/types/message.js'
-import { recordAutoModeDenial } from 'claude-code-best/utils/autoModeDenials.js'
+} from '@neptune/builtin-tools/tools/BashTool/bashPermissions.js'
+import { BASH_TOOL_NAME } from '@neptune/builtin-tools/tools/BashTool/toolName.js'
+import type { AssistantMessage } from '@neptune/engine-product/types/message.js'
+import { recordAutoModeDenial } from '@neptune/engine-product/utils/autoModeDenials.js'
 import {
   clearClassifierChecking,
   setClassifierApproval,
   setYoloClassifierApproval,
-} from 'claude-code-best/utils/classifierApprovals.js'
-import { logForDebugging } from 'claude-code-best/utils/debug.js'
-import { AbortError } from 'claude-code-best/utils/errors.js'
-import { logError } from 'claude-code-best/utils/log.js'
-import type { PermissionDecision } from 'claude-code-best/utils/permissions/PermissionResult.js'
-import { hasPermissionsToUseTool } from 'claude-code-best/utils/permissions/permissions.js'
-import { jsonStringify } from 'claude-code-best/utils/slowOperations.js'
+} from '@neptune/engine-product/utils/classifierApprovals.js'
+import { logForDebugging } from '@neptune/engine-product/utils/debug.js'
+import { AbortError } from '@neptune/engine-product/utils/errors.js'
+import { logError } from '@neptune/engine-product/utils/log.js'
+import type { PermissionDecision } from '@neptune/engine-product/utils/permissions/PermissionResult.js'
+import { hasPermissionsToUseTool } from '@neptune/engine-product/utils/permissions/permissions.js'
+import { jsonStringify } from '@neptune/engine-product/utils/slowOperations.js'
 import { handleCoordinatorPermission } from './toolPermission/handlers/coordinatorHandler.js'
 import { handleInteractivePermission } from './toolPermission/handlers/interactiveHandler.js'
 import { handleSwarmWorkerPermission } from './toolPermission/handlers/swarmWorkerHandler.js'
@@ -40,10 +40,10 @@ import {
   createPermissionQueueOps,
 } from './toolPermission/PermissionContext.js'
 import { logPermissionDecision } from './toolPermission/permissionLogging.js'
-import type { CanUseToolFn as ImportedCanUseToolFn } from 'claude-code-best/types/permissions.js'
+import type { CanUseToolFn as ImportedCanUseToolFn } from '@neptune/engine-product/types/permissions.js'
 
 // Re-export CanUseToolFn from types/permissions for backward compatibility
-export type { CanUseToolFn } from 'claude-code-best/types/permissions.js'
+export type { CanUseToolFn } from '@neptune/engine-product/types/permissions.js'
 
 function useCanUseTool(
   setToolUseConfirmQueue: React.Dispatch<

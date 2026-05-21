@@ -2,7 +2,7 @@ import type { StructuredPatchHunk } from 'diff'
 import * as React from 'react'
 import { useTerminalSize } from '../hooks/useTerminalSize.js'
 import { Box, Text } from '@anthropic/ink'
-import { count } from 'claude-code-best/utils/array.js'
+import { count } from '@neptune/engine-product/utils/array.js'
 import { MessageResponse } from './MessageResponse.js'
 import { StructuredDiffList } from './StructuredDiffList.js'
 

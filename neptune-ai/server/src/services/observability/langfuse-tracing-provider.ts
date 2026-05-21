@@ -16,8 +16,8 @@
  */
 
 import type {Langfuse as LangfuseClient} from 'langfuse';
-import type {ITracingProvider} from 'claude-code-best/engine';
-import {SpanStatus, type Span} from 'claude-code-best/engine';
+import type {ITracingProvider} from '@neptune/engine-product/engine';
+import {SpanStatus, type Span} from '@neptune/engine-product/engine';
 
 /**
  * Langfuse Span 适配器 — 实现 Engine 的 Span 接口

@@ -1,6 +1,6 @@
 // Host HTTP config adapter — bridges getUserAgent/getSessionId to mcp-client's HttpConfig interface
 
-import type {HttpConfig} from '@claude-code-best/mcp-client'
+import type {HttpConfig} from '@neptune/mcp-client'
 import {getMCPUserAgent} from '../../../utils/http.js'
 import {getSessionId} from '../../../engine/session/SessionContext.js'
 

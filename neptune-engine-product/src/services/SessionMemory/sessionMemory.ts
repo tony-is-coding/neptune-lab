@@ -13,11 +13,11 @@ import {getSystemPrompt} from '../../constants/prompts.js'
 import {getSystemContext, getUserContext} from '../../context.js'
 import type {CanUseToolFn} from '../../types/permissions.js'
 import type {Tool, ToolUseContext} from '../../Tool.js'
-import {FILE_EDIT_TOOL_NAME} from '@claude-code-best/builtin-tools/tools/FileEditTool/constants.js'
+import {FILE_EDIT_TOOL_NAME} from '@neptune/builtin-tools/tools/FileEditTool/constants.js'
 import {
 	FileReadTool,
 	type Output as FileReadToolOutput,
-} from '@claude-code-best/builtin-tools/tools/FileReadTool/FileReadTool.js'
+} from '@neptune/builtin-tools/tools/FileReadTool/FileReadTool.js'
 import type {Message} from '../../types/message.js'
 import {count} from '../../utils/array.js'
 import {

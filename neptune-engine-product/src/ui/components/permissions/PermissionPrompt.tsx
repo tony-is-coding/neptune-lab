@@ -5,8 +5,8 @@ import { useKeybindings } from '../../keybindings/useKeybinding.js'
 import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   logEvent,
-} from 'claude-code-best/services/analytics/index.js'
-import { useSetAppState } from 'claude-code-best/state/AppState.js'
+} from '@neptune/engine-product/services/analytics/index.js'
+import { useSetAppState } from '@neptune/engine-product/state/AppState.js'
 import { type OptionWithDescription, Select } from '../CustomSelect/select.js'
 
 export type FeedbackType = 'accept' | 'reject'

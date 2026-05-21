@@ -17,7 +17,7 @@ import type {
 	ToolUseBlockParam,
 } from '@anthropic-ai/sdk/resources/index.mjs'
 import type {AssistantMessage, ProgressMessage} from './message.js'
-import type {AgentDefinition} from '@claude-code-best/builtin-tools/tools/AgentTool/loadAgentsDir.js'
+import type {AgentDefinition} from '@neptune/builtin-tools/tools/AgentTool/loadAgentsDir.js'
 import type {Command} from '../commands.js'
 import type {Theme, ThemeName} from '../utils/theme.js'
 import type {Message} from './message.js'

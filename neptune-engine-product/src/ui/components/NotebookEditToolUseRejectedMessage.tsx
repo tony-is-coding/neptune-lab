@@ -1,6 +1,6 @@
 import { relative } from 'path'
 import * as React from 'react'
-import { getCwd } from 'claude-code-best/utils/cwd.js'
+import { getCwd } from '@neptune/engine-product/utils/cwd.js'
 import { Box, Text } from '@anthropic/ink'
 import { HighlightedCode } from './HighlightedCode.js'
 import { MessageResponse } from './MessageResponse.js'

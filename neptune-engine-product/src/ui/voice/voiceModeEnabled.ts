@@ -1,9 +1,9 @@
 import { feature } from 'bun:bundle'
-import { getFeatureValue_CACHED_MAY_BE_STALE } from 'claude-code-best/services/analytics/growthbook.js'
+import { getFeatureValue_CACHED_MAY_BE_STALE } from '@neptune/engine-product/services/analytics/growthbook.js'
 import {
   getClaudeAIOAuthTokens,
   isAnthropicAuthEnabled,
-} from 'claude-code-best/utils/auth.js'
+} from '@neptune/engine-product/utils/auth.js'
 
 /**
  * Kill-switch check for voice mode. Returns true unless the

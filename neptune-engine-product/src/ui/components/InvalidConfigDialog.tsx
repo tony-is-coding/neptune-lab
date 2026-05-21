@@ -1,14 +1,14 @@
 import React from 'react'
 import { Box, Dialog, wrappedRender as render, Text } from '@anthropic/ink'
 import { KeybindingSetup } from '../keybindings/KeybindingProviderSetup.js'
-import { AppStateProvider } from 'claude-code-best/state/AppState.js'
-import type { ConfigParseError } from 'claude-code-best/utils/errors.js'
-import { getBaseRenderOptions } from 'claude-code-best/utils/renderOptions.js'
+import { AppStateProvider } from '@neptune/engine-product/state/AppState.js'
+import type { ConfigParseError } from '@neptune/engine-product/utils/errors.js'
+import { getBaseRenderOptions } from '@neptune/engine-product/utils/renderOptions.js'
 import {
   jsonStringify,
   writeFileSync_DEPRECATED,
-} from 'claude-code-best/utils/slowOperations.js'
-import type { ThemeName } from 'claude-code-best/utils/theme.js'
+} from '@neptune/engine-product/utils/slowOperations.js'
+import type { ThemeName } from '@neptune/engine-product/utils/theme.js'
 import { Select } from './CustomSelect/index.js'
 
 interface InvalidConfigHandlerProps {

@@ -3,13 +3,13 @@ import chalk from 'chalk'
 import React from 'react'
 import { Ansi, Box, Text } from '@anthropic/ink'
 import ThemedText from '../design-system/ThemedText.js'
-import { useAppState } from 'claude-code-best/state/AppState.js'
+import { useAppState } from '@neptune/engine-product/state/AppState.js'
 import type {
   PermissionDecision,
   PermissionDecisionReason,
-} from 'claude-code-best/utils/permissions/PermissionResult.js'
-import { permissionRuleValueToString } from 'claude-code-best/utils/permissions/permissionRuleParser.js'
-import type { Theme } from 'claude-code-best/utils/theme.js'
+} from '@neptune/engine-product/utils/permissions/PermissionResult.js'
+import { permissionRuleValueToString } from '@neptune/engine-product/utils/permissions/permissionRuleParser.js'
+import type { Theme } from '@neptune/engine-product/utils/theme.js'
 
 export type PermissionRuleExplanationProps = {
   permissionResult: PermissionDecision

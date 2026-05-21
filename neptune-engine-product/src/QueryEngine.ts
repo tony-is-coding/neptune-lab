@@ -39,10 +39,10 @@ import {categorizeRetryableAPIError} from './services/api/errors.js'
 import type {MCPServerConnection} from './services/mcp/types.js'
 import type {AppState} from './state/AppStateStore.js'
 import {type Tools, type ToolUseContext, toolMatchesName} from './Tool.js'
-import type {AgentDefinition} from '@claude-code-best/builtin-tools/tools/AgentTool/loadAgentsDir.js'
+import type {AgentDefinition} from '@neptune/builtin-tools/tools/AgentTool/loadAgentsDir.js'
 import {
 	SYNTHETIC_OUTPUT_TOOL_NAME
-} from '@claude-code-best/builtin-tools/tools/SyntheticOutputTool/SyntheticOutputTool.js'
+} from '@neptune/builtin-tools/tools/SyntheticOutputTool/SyntheticOutputTool.js'
 import type {APIError} from '@anthropic-ai/sdk'
 import type {CompactMetadata, Message, SystemCompactBoundaryMessage} from './types/message.js'
 import type {OrphanedPermission} from './types/textInputTypes.js'

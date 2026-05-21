@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { Box } from '@anthropic/ink'
-import type { Theme } from 'claude-code-best/utils/theme.js'
+import type { Theme } from '@neptune/engine-product/utils/theme.js'
 import { PermissionRequestTitle } from './PermissionRequestTitle.js'
 import type { WorkerBadgeProps } from './WorkerBadge.js'
 

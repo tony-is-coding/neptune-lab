@@ -6,7 +6,7 @@ declare module 'bcrypt' {
     export function genRounds(rounds?: number): Promise<string>;
 }
 
-declare module 'claude-code-best/engine' {
+declare module '@neptune/engine-product/engine' {
     export interface QueryEvent {
         type: string;
 
@@ -43,7 +43,7 @@ declare module 'claude-code-best/engine' {
     }
 }
 
-declare module 'claude-code-best/engine/permissions' {
+declare module '@neptune/engine-product/engine/permissions' {
     export interface PermissionDelegate {
         onToolAccess(
             toolName: string,

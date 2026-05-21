@@ -1,11 +1,11 @@
 import type { ToolResultBlockParam } from '@anthropic-ai/sdk/resources/messages/messages.mjs'
 import * as React from 'react'
 import { stripUnderlineAnsi } from './shell/OutputLine.js'
-import { extractTag } from 'claude-code-best/utils/messages.js'
-import { removeSandboxViolationTags } from 'claude-code-best/utils/sandbox/sandbox-ui-utils.js'
+import { extractTag } from '@neptune/engine-product/utils/messages.js'
+import { removeSandboxViolationTags } from '@neptune/engine-product/utils/sandbox/sandbox-ui-utils.js'
 import { Box, Text } from '@anthropic/ink'
 import { useShortcutDisplay } from '../keybindings/useShortcutDisplay.js'
-import { countCharInString } from 'claude-code-best/utils/stringUtils.js'
+import { countCharInString } from '@neptune/engine-product/utils/stringUtils.js'
 import { MessageResponse } from './MessageResponse.js'
 
 const MAX_RENDERED_LINES = 10

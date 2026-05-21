@@ -1,7 +1,7 @@
 import * as React from 'react'
 import { Box, Text } from '@anthropic/ink'
-import { formatNumber } from 'claude-code-best/utils/format.js'
-import type { Theme } from 'claude-code-best/utils/theme.js'
+import { formatNumber } from '@neptune/engine-product/utils/format.js'
+import type { Theme } from '@neptune/engine-product/utils/theme.js'
 
 type Props = {
   agentType: string

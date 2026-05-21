@@ -11,8 +11,8 @@
  * using IPC auth) use the Override getters directly.
  */
 
-import { getOauthConfig } from 'claude-code-best/constants/oauth.js'
-import { getClaudeAIOAuthTokens } from 'claude-code-best/utils/auth.js'
+import { getOauthConfig } from '@neptune/engine-product/constants/oauth.js'
+import { getClaudeAIOAuthTokens } from '@neptune/engine-product/utils/auth.js'
 
 /** Dev override: CLAUDE_BRIDGE_OAUTH_TOKEN, else undefined. */
 export function getBridgeTokenOverride(): string | undefined {

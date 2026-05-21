@@ -1,15 +1,15 @@
 import React from 'react'
-import { envDynamic } from 'claude-code-best/utils/envDynamic.js'
+import { envDynamic } from '@neptune/engine-product/utils/envDynamic.js'
 import { Box, Text } from '@anthropic/ink'
 import { useKeybindings } from '../keybindings/useKeybinding.js'
-import { getGlobalConfig, saveGlobalConfig } from 'claude-code-best/utils/config.js'
-import { env } from 'claude-code-best/utils/env.js'
+import { getGlobalConfig, saveGlobalConfig } from '@neptune/engine-product/utils/config.js'
+import { env } from '@neptune/engine-product/utils/env.js'
 import {
   getTerminalIdeType,
   type IDEExtensionInstallationStatus,
   isJetBrainsIde,
   toIDEDisplayName,
-} from 'claude-code-best/utils/ide.js'
+} from '@neptune/engine-product/utils/ide.js'
 import { Dialog } from '@anthropic/ink'
 
 interface Props {

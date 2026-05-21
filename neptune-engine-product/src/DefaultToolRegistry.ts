@@ -12,23 +12,23 @@ import type {Tool, Tools} from './Tool.js'
 import type {ToolRegistry, ToolSet} from './ToolRegistry.js'
 
 // 核心工具导入（无条件加载，SDK 必需）
-import {AgentTool} from '@claude-code-best/builtin-tools/tools/AgentTool/AgentTool.js'
-import {BashTool} from '@claude-code-best/builtin-tools/tools/BashTool/BashTool.js'
-import {FileEditTool} from '@claude-code-best/builtin-tools/tools/FileEditTool/FileEditTool.js'
-import {FileReadTool} from '@claude-code-best/builtin-tools/tools/FileReadTool/FileReadTool.js'
-import {FileWriteTool} from '@claude-code-best/builtin-tools/tools/FileWriteTool/FileWriteTool.js'
-import {GlobTool} from '@claude-code-best/builtin-tools/tools/GlobTool/GlobTool.js'
-import {GrepTool} from '@claude-code-best/builtin-tools/tools/GrepTool/GrepTool.js'
-import {NotebookEditTool} from '@claude-code-best/builtin-tools/tools/NotebookEditTool/NotebookEditTool.js'
-import {WebFetchTool} from '@claude-code-best/builtin-tools/tools/WebFetchTool/WebFetchTool.js'
-import {WebSearchTool} from '@claude-code-best/builtin-tools/tools/WebSearchTool/WebSearchTool.js'
-import {TaskCreateTool} from '@claude-code-best/builtin-tools/tools/TaskCreateTool/TaskCreateTool.js'
-import {TaskGetTool} from '@claude-code-best/builtin-tools/tools/TaskGetTool/TaskGetTool.js'
-import {TaskUpdateTool} from '@claude-code-best/builtin-tools/tools/TaskUpdateTool/TaskUpdateTool.js'
-import {TaskListTool} from '@claude-code-best/builtin-tools/tools/TaskListTool/TaskListTool.js'
-import {TaskStopTool} from '@claude-code-best/builtin-tools/tools/TaskStopTool/TaskStopTool.js'
-import {TaskOutputTool} from '@claude-code-best/builtin-tools/tools/TaskOutputTool/TaskOutputTool.js'
-import {ExitPlanModeV2Tool} from '@claude-code-best/builtin-tools/tools/ExitPlanModeTool/ExitPlanModeV2Tool.js'
+import {AgentTool} from '@neptune/builtin-tools/tools/AgentTool/AgentTool.js'
+import {BashTool} from '@neptune/builtin-tools/tools/BashTool/BashTool.js'
+import {FileEditTool} from '@neptune/builtin-tools/tools/FileEditTool/FileEditTool.js'
+import {FileReadTool} from '@neptune/builtin-tools/tools/FileReadTool/FileReadTool.js'
+import {FileWriteTool} from '@neptune/builtin-tools/tools/FileWriteTool/FileWriteTool.js'
+import {GlobTool} from '@neptune/builtin-tools/tools/GlobTool/GlobTool.js'
+import {GrepTool} from '@neptune/builtin-tools/tools/GrepTool/GrepTool.js'
+import {NotebookEditTool} from '@neptune/builtin-tools/tools/NotebookEditTool/NotebookEditTool.js'
+import {WebFetchTool} from '@neptune/builtin-tools/tools/WebFetchTool/WebFetchTool.js'
+import {WebSearchTool} from '@neptune/builtin-tools/tools/WebSearchTool/WebSearchTool.js'
+import {TaskCreateTool} from '@neptune/builtin-tools/tools/TaskCreateTool/TaskCreateTool.js'
+import {TaskGetTool} from '@neptune/builtin-tools/tools/TaskGetTool/TaskGetTool.js'
+import {TaskUpdateTool} from '@neptune/builtin-tools/tools/TaskUpdateTool/TaskUpdateTool.js'
+import {TaskListTool} from '@neptune/builtin-tools/tools/TaskListTool/TaskListTool.js'
+import {TaskStopTool} from '@neptune/builtin-tools/tools/TaskStopTool/TaskStopTool.js'
+import {TaskOutputTool} from '@neptune/builtin-tools/tools/TaskOutputTool/TaskOutputTool.js'
+import {ExitPlanModeV2Tool} from '@neptune/builtin-tools/tools/ExitPlanModeTool/ExitPlanModeV2Tool.js'
 
 /**
  * DefaultToolRegistry 实现
@@ -126,53 +126,53 @@ export class DefaultToolRegistry implements ToolRegistry {
 		// 动态加载条件工具
 		try {
 			// SkillTool
-			const {SkillTool} = require('@claude-code-best/builtin-tools/tools/SkillTool/SkillTool.js')
+			const {SkillTool} = require('@neptune/builtin-tools/tools/SkillTool/SkillTool.js')
 			tools.push(SkillTool)
 		} catch {
 		}
 
 		try {
 			// BriefTool
-			const {BriefTool} = require('@claude-code-best/builtin-tools/tools/BriefTool/BriefTool.js')
+			const {BriefTool} = require('@neptune/builtin-tools/tools/BriefTool/BriefTool.js')
 			tools.push(BriefTool)
 		} catch {
 		}
 
 		try {
 			// TodoWriteTool
-			const {TodoWriteTool} = require('@claude-code-best/builtin-tools/tools/TodoWriteTool/TodoWriteTool.js')
+			const {TodoWriteTool} = require('@neptune/builtin-tools/tools/TodoWriteTool/TodoWriteTool.js')
 			tools.push(TodoWriteTool)
 		} catch {
 		}
 
 		try {
 			// Cron 工具
-			const {CronCreateTool} = require('@claude-code-best/builtin-tools/tools/ScheduleCronTool/CronCreateTool.js')
-			const {CronDeleteTool} = require('@claude-code-best/builtin-tools/tools/ScheduleCronTool/CronDeleteTool.js')
-			const {CronListTool} = require('@claude-code-best/builtin-tools/tools/ScheduleCronTool/CronListTool.js')
+			const {CronCreateTool} = require('@neptune/builtin-tools/tools/ScheduleCronTool/CronCreateTool.js')
+			const {CronDeleteTool} = require('@neptune/builtin-tools/tools/ScheduleCronTool/CronDeleteTool.js')
+			const {CronListTool} = require('@neptune/builtin-tools/tools/ScheduleCronTool/CronListTool.js')
 			tools.push(CronCreateTool, CronDeleteTool, CronListTool)
 		} catch {
 		}
 
 		// MCP 工具
 		try {
-			const {ListMcpResourcesTool} = require('@claude-code-best/builtin-tools/tools/ListMcpResourcesTool/ListMcpResourcesTool.js')
-			const {ReadMcpResourceTool} = require('@claude-code-best/builtin-tools/tools/ReadMcpResourceTool/ReadMcpResourceTool.js')
+			const {ListMcpResourcesTool} = require('@neptune/builtin-tools/tools/ListMcpResourcesTool/ListMcpResourcesTool.js')
+			const {ReadMcpResourceTool} = require('@neptune/builtin-tools/tools/ReadMcpResourceTool/ReadMcpResourceTool.js')
 			tools.push(ListMcpResourcesTool, ReadMcpResourceTool)
 		} catch {
 		}
 
 		// LSP 工具
 		try {
-			const {LSPTool} = require('@claude-code-best/builtin-tools/tools/LSPTool/LSPTool.js')
+			const {LSPTool} = require('@neptune/builtin-tools/tools/LSPTool/LSPTool.js')
 			tools.push(LSPTool)
 		} catch {
 		}
 
 		// Worktree 工具
 		try {
-			const {EnterWorktreeTool} = require('@claude-code-best/builtin-tools/tools/EnterWorktreeTool/EnterWorktreeTool.js')
-			const {ExitWorktreeTool} = require('@claude-code-best/builtin-tools/tools/ExitWorktreeTool/ExitWorktreeTool.js')
+			const {EnterWorktreeTool} = require('@neptune/builtin-tools/tools/EnterWorktreeTool/EnterWorktreeTool.js')
+			const {ExitWorktreeTool} = require('@neptune/builtin-tools/tools/ExitWorktreeTool/ExitWorktreeTool.js')
 			if (isWorktreeModeEnabled()) {
 				tools.push(EnterWorktreeTool, ExitWorktreeTool)
 			}
@@ -181,14 +181,14 @@ export class DefaultToolRegistry implements ToolRegistry {
 
 		// Plan 模式工具
 		try {
-			const {EnterPlanModeTool} = require('@claude-code-best/builtin-tools/tools/EnterPlanModeTool/EnterPlanModeTool.js')
+			const {EnterPlanModeTool} = require('@neptune/builtin-tools/tools/EnterPlanModeTool/EnterPlanModeTool.js')
 			tools.push(EnterPlanModeTool)
 		} catch {
 		}
 
 		// Config 工具
 		try {
-			const {ConfigTool} = require('@claude-code-best/builtin-tools/tools/ConfigTool/ConfigTool.js')
+			const {ConfigTool} = require('@neptune/builtin-tools/tools/ConfigTool/ConfigTool.js')
 			tools.push(ConfigTool)
 		} catch {
 		}

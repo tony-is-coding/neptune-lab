@@ -4,7 +4,7 @@ import {supportsHyperlinks} from '@anthropic/ink'
 import {Link, Text} from '@anthropic/ink'
 import {
 	renderToolResultMessage as renderDefaultMCPToolResultMessage
-} from '@claude-code-best/builtin-tools/tools/MCPTool/UI.js'
+} from '@neptune/builtin-tools/tools/MCPTool/UI.js'
 import type {MCPToolResult} from '../../utils/mcpValidation.js'
 import {truncateToWidth} from '../format.js'
 import {trackClaudeInChromeTabId} from './common.js'

@@ -1,7 +1,7 @@
 import type {Tokens} from 'marked'
 import * as React from 'react'
 import {Box, Text} from '@anthropic/ink'
-import type {CliHighlight} from 'claude-code-best/utils/cliHighlight.js'
+import type {CliHighlight} from '@neptune/engine-product/utils/cliHighlight.js'
 
 type Props = {
 	token: Tokens.Table

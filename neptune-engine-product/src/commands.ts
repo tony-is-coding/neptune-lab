@@ -56,7 +56,7 @@ export {getCommandName, isCommandEnabled} from './types/command.js'
 /* eslint-disable @typescript-eslint/no-require-imports */
 const getWorkflowCommands = feature('WORKFLOW_SCRIPTS')
 	? (
-		require('@claude-code-best/builtin-tools/tools/WorkflowTool/createWorkflowCommand.js') as typeof import('@claude-code-best/builtin-tools/tools/WorkflowTool/createWorkflowCommand.js')
+		require('@neptune/builtin-tools/tools/WorkflowTool/createWorkflowCommand.js') as typeof import('@neptune/builtin-tools/tools/WorkflowTool/createWorkflowCommand.js')
 	).getWorkflowCommands
 	: null
 /* eslint-enable @typescript-eslint/no-require-imports */
