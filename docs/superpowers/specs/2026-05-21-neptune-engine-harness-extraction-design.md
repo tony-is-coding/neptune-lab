@@ -18,11 +18,33 @@ Neptune Engine 的使命是一个**轻量级执行引擎**。Claude Code 是大�
 
 不是空骨架（仅 LLM 调用循环），也不是大而全产品。harness 内核 = **运行一个 agent 必须的若干类能力 + 它们的接口和最小默认实现**：tool / skill / memory / 上下文 / 提示词 / 安全 / mcp / sandbox / provider / 可扩展性。
 
-### 1.3 单条判定标准
+### 1.3 判定标准（两层）
 
-> **一个文件属于内核 ⇔ 在没有任何 UI、没有 Anthropic 账号体系、没有 Neptune 产品后台、没有 telemetry 上报的环境下，agent 仍然能正确完成"一次端到端 query 含工具调用"。**
+#### Layer 1 · 最低门槛（K）
+> **一个文件属于 K ⇔ 在没有任何 UI、没有 Anthropic 账号体系、没有 Neptune 产品后台、没有 telemetry 上报的环境下，agent 仍然能正确完成"一次端到端 query 含工具调用"。**
 
-凡是失去它 agent 还能跑完一次完整对话+工具调用的，都是产品。
+这条标准定义了"运行 agent 的最小可执行集"：Provider 调用 + Tool 执行 + 单轮上下文。
+
+#### Layer 2 · harness 必备形态（K-DEFAULT）
+仅 Layer 1 的能力还不足以构成"完备的 harness"。一个生产可用的 agent harness 还必须支持以下"必备形态"，每条形态对应若干 K-DEFAULT 文件：
+
+| 必备形态 | 为什么是必备 | 对应 K-DEFAULT |
+|---|---|---|
+| **多轮长会话** | agent 必须能跨 turn 累积上下文，而非单次 one-shot | SessionMemory、sessionTranscript、SessionContext (ALS) |
+| **上下文压缩** | LLM 上下文窗口有限，超长会话必须可压缩 | compact、ContextCollapse、TokenBudget |
+| **Skill 装载** | agent 行为定义来自 skill，必须能动态装载 | skills/loadSkillsDir、mcpSkillBuilders、SkillExtension |
+| **MCP 接入** | 现代 agent 必须能接入 MCP server 扩展工具与资源 | services/mcp 核心、mcp-client 包 |
+| **多 agent 协作** | sub-agent / swarm 是 agent harness 的标配能力 | tasks/LocalAgentTask、utils/swarm/{spawnInProcess, teammateInit} |
+| **Memory 检索** | agent 必须能从历史记忆中检索相关信息 | memdir、findRelevantMemories、extractMemories |
+| **Permission 决策** | 任何工具调用都要经过权限判定，不可绕过 | PermissionDelegate 接口 + ReadOnly/RBAC/Audit/Tenant 默认 |
+| **Sandbox 隔离** | bash/file 工具的执行边界 | sandbox 接口、sandboxTypes |
+
+**判定流程**：
+1. 文件能让 agent 跑 Layer 1？→ K
+2. 不能跑 Layer 1，但是某个"必备形态"的实现？→ K-DEFAULT
+3. 即不属于 1 也不属于 2？→ P
+
+凡是失去它 agent 还能跑完一次完整对话+工具调用，**且不属于任何"必备形态"**的，都是产品。
 
 ### 1.4 与前序设计的关系
 
@@ -71,10 +93,12 @@ Neptune Engine 的使命是一个**轻量级执行引擎**。Claude Code 是大�
 内核需要的最小默认实现，留 engine：
 
 * `src/engine/`（现 SDK 包装层全部，含 cc-runtime/HeadlessQueryEngine/HeadlessToolRegistry）
+* **类型基石（带债务暂留）**：`src/Tool.ts`、`src/Task.ts`、`src/tasks.ts` —— 这些是 B 类（含产品耦合），但被 `src/engine/` 11 处直接依赖；本轮整体留 engine 作为 "K-DEFAULT 含债务"，阶段二拆净化版替代
 * `packages/builtin-tools`、`packages/mcp-client`
-* `src/services/api/{client,claude,withRetry,errors,openai/,gemini/}`（LLM 调用核心）
-* `src/services/{mcp/类型与核心 client, plugins/, extractMemories/, sessionTranscript/}`
-* `src/services/SessionMemory/`（净化版）、`src/services/compact/`（净化版）
+* `src/services/api/{client.ts, claude.ts, withRetry.ts, errors.ts, openai/, gemini/, types.ts}`（LLM 调用核心；产品支线在 3.5 单列）
+* `src/services/mcp/{types 与 核心 client，不含 MCPConnectionManager.tsx}`、`src/services/{plugins/, extractMemories/, sessionTranscript/}`
+* `src/services/SessionMemory/` 整体（含债务暂留，阶段二拆净化）
+* `src/services/compact/` 整体（含债务暂留，阶段二拆净化）
 * `src/tasks/{LocalAgentTask, LocalShellTask}`
 * `src/memdir/{memdir, findRelevantMemories, memoryAge, memoryScan, paths.ts, memoryTypes.ts}`
 * `src/skills/{loadSkillsDir, mcpSkillBuilders, mcpSkills}`
@@ -82,24 +106,25 @@ Neptune Engine 的使命是一个**轻量级执行引擎**。Claude Code 是大�
 * `src/utils/settings/{settings.ts, settingsCache.ts, applySettingsChange.ts}`
 * `src/entrypoints/sdk/{coreTypes, controlTypes, runtimeTypes}`、`src/entrypoints/agentSdkTypes.ts`、`src/entrypoints/sandboxTypes.ts`
 
+> **K-DEFAULT 含债务**：上述加粗项与 SessionMemory/compact 是 B 类有产品耦合，但被 engine 公共 SDK 直接依赖，整体迁 product 会立即破编译。本轮接受 "engine 内含暂时债务" 这个事实，把净化拆分推到阶段二。这条政策遵循 "engine 仓必须始终可编译" 这条更高优先级原则。
+
 ### 3.3 B（Boundary-Blur）
 
 接口/类型属于 K，实现/产品耦合属于 P。**本轮 spec 标记，不在本轮拆分**。下一阶段（writing-plans 项目）由专人拆分。
 
+> 注：`Tool.ts`、`Task.ts`、`tasks.ts`、`SessionMemory`、`compact` 也是 B 类，但被 `src/engine/` 公共 SDK 直接依赖；按 3.2 政策"K-DEFAULT 含债务"留 engine 整体保留，阶段二拆净化。下表只列**不被 engine 直接依赖、可以整体迁 product 而不破编译**的 B 类文件。
+
 | 文件 | 当前问题 | 最终归属 | 本轮迁移如何处置 |
 |---|---|---|---|
-| `Tool.ts` | 类型内核但反向 import services/mcp、commands、permissions | 类型 → engine/kernel/tool；实现 → product/cc-runtime | 整体迁 product/cc-runtime；engine 内由 builtin-tools 包提供轻量 Tool 类型支撑现 engine/ |
-| `Task.ts` | Task 接口（K）+ AppStateStore 依赖（P） | 接口 → engine；实现 → product | 整体迁 product/cc-runtime |
 | `commands.ts` | skill/plugin 加载（K）+ auth/订阅判断（P） | 算法 → engine；订阅判断 → product | 整体迁 product |
-| `tasks.ts` | 含 K 类工厂 + P 类 task 类型 | 接口 → engine；具体 task → product | 整体迁 product/cc-runtime |
 | `services/tools/{toolExecution, toolOrchestration, toolHooks}` | 工具执行核心 K-DEFAULT，但 toolExecution.ts 调用 getAppState() | 净化后 → engine/kernel/tool；当前实现 → product | 整体迁 product |
 | `services/AgentSummary` | agent 摘要能力 K，但耦合具体 Task 类型 | 接口 → engine；实现 → product | 整体迁 product |
 | `state/SessionContextBridge.ts` | ALS bridge K | engine | **留 engine**，独立挑出来 |
 | `memdir/team*` | 团队记忆同步 P | product | 整体跟 services/teamMemorySync 走 product |
 | `skills/bundled*` | bundled skills 中部分是 K，部分是 P | 拆分后续 | 整体迁 product |
 | `plugins/` | builtinPlugins K，bundled/ 中含 P | 拆分后续 | 整体迁 product |
-| `services/skillSearch/` | localSearch.ts 是 K-DEFAULT；其余是 P（marketplace）| localSearch → engine 后续；其余 → product | 整体迁 product |
-| `services/api/*`（产品部分）| promptCacheBreakDetection、sessionIngress、referral、overageCreditGrant、ultrareviewQuota、adminRequests、grove | product | 整体迁 product |
+| `services/skillSearch/` | localSearch.ts 是 K-DEFAULT；其余是 P（marketplace）| localSearch → engine 后续；其余 → product | 整体迁 product，阶段二补回 localSearch |
+| `services/api/`（产品支线） | promptCacheBreakDetection、sessionIngress、referral、overageCreditGrant、ultrareviewQuota、adminRequests、grove、firstTokenDate、metricsOptOut | product | 整体迁 product；3.2 已列出 api/ 中保留的核心文件清单 |
 
 ### 3.4 CC-FORK（不动整体迁 product/cc-runtime）
 
@@ -199,25 +224,73 @@ neptune-ai ──────────→ @neptune/engine-product  (CLI/CC fo
 @neptune/engine ──╳──→ @neptune/engine-product  (禁止)
 ```
 
-防呆机制：
-* `neptune-engine/eslint.config.mjs` 加 `no-restricted-imports`，规则禁止 `@neptune/engine-product` 及其子路径
-* `neptune-engine/tsconfig.json` `paths` 不映射 product 包
-* CI 步骤：`bun run lint:layers`（已有脚本，扩展规则覆盖新边界）
+防呆机制（具体可执行）：
 
-### 4.3 迁移路径（4 步）
+1. **包依赖隔离**（首要防线）：`neptune-engine/package.json` 的 `dependencies` / `peerDependencies` / `devDependencies` 三段都不允许声明 `@neptune/engine-product*`。Node/Bun 解析未声明依赖会直接 `ERR_MODULE_NOT_FOUND`。这是最硬的防线，远比 tsconfig paths 可靠（后者无法阻止 node_modules 解析）。
+
+2. **ESLint `no-restricted-imports`**（CI 防线）：先在 neptune-engine 仓引入 ESLint（当前仓未启用，仅有 `scripts/lint-layers.sh` 的 bash grep 实现），配置示例：
+   ```js
+   {
+     files: ['src/**/*.ts', 'src/**/*.tsx'],
+     rules: {
+       'no-restricted-imports': ['error', {
+         patterns: [{
+           group: ['@neptune/engine-product', '@neptune/engine-product/*'],
+           message: 'engine 不可反向依赖 product。引导接口下放，不要在 engine 引用 product 实现。'
+         }]
+       }]
+     }
+   }
+   ```
+
+3. **CI 强制**：`.github/workflows/ci.yml`（或对应 CI 文件）在 neptune-engine 仓的 lint job 必须跑这条 rule。`scripts/lint-layers.sh` 同步扩展，作为 CI 兜底。
+
+4. **`bun.lock` 校验**：CI 中 `bun install --frozen-lockfile`，并 grep 验证 neptune-engine 的 lock 段不含 product 包。
+
+### 4.3 迁移路径（5 步）
 
 > 实际执行不在本轮 spec 范围。这里只是 spec 必要的 happy path。
 
-**步骤 1：仓内重命名**
+**步骤 0：依赖事实采集**（前置）
 ```
-mv neptune-engine neptune-engine-product
+cd neptune-engine
+bunx madge --json --ts-config ./tsconfig.json src > /tmp/madge.json
+```
+产出 `madge.json` 作为步骤 3 拓扑挑回的事实依据。任何与 spec 拓扑分层不一致的依赖必须在挑回前消解（要么前移到更早层、要么标记为 B 类暂留）。
+
+**步骤 1：仓内重命名 + 包名同步**
+```
+git mv neptune-engine neptune-engine-product
+
+# package.json 元数据全套同步
 neptune-engine-product/package.json:
-  "name": "claude-code-best"  →  "name": "@neptune/engine-product"
+  name:        "claude-code-best"             →  "@neptune/engine-product"
+  description: "Reverse-engineered Anthropic Claude Code CLI" → 改为对应 product 描述
+  repository:  根据迁移后实际仓库地址更新
+  homepage:    同上
+  bugs.url:    同上
+  bin:         "ccb"/"ccb-bun"/"claude-code-best" → 由 neptune-engine-product 持有（CLI 二进制属于 product）
+  author:      根据团队意愿，可保留或更新
+
 neptune-engine-product/packages/*/package.json:
   "@claude-code-best/agent-tools"  →  "@neptune/engine-tools"
   "@claude-code-best/builtin-tools" →  "@neptune/builtin-tools"
   "@claude-code-best/mcp-client"   →  "@neptune/mcp-client"
-  "@claude-code-best/protocol"     →  "@neptune/protocol"
+  "@anthropic/remote-control-server" → "@neptune/remote-control-server"
+  packages/protocol/package.json: 新增 "name": "@neptune/protocol"
+
+# 内部 135 处源码 import codemod（一次性）
+cd neptune-engine-product
+rg -l "from ['\"](@claude-code-best/|claude-code-best/)" src packages | \
+  xargs sed -i '' \
+    -e "s|@claude-code-best/agent-tools|@neptune/engine-tools|g" \
+    -e "s|@claude-code-best/builtin-tools|@neptune/builtin-tools|g" \
+    -e "s|@claude-code-best/mcp-client|@neptune/mcp-client|g" \
+    -e "s|claude-code-best/engine|@neptune/engine|g" \
+    -e "s|'claude-code-best'|'@neptune/engine-product'|g"
+
+# 重建 lock
+rm bun.lock && bun install
 ```
 
 **步骤 2：新建空 engine 仓骨架**
@@ -225,51 +298,73 @@ neptune-engine-product/packages/*/package.json:
 mkdir neptune-engine
 neptune-engine/package.json: { "name": "@neptune/engine", "exports": ... }
 neptune-engine/tsconfig.json: 复用 product 仓的 base
+neptune-engine/eslint.config.mjs: 启用步骤 4.2 第 2 条规则
+neptune-engine/scripts/lint-layers.sh: 复用并扩展
 ```
 
-**步骤 3：挑回 K + K-DEFAULT**
-按依赖拓扑顺序逐层挑：
-1. 第一层（零依赖）：`packages/{agent-tools, protocol}`、`src/utils` 中纯函数子集、`src/schemas`、`src/shared/SessionContextBridge.ts`
-2. 第二层：`packages/{builtin-tools, mcp-client}`、`src/utils/{model/, permissions/, bash/, git/, memory/}`、`src/entrypoints/sdk/`
-3. 第三层：`src/services/{api 核心, mcp 核心, plugins, extractMemories, sessionTranscript}`、`src/services/SessionMemory`（净化版）、`src/services/compact`（净化版）、`src/memdir/{核心}`、`src/skills/{loadSkillsDir, mcpSkillBuilders, mcpSkills}`、`src/tasks/{LocalAgentTask, LocalShellTask}`
-4. 第四层：`src/engine/`（28k 行 SDK 包装层整体）
+**步骤 3：按拓扑顺序挑回 K + K-DEFAULT**
 
-每层挑完跑一次 `bun test` + `bunx tsc --noEmit`，绿了再下一层。
+每层下面的 invariants：**本层文件不向外 import；下一层只 import 已挑回的层**。每层挑完跑 `bun test` + `bunx tsc --noEmit` + `bunx madge --circular src`，三绿才能进下一层。
 
-**步骤 4：workspace 与 import 修复**
+* **第一层（零依赖）**：`packages/{agent-tools, protocol}`、`src/schemas/`、`src/shared/SessionContextBridge.ts`、`src/utils` 中纯函数子集（`errors.ts, log.ts, json.ts, hash.ts, sleep.ts, uuid.ts, array.ts, set.ts, string*`）
+* **第二层**：`packages/{builtin-tools, mcp-client}`、`src/utils/{model/, permissions/, memory/, git/, bash/, tokens.ts, thinking.ts, tokenBudget.ts, sessionStorage.ts}`、`src/utils/settings/{settings.ts, settingsCache.ts, applySettingsChange.ts}`、`src/entrypoints/sdk/`、`src/entrypoints/agentSdkTypes.ts`、`src/entrypoints/sandboxTypes.ts`
+* **第三层（含债务暂留的类型基石）**：`src/Tool.ts`、`src/Task.ts`、`src/tasks.ts` —— 这些是 B 类含债务，但被 engine 公共 SDK 直接依赖，整体留 engine
+* **第四层**：`src/services/api/{client.ts, claude.ts, withRetry.ts, errors.ts, openai/, gemini/, types.ts}`、`src/services/{mcp 核心, plugins/, extractMemories/, sessionTranscript/, SessionMemory/, compact/}`、`src/memdir/{核心}`、`src/skills/{loadSkillsDir, mcpSkillBuilders, mcpSkills}`、`src/tasks/{LocalAgentTask, LocalShellTask}`、`src/utils/swarm/{spawnInProcess, teammateInit}`
+* **第五层**：`src/engine/`（28k 行 SDK 包装层整体）
+
+**步骤 4：workspace 与外部 import 修复**
 ```
-neptune-lab/package.json workspaces:
+neptune-lab/package.json workspaces 重声明:
   - neptune-engine
   - neptune-engine/packages/*
   - neptune-engine-product
   - neptune-engine-product/packages/*
   - neptune-engine-product/packages/@ant/*
   - neptune-ai/server
+  - shared
 
 neptune-ai/server: 8 处 import 'claude-code-best/engine*' → '@neptune/engine*'
 neptune-ai/server/package.json: "claude-code-best": "workspace:*" → "@neptune/engine": "workspace:*"
-neptune-engine-product 内部: 大批 import 路径修改（B/CC-FORK 文件原内嵌的 engine 引用切到 @neptune/engine）
 ```
+
+**步骤 5：周边文件归位**
+
+下列周边文件按用途归仓：
+
+| 文件 / 目录 | 归仓 | 理由 |
+|---|---|---|
+| `vendor/` | product | 历史 fork 引入的 vendored 依赖 |
+| 根级 `shared/`（neptune-lab/shared） | 不动 | 已是顶级 workspace 包 |
+| `tsconfig.sdk.json`、`tsconfig.dts-gen.json` | engine | SDK 类型导出配置 |
+| `vite.config.ts`、`build.ts` | product | 当前用于 CLI 构建 |
+| `bunfig.toml` | 两仓各持一份 | bun 运行时配置 |
+| `biome.json`、`knip.json` | 两仓各持一份 | 代码质量工具 |
+| `typedoc.json` | engine | API 文档生成（engine SDK 是文档对象） |
+| `mint.json`、`docs.json` | product | 当前文档站属产品形态 |
 
 ### 4.4 收敛后的预期形态
 
-| 指标 | 当前 neptune-engine | 迁移后 neptune-engine | 迁移后 neptune-engine-product |
-|---|---|---|---|
-| TS 行数 | ~33 万 | ~3.5 万 | ~30 万 |
-| 顶层目录数 | 24 | 6（kernel + engine + shared + schemas + utils 子集 + entrypoints/sdk）| 5（cc-runtime + cli + services + tasks + entrypoints）|
-| packages 数 | 11 | 4 | 7 |
-| 主包名 | `claude-code-best` | `@neptune/engine` | `@neptune/engine-product` |
-| 对外 SDK 出口 | `claude-code-best/engine/*` | `@neptune/engine/*` | n/a（消费方仅 neptune-ai 可选） |
+| 指标 | 当前 neptune-engine | 迁移后 neptune-engine（本轮稳态）| 阶段二完成后 neptune-engine | 迁移后 neptune-engine-product |
+|---|---|---|---|---|
+| TS 行数 | ~33 万 | ~3.5 万（其中 src/engine/ SDK 包装 28k + 类型基石与 K-DEFAULT 含债务 ~5k + utils 子集 ~2k）| ~5-6 万（B 类拆分后的净化版补回）| ~30 万（含 cc-runtime 高保真 fork）|
+| 真正 kernel 内容 | 不可统计 | ~2 万（不含 SDK 包装层，且仍含债务）| ~3 万（净化）| n/a |
+| 顶层目录数 | 24 | 6（kernel/ 仅占位 + engine + shared + schemas + utils 子集 + entrypoints/sdk）| 7（kernel/ 启用）| 5（cc-runtime + cli + services + tasks + entrypoints）|
+| packages 数 | 11 | 4 | 4 | 7 |
+| 主包名 | `claude-code-best` | `@neptune/engine` | `@neptune/engine` | `@neptune/engine-product` |
+| 对外 SDK 出口 | `claude-code-best/engine/*` | `@neptune/engine/*` | `@neptune/engine/*` | n/a |
+
+> **关于"完备性不足"**：本轮稳态的 engine 仓中，去掉 SDK 包装层后真正的 kernel 内容只有 ~2 万行，且其中仍含债务（Tool.ts 等 K-DEFAULT 含债务文件）。"轻量但完备"中"完备"一项要等阶段二 B 类拆分、净化版补回后才真正达成。本轮可接受这种"完备性渐进达成"，因为继续等待会拖慢边界落地。
 
 ### 4.5 风险与缓解
 
 | 风险 | 影响 | 缓解 |
 |---|---|---|
-| **新 engine 仓中途 broken**（已接受）| 半天到几天不可编译 | 拓扑顺序逐层挑；每层有验证关卡；不通过不准提交；迁移期临时分支隔离 |
-| **product 反向引用 engine 出现循环依赖** | 编译卡死或运行时未定义 | ESLint `no-restricted-imports` + tsconfig path 双重防呆；CI 强制 lint:layers |
-| **Git 历史 `git log --follow` 失效** | 后续考古困难 | 全程 `git mv` 而非 rm+add；spec 文档明示"2026-05-21 之前的 product 历史在 neptune-engine-product 仓查阅" |
-| **B 类文件迁到 product 后 engine 默认实现不完整** | engine 部分能力暂时降级（如 compact 算法、Tool.ts 的产品类型） | 接受短期降级，product 通过反向消费 engine 接口补齐；B 类拆分纳入下一阶段 |
-| **neptune-ai 同时改 import 容易遗漏** | 编译/运行时报错 | 一次性 `find/sed` 全仓替换；workspace 起作用前 `bun install` 重建 lockfile |
+| **新 engine 仓中途 broken**（已接受）| 半天到几天不可编译 | 步骤 0 madge 采集 + 步骤 3 拓扑挑回 + 每层 invariants + 每层 test/typecheck/madge 三绿门禁；不通过不准提交；迁移期临时分支隔离 |
+| **product 反向引用 engine 出现循环依赖** | 编译卡死或运行时未定义 | 包依赖隔离（首要）+ ESLint `no-restricted-imports` + CI lint:layers + bun.lock grep；详见 4.2 防呆 4 条 |
+| **engine 初期完备性不足** | 部分能力（如 compact 净化、tool 净化）暂时降级 | 接受 "完备性渐进达成"；阶段二完成前 product 通过 SDK 出口反向暴露能力；spec 4.4 注解明示 |
+| **Git 历史 follow 失效** | 后续考古困难 | 步骤 1 用 `git mv neptune-engine neptune-engine-product` 保留 product 仓全部历史；步骤 3 用 `git mv` 在 engine 仓内保留挑回历史；**跨仓 follow 不可用**——明示 2026-05-21 之前的 product 历史在 neptune-engine-product 仓查阅，engine 仓 history 始于挑回那一刻 |
+| **包名 codemod 误伤** | 内部 import 改坏运行时报错 | 步骤 1 codemod 后立即 `bun install` + `bunx tsc --noEmit`；准备 `git revert` 逃生通道；编写 codemod 测试样例（含 dist 产物文件名是否更名的决策） |
+| **neptune-ai 同时改 import 容易遗漏** | 编译/运行时报错 | 一次性 `find/sed` 全仓替换；workspace 起作用前 `bun install` 重建 lockfile；CI 在 neptune-ai 仓 grep `claude-code-best` 必须为 0 |
 
 ---
 
@@ -294,24 +389,37 @@ neptune-engine-product 内部: 大批 import 路径修改（B/CC-FORK 文件原�
 
 ### 5.2 决策：切换到 `@neptune/*` 命名空间
 
-**与剥离同步进行**。理由：
+**与剥离同步进行**（即步骤 1 的原子动作之一）。理由：
 
 1. **语义错位**：剥离后 engine 的使命是"Neptune 的 agent harness 内核"，名字叫 `claude-code-best` 既不准确也容易误解
 2. **命名一致性**：`neptune-engine` / `neptune-engine-product` / `neptune-ai` 已经统一命名空间，再多一个 `claude-code-best` 是历史包袱
 3. **本轮无额外成本**：neptune-ai 那 8 处 import 反正都要因为方案 A 改
 
-### 5.3 改名映射
+### 5.3 命名标准
 
-| 现 name | 新 name | 落地位置 |
+应用以下标准统一决策：
+
+> **改名条件**：包名包含"`claude-code-best`"且当前仓将其作为 Neptune 资产持有的，全部改名到 `@neptune/*`。
+>
+> **保名条件**：包名包含"`@anthropic/`、`@ant/`"且其内容是 Anthropic 直接 fork 未做实质改动的，**保留原名**以诚实标注来源。
+
+按此标准，逐包决策：
+
+| 现 name | 新 name | 决策依据 |
 |---|---|---|
-| `claude-code-best` | `@neptune/engine` | neptune-engine/package.json |
-| (新建) | `@neptune/engine-product` | neptune-engine-product/package.json |
-| `@claude-code-best/agent-tools` | `@neptune/engine-tools` | neptune-engine/packages/agent-tools |
-| `@claude-code-best/builtin-tools` | `@neptune/builtin-tools` | neptune-engine/packages/builtin-tools |
-| `@claude-code-best/mcp-client` | `@neptune/mcp-client` | neptune-engine/packages/mcp-client |
-| `packages/protocol`（无 name） | `@neptune/protocol` | neptune-engine/packages/protocol |
-| `@anthropic/remote-control-server` | `@neptune/remote-control-server` | neptune-engine-product/packages/remote-control-server |
-| `@anthropic/ink`、`@ant/*` | **保持原名** | neptune-engine-product/packages/@ant（这些是 fork 自 anthropic 的，保留来源标识更诚实） |
+| `claude-code-best` | `@neptune/engine` | engine 主包，符合改名条件 |
+| (新建) | `@neptune/engine-product` | 主包剥离后的产品仓 |
+| `@claude-code-best/agent-tools` | `@neptune/engine-tools` | Neptune 资产，改名 |
+| `@claude-code-best/builtin-tools` | `@neptune/builtin-tools` | Neptune 资产，改名 |
+| `@claude-code-best/mcp-client` | `@neptune/mcp-client` | Neptune 资产，改名 |
+| `packages/protocol`（无 name） | `@neptune/protocol` | Neptune 资产，新增 name |
+| `@anthropic/remote-control-server` | `@neptune/remote-control-server` | **改名**——已被 Neptune 重写而非纯 fork，符合改名条件 |
+| `@anthropic/ink` | `@anthropic/ink` | 保留——Anthropic fork Ink，未做实质改动 |
+| `@ant/computer-use-input` | `@ant/computer-use-input` | 保留——Anthropic 平台特性 fork |
+| `@ant/computer-use-mcp` | `@ant/computer-use-mcp` | 保留 |
+| `@ant/computer-use-swift` | `@ant/computer-use-swift` | 保留 |
+| `@ant/claude-for-chrome-mcp` | `@ant/claude-for-chrome-mcp` | 保留 |
+| `audio-capture-napi` 等 napi 包 | 保留原名 | 平台原生绑定，无 scope 前缀 |
 
 ### 5.4 原子性
 
@@ -325,16 +433,27 @@ neptune-engine-product 内部: 大批 import 路径修改（B/CC-FORK 文件原�
 
 ## 6. 后续阶段（不在本轮 spec）
 
+### 阶段顺序与依赖
+
+```
+本轮（2026-05-21 spec + writing-plans 项目）→ 阶段二 → 阶段三 → 阶段四 → 阶段五
+```
+
+**阶段二（B 类拆分）必须先于阶段三（CC fork 重写）**。理由：
+- product/cc-runtime/ 中的 `QueryEngine.ts` 同时持有 `Tool.ts`/`Task.ts` 这套类型基石，阶段三若要用 engine kernel 重写 query loop，必须先有"engine 内净化版的 Tool/Task 接口"作为重写目标——这正是阶段二产出
+- 否则阶段三会陷入"product `QueryEngine` 同时实现两套 Tool 类型"的撕裂状态，重构成本翻倍
+
+**阶段四（可选 product 解耦）可与阶段二并行**。`cli/` 独立成 `@neptune/engine-cli` 不依赖 B 类拆分，是 product 仓内部细分。
+
 ### 阶段二：B 类文件拆分
 
-把 spec 3.3 表中的 B 类文件按"接口去 engine、实现留 product"拆分：
-* `Tool.ts`（拆出 `@neptune/engine/kernel/tool` 的纯接口）
-* `Task.ts`、`commands.ts`、`tasks.ts`
+把 spec 3.3 表中的 B 类文件 + 3.2 中"K-DEFAULT 含债务"项按"接口去 engine、实现留 product"拆分：
+* `Tool.ts`、`Task.ts`、`tasks.ts` —— 最关键，阶段二第一批
+* `commands.ts`
 * `services/tools/{toolExecution, toolOrchestration, toolHooks}`（净化版补回 engine）
 * `services/compact`、`services/SessionMemory`（净化版补回 engine）
 * `services/AgentSummary`
 * `services/skillSearch/localSearch.ts` 补回 engine
-* `services/api/*` 中 LLM 调用核心补回 engine
 
 每个 B 类文件按"提取接口 → product 依赖反转 → engine 提供默认实现 → product 消费 engine 接口"四步推进。每个文件单独走 plan-phase。
 
@@ -348,7 +467,7 @@ neptune-engine-product 内部: 大批 import 路径修改（B/CC-FORK 文件原�
 
 完成后 `product/cc-runtime/` 收敛为薄层适配（仅保留 CLI 特性需要的 hook 点），或彻底废弃。
 
-### 阶段四：可选 product 解耦
+### 阶段四：可选 product 解耦（可与阶段二并行）
 
 `neptune-engine-product/` 内部继续分化：
 * `cli/` 部分独立成 `@neptune/engine-cli`（终端形态）
