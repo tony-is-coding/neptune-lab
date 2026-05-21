@@ -97,7 +97,7 @@ Neptune Engine 的使命是一个**轻量级执行引擎**。Claude Code 是大�
 * `packages/builtin-tools`、`packages/mcp-client`
 * `src/services/api/` 留 engine 清单（**LLM 调用核心**）：
   * **Provider 适配器**：`client.ts`、`claude.ts`、`openai/`、`gemini/`、`grok/`（Provider 能力域 8 大默认实现之一）
-  * **基础设施**：`withRetry.ts`、`errors.ts`、`errorUtils.ts`、`logging.ts`、`emptyUsage.ts`、`dumpPrompts.ts`、`filesApi.ts`（Files API harness 必备）、`types.ts`
+  * **基础设施**：`withRetry.ts`、`errors.ts`、`errorUtils.ts`、`logging.ts`、`emptyUsage.ts`、`dumpPrompts.ts`、`filesApi.ts`（Files API harness 必备）
 * `src/services/mcp/{types 与 核心 client，不含 MCPConnectionManager.tsx}`、`src/services/{plugins/, extractMemories/, sessionTranscript/}`
 * `src/services/SessionMemory/` 整体（含债务暂留，阶段二拆净化）
 * `src/services/compact/` 整体（含债务暂留，阶段二拆净化）
@@ -318,45 +318,62 @@ grep -rE "claude-code-best" src packages --include='*.ts' --include='*.tsx' | wc
 rm bun.lock && bun install
 ```
 
-**步骤 2：新建空 engine 仓骨架**
+**步骤 2：新建空 engine 仓骨架 + 注册到 workspaces**
 ```
 mkdir neptune-engine
 neptune-engine/package.json: { "name": "@neptune/engine", "exports": ... }
 neptune-engine/tsconfig.json: 复用 product 仓的 base
 neptune-engine/eslint.config.mjs: 启用步骤 4.2 第 2 条规则
 neptune-engine/scripts/lint-layers.sh: 复用并扩展
+
+# 立即追加到根 workspaces，确保步骤 3 三绿门禁可用
+neptune-lab/package.json workspaces 追加:
+  - neptune-engine
+  - neptune-engine/packages/*
+bun install   # 让 engine 注册生效
 ```
 
 **步骤 3：按拓扑顺序挑回 K + K-DEFAULT**
 
-每层下面的 invariants：**本层文件不向外 import；下一层只 import 已挑回的层**。每层挑完跑 `bun test` + `bunx tsc --noEmit` + `bunx madge --circular src`，三绿才能进下一层。
+每层下面的 invariants（**两条**，缺一不可）：
+
+* **(a) engine 侧**：本层文件不向外 import；下一层只 import 已挑回的层
+* **(b) product 侧**：本层挑回完成后，product 仓中所有引用本层迁出文件的 import path 必须改回 `@neptune/engine/<对应路径>`，否则 product `bunx tsc --noEmit` 必失败
+
+每层挑完跑下面五项门禁，全绿才能进下一层：
+1. `cd neptune-engine && bun test`
+2. `cd neptune-engine && bunx tsc --noEmit`
+3. `cd neptune-engine && bunx madge --circular src`
+4. `cd neptune-engine-product && bunx tsc --noEmit`（验证 invariant b 已修）
+5. `grep -rE "@neptune/engine-product/<本层迁出文件路径>" neptune-engine-product/src` = 0（验证无悬空引用）
+
+每层 invariant (b) 的实施做法：
+
+```
+# 示例：第三层挑回 Tool.ts/Task.ts/tasks.ts 后
+cd neptune-engine-product
+rg -l "@neptune/engine-product/(Tool|Task|tasks)\.js" src | \
+  xargs sed -i '' \
+    -e "s|@neptune/engine-product/Tool\.js|@neptune/engine/Tool.js|g" \
+    -e "s|@neptune/engine-product/Task\.js|@neptune/engine/Task.js|g" \
+    -e "s|@neptune/engine-product/tasks\.js|@neptune/engine/tasks.js|g"
+```
 
 * **第一层（零依赖）**：`packages/{agent-tools, protocol}`、`src/schemas/`、`src/shared/SessionContextBridge.ts`、`src/utils` 中纯函数子集（`errors.ts, log.ts, json.ts, hash.ts, sleep.ts, uuid.ts, array.ts, set.ts, string*`）
 * **第二层**：`packages/{builtin-tools, mcp-client}`、`src/utils/{model/, permissions/, memory/, git/, bash/, tokens.ts, thinking.ts, tokenBudget.ts, sessionStorage.ts}`、`src/utils/settings/{settings.ts, settingsCache.ts, applySettingsChange.ts}`、`src/entrypoints/sdk/`、`src/entrypoints/agentSdkTypes.ts`、`src/entrypoints/sandboxTypes.ts`
 * **第三层（含债务暂留的类型基石）**：`src/Tool.ts`、`src/Task.ts`、`src/tasks.ts` —— 这些是 B 类含债务，但被 engine 公共 SDK 直接依赖，整体留 engine
-* **第四层**：`src/services/api/{client.ts, claude.ts, withRetry.ts, errors.ts, openai/, gemini/, types.ts}`、`src/services/{mcp 核心, plugins/, extractMemories/, sessionTranscript/, SessionMemory/, compact/}`、`src/memdir/{核心}`、`src/skills/{loadSkillsDir, mcpSkillBuilders, mcpSkills}`、`src/tasks/{LocalAgentTask, LocalShellTask}`、`src/utils/swarm/{spawnInProcess, teammateInit}`
+* **第四层**：`src/services/api/{client.ts, claude.ts, withRetry.ts, errors.ts, errorUtils.ts, logging.ts, emptyUsage.ts, dumpPrompts.ts, filesApi.ts, openai/, gemini/, grok/}`、`src/services/{mcp 核心, plugins/, extractMemories/, sessionTranscript/, SessionMemory/, compact/}`、`src/memdir/{核心}`、`src/skills/{loadSkillsDir, mcpSkillBuilders, mcpSkills}`、`src/tasks/{LocalAgentTask, LocalShellTask}`、`src/utils/swarm/{spawnInProcess, teammateInit}`
 * **第五层**：`src/engine/`（28k 行 SDK 包装层整体）
 
-**步骤 4：workspace 追加 engine + 外部 import 修复**
+**步骤 4：外部 import 修复**
 ```
-# 步骤 1 已重声明 product 部分。本步只追加 engine 部分：
-neptune-lab/package.json workspaces 追加:
-  - neptune-engine
-  - neptune-engine/packages/*
-
-# 最终 workspaces 应为:
-  - neptune-engine
-  - neptune-engine/packages/*
-  - neptune-engine-product
-  - neptune-engine-product/packages/*
-  - neptune-engine-product/packages/@ant/*
-  - neptune-ai/server
-  - shared
-
+# 步骤 1 已重声明 product 部分，步骤 2 已追加 engine 部分。本步只处理外部消费方：
 neptune-ai/server: 8 处 import 'claude-code-best/engine*' → '@neptune/engine*'
 neptune-ai/server/package.json: "claude-code-best": "workspace:*" → "@neptune/engine": "workspace:*"
+bun install
 
-# CI 校验：neptune-ai 仓 grep 'claude-code-best' 必须为 0
+# CI 校验
+grep -rE "claude-code-best" neptune-ai/server | wc -l   # 必须为 0
 ```
 
 **步骤 5：周边文件归位**
