@@ -95,7 +95,9 @@ Neptune Engine 的使命是一个**轻量级执行引擎**。Claude Code 是大�
 * `src/engine/`（现 SDK 包装层全部，含 cc-runtime/HeadlessQueryEngine/HeadlessToolRegistry）
 * **类型基石（带债务暂留）**：`src/Tool.ts`、`src/Task.ts`、`src/tasks.ts` —— 这些是 B 类（含产品耦合），但被 `src/engine/` 11 处直接依赖；本轮整体留 engine 作为 "K-DEFAULT 含债务"，阶段二拆净化版替代
 * `packages/builtin-tools`、`packages/mcp-client`
-* `src/services/api/{client.ts, claude.ts, withRetry.ts, errors.ts, openai/, gemini/, types.ts}`（LLM 调用核心；产品支线在 3.5 单列）
+* `src/services/api/` 留 engine 清单（**LLM 调用核心**）：
+  * **Provider 适配器**：`client.ts`、`claude.ts`、`openai/`、`gemini/`、`grok/`（Provider 能力域 8 大默认实现之一）
+  * **基础设施**：`withRetry.ts`、`errors.ts`、`errorUtils.ts`、`logging.ts`、`emptyUsage.ts`、`dumpPrompts.ts`、`filesApi.ts`（Files API harness 必备）、`types.ts`
 * `src/services/mcp/{types 与 核心 client，不含 MCPConnectionManager.tsx}`、`src/services/{plugins/, extractMemories/, sessionTranscript/}`
 * `src/services/SessionMemory/` 整体（含债务暂留，阶段二拆净化）
 * `src/services/compact/` 整体（含债务暂留，阶段二拆净化）
@@ -124,7 +126,7 @@ Neptune Engine 的使命是一个**轻量级执行引擎**。Claude Code 是大�
 | `skills/bundled*` | bundled skills 中部分是 K，部分是 P | 拆分后续 | 整体迁 product |
 | `plugins/` | builtinPlugins K，bundled/ 中含 P | 拆分后续 | 整体迁 product |
 | `services/skillSearch/` | localSearch.ts 是 K-DEFAULT；其余是 P（marketplace）| localSearch → engine 后续；其余 → product | 整体迁 product，阶段二补回 localSearch |
-| `services/api/`（产品支线） | promptCacheBreakDetection、sessionIngress、referral、overageCreditGrant、ultrareviewQuota、adminRequests、grove、firstTokenDate、metricsOptOut | product | 整体迁 product；3.2 已列出 api/ 中保留的核心文件清单 |
+| `services/api/`（产品支线） | bootstrap.ts（OAuth 初始化）、usage.ts（账号配额）、metricsOptOut.ts、promptCacheBreakDetection.ts、sessionIngress.ts、referral.ts、overageCreditGrant.ts、ultrareviewQuota.ts、adminRequests.ts、grove.ts、firstTokenDate.ts | product | 整体迁 product；3.2 已列出 api/ 中保留的核心文件清单；`services/api/src/` 是构建产物目录，不需归位 |
 
 ### 3.4 CC-FORK（不动整体迁 product/cc-runtime）
 
@@ -258,7 +260,7 @@ bunx madge --json --ts-config ./tsconfig.json src > /tmp/madge.json
 ```
 产出 `madge.json` 作为步骤 3 拓扑挑回的事实依据。任何与 spec 拓扑分层不一致的依赖必须在挑回前消解（要么前移到更早层、要么标记为 B 类暂留）。
 
-**步骤 1：仓内重命名 + 包名同步**
+**步骤 1：仓内重命名 + 包名同步 + workspaces 重声明**
 ```
 git mv neptune-engine neptune-engine-product
 
@@ -277,9 +279,23 @@ neptune-engine-product/packages/*/package.json:
   "@claude-code-best/builtin-tools" →  "@neptune/builtin-tools"
   "@claude-code-best/mcp-client"   →  "@neptune/mcp-client"
   "@anthropic/remote-control-server" → "@neptune/remote-control-server"
-  packages/protocol/package.json: 新增 "name": "@neptune/protocol"
 
-# 内部 135 处源码 import codemod（一次性）
+# packages/protocol 当前不是 workspace 包（实测无 package.json/src/），步骤 1 内补建：
+neptune-engine-product/packages/protocol/package.json: 新建文件，内容
+  { "name": "@neptune/protocol", "version": "0.0.0", "type": "module",
+    "main": "src/index.ts", "exports": { ".": "./src/index.ts" } }
+neptune-engine-product/packages/protocol/src/: 必要时新建 src 与 index.ts 占位（具体 schema 内容沿用历史定义；如历史实际已 inline 在他处则单独整理）
+
+# 同步重声明根 workspaces（必须在 bun install 前完成，否则 install 失败）
+neptune-lab/package.json workspaces:
+  - neptune-engine-product
+  - neptune-engine-product/packages/*
+  - neptune-engine-product/packages/@ant/*
+  - neptune-ai/server
+  - shared
+  （此时 neptune-engine 还未创建，workspaces 中暂不列出）
+
+# 内部源码 import codemod（一次性；实测 451 处 @claude-code-best/* + 76 处 claude-code-best/*）
 cd neptune-engine-product
 rg -l "from ['\"](@claude-code-best/|claude-code-best/)" src packages | \
   xargs sed -i '' \
@@ -287,9 +303,18 @@ rg -l "from ['\"](@claude-code-best/|claude-code-best/)" src packages | \
     -e "s|@claude-code-best/builtin-tools|@neptune/builtin-tools|g" \
     -e "s|@claude-code-best/mcp-client|@neptune/mcp-client|g" \
     -e "s|claude-code-best/engine|@neptune/engine|g" \
+    -e "s|claude-code-best/|@neptune/engine-product/|g" \
     -e "s|'claude-code-best'|'@neptune/engine-product'|g"
 
-# 重建 lock
+# sed 顺序不可调换：
+# - claude-code-best/engine → @neptune/engine 必须在 claude-code-best/ → @neptune/engine-product/ 之前
+#   否则 engine/ 会先被改成 engine-product/engine/
+# - 'claude-code-best' 裸引用兜底放最后
+
+# 验证 codemod 完整性
+grep -rE "claude-code-best" src packages --include='*.ts' --include='*.tsx' | wc -l   # 必须为 0
+
+# 重建 lock（此时 workspaces 已重声明，install 不会失败）
 rm bun.lock && bun install
 ```
 
@@ -312,9 +337,14 @@ neptune-engine/scripts/lint-layers.sh: 复用并扩展
 * **第四层**：`src/services/api/{client.ts, claude.ts, withRetry.ts, errors.ts, openai/, gemini/, types.ts}`、`src/services/{mcp 核心, plugins/, extractMemories/, sessionTranscript/, SessionMemory/, compact/}`、`src/memdir/{核心}`、`src/skills/{loadSkillsDir, mcpSkillBuilders, mcpSkills}`、`src/tasks/{LocalAgentTask, LocalShellTask}`、`src/utils/swarm/{spawnInProcess, teammateInit}`
 * **第五层**：`src/engine/`（28k 行 SDK 包装层整体）
 
-**步骤 4：workspace 与外部 import 修复**
+**步骤 4：workspace 追加 engine + 外部 import 修复**
 ```
-neptune-lab/package.json workspaces 重声明:
+# 步骤 1 已重声明 product 部分。本步只追加 engine 部分：
+neptune-lab/package.json workspaces 追加:
+  - neptune-engine
+  - neptune-engine/packages/*
+
+# 最终 workspaces 应为:
   - neptune-engine
   - neptune-engine/packages/*
   - neptune-engine-product
@@ -325,6 +355,8 @@ neptune-lab/package.json workspaces 重声明:
 
 neptune-ai/server: 8 处 import 'claude-code-best/engine*' → '@neptune/engine*'
 neptune-ai/server/package.json: "claude-code-best": "workspace:*" → "@neptune/engine": "workspace:*"
+
+# CI 校验：neptune-ai 仓 grep 'claude-code-best' 必须为 0
 ```
 
 **步骤 5：周边文件归位**
