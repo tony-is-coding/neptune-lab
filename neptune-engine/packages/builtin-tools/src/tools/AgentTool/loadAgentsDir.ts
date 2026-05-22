@@ -123,12 +123,12 @@ export type BaseAgentDefinition = {
 	background?: boolean // Always run as background task when spawned
 	initialPrompt?: string // Prepended to the first user turn (slash commands work)
 	memory?: AgentMemoryScope // Persistent memory scope
-	isolation?: 'worktree' | 'remote' // Run in an isolated git worktree, or remotely in CCR (ant-only)
+	isolation?: 'worktree' | 'remote' // Run in an isolated local workspace, or through a host-provided remote runtime.
 	pendingSnapshotUpdate?: { snapshotTimestamp: string }
-	/** Omit CLAUDE.md hierarchy from the agent's userContext. Read-only agents
-	 * (Explore, Plan) don't need commit/PR/lint guidelines — the main agent has
-	 * full CLAUDE.md and interprets their output. Saves ~5-15 Gtok/week across
-	 * 34M+ Explore spawns. Kill-switch: tengu_slim_subagent_claudemd. */
+	/** Omit project instruction hierarchy from the agent's userContext.
+	 * Read-only agents do not need product workflow guidance because the main
+	 * agent has full context and interprets their output. Kill-switch:
+	 * tengu_slim_subagent_claudemd. */
 	omitClaudeMd?: boolean
 }
 

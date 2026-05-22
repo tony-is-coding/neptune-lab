@@ -3,9 +3,11 @@ import {readFileSync} from 'node:fs'
 import {fileURLToPath} from 'node:url'
 
 const files = [
+	'../built-in/generalPurposeAgent.ts',
 	'../built-in/exploreAgent.ts',
 	'../built-in/planAgent.ts',
 	'../built-in/verificationAgent.ts',
+	'../loadAgentsDir.ts',
 ]
 
 function readSource(path: string): string {
@@ -13,7 +15,7 @@ function readSource(path: string): string {
 }
 
 describe('built-in Agent prompts runtime boundary', () => {
-	test('keeps Explore, Plan, and Verification prompts free of product delivery language', () => {
+	test('keeps general-purpose, Explore, Plan, and Verification prompts free of product delivery language', () => {
 		const source = files.map(readSource).join('\n')
 
 		expect(source).not.toContain('git status')
@@ -33,5 +35,6 @@ describe('built-in Agent prompts runtime boundary', () => {
 		expect(source).not.toContain('mcp__playwright__')
 		expect(source).not.toContain('mcp__claude-in-chrome__')
 		expect(source).not.toContain('3+ file edits')
+		expect(source).not.toContain('remotely in CCR')
 	})
 })
