@@ -12,7 +12,6 @@
  */
 
 import type {ProviderQueryParams, ProviderMessage} from '../ProviderAdapter.js'
-import {asSystemPrompt} from '../types/system-prompt.js'
 import {BaseProvider, type BaseProviderConfig} from './BaseProvider.js'
 import type {GeminiProviderConfig} from '../types/ProviderConfigs.js'
 
@@ -38,32 +37,9 @@ export class GeminiProvider extends BaseProvider<GeminiProviderConfig> {
 	 * @returns 异步生成器，产出 ProviderMessage
 	 */
 	async* query(params: ProviderQueryParams): AsyncGenerator<ProviderMessage> {
-		const {queryModelGemini} = await import('../../../services/api/gemini/index.js')
-
 		try {
-			const systemPrompt = asSystemPrompt(params.systemPrompt ? [params.systemPrompt] : [])
-			const options = this.buildOptions(params)
-
-			const stream = queryModelGemini(
-				params.messages,
-				systemPrompt,
-				params.tools ?? [],
-				params.signal || new AbortController().signal,
-				options,
-				{type: 'disabled'},
-			)
-
-			try {
-				for await (const event of stream) {
-					yield this.convertToProviderMessage(event)
-				}
-			} finally {
-				// 确保在提前退出/中断/超时场景下清理 stream
-				const iterator = stream[Symbol.asyncIterator]()
-				if (typeof iterator.return === 'function') {
-					await iterator.return()
-				}
-			}
+			void params
+			yield this.unsupportedProductRuntimeProvider()
 		} catch (error) {
 			yield this.createErrorResponse(error)
 		}

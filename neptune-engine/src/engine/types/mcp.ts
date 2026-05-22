@@ -6,11 +6,21 @@
  * 此处用结构等价的 opaque 形式定义。
  */
 
-import type {Resource, ServerCapabilities} from '@modelcontextprotocol/sdk/types.js'
-
 // ============================================================================
 // MCP Server Config (opaque subset — engine only needs the name/type discriminant)
 // ============================================================================
+
+export type ServerCapabilities = {
+	[key: string]: unknown
+}
+
+export type Resource = {
+	uri: string
+	name?: string
+	description?: string
+	mimeType?: string
+	[key: string]: unknown
+}
 
 /** Engine 层只关心 name + scope，不关心完整 config 结构 */
 export type ScopedMcpServerConfigBase = {

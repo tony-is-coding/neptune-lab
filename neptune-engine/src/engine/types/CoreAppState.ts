@@ -15,6 +15,7 @@ import type {Message} from '../types/message.js'
 import type {UserMessage} from '../types/message.js'
 import type {ToolPermissionContext} from '../types/permissions.js'
 import type {MCPServerConnection} from '../types/mcp.js'
+import type {Tool} from '../types/tool.js'
 
 // ============================================================
 // Inlined from @neptune/engine-product — pure types, no AppState dep

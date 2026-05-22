@@ -14,9 +14,6 @@ import type {Tools} from '../types/tool.js'
 export type QueryEngineConfig = Record<string, unknown>
 import type {ToolRegistry} from '../types/tool.js'
 
-// 重新导出 QueryEngineConfig 供外部使用
-export type {QueryEngineConfig}
-
 // ============================================================
 // CWD 上下文类型
 // ============================================================

@@ -15,7 +15,7 @@ import type {ToolPermissionContext} from './permissions.js'
 
 export type ToolInputJSONSchema = {
 	[x: string]: unknown
-	type: 'object'
+	type?: string
 	properties?: {
 		[x: string]: unknown
 	}
@@ -45,7 +45,9 @@ export type ToolUseContext = {
 
 /** ToolResult — engine 最小接口 */
 export type ToolResult<T = unknown> = {
+	type?: string
 	data: T
+	resultForAssistant?: unknown
 	newMessages?: unknown[]
 	contextModifier?: (context: ToolUseContext) => ToolUseContext
 	mcpMeta?: {
@@ -61,8 +63,9 @@ export type ToolResult<T = unknown> = {
 /** ToolDef — engine 最小接口 */
 export type ToolDef<I = Record<string, unknown>> = {
 	name: string
-	description: string
-	inputSchema?: ToolInputJSONSchema
+	description: string | ((...args: unknown[]) => string | Promise<string>)
+	inputSchema?: unknown
+	inputJSONSchema?: ToolInputJSONSchema
 	aliases?: string[]
 	[key: string]: unknown
 }
@@ -74,9 +77,10 @@ export type CoreTool<
 	P = unknown,
 > = {
 	name: string
-	description: string
+	description: string | ((...args: unknown[]) => string | Promise<string>)
 	aliases?: string[]
-	inputSchema?: ToolInputJSONSchema
+	inputSchema?: unknown
+	inputJSONSchema?: ToolInputJSONSchema
 	call?: (input: I, context: ToolUseContext, progress: ToolCallProgress) => Promise<ToolResult<O>>
 	[key: string]: unknown
 }
@@ -117,11 +121,18 @@ export type Tool<
 /** Tools — 工具列表 */
 export type Tools = Tool[]
 
+/** ToolSet — 可注册到 registry 的工具集合 */
+export type ToolSet = {
+	tools: Tool[]
+	enabled?: boolean
+}
+
 /** ToolRegistry — 工具注册表接口 */
 export type ToolRegistry = {
-	getTools(): Tools
-	getTool(name: string): Tool | undefined
-	[key: string]: unknown
+	getTools(permissionContext?: ToolPermissionContext): Tools
+	getTool?(name: string): Tool | undefined
+	getToolByName?(name: string): Tool | undefined
+	getCoreToolCount?(): number
 }
 
 // ============================================================
@@ -164,6 +175,12 @@ export function filterToolProgressMessages(
 		(msg): msg is ProgressMessage<ToolProgressData> =>
 			(msg.data as { type?: string })?.type !== 'hook_progress',
 	)
+}
+
+export function buildTool<I = Record<string, unknown>, O = unknown, P = unknown>(
+	tool: Tool<I, O, P>,
+): Tool<I, O, P> {
+	return tool
 }
 
 // ============================================================

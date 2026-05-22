@@ -32,7 +32,7 @@ export class HeadlessQueryEngine implements QueryEngineWrapper {
 				model,
 				messages,
 				systemPrompt,
-				signal: this.config.abortController?.signal,
+				signal: this.getAbortSignal(),
 				provider,
 			})) {
 				if (message.type === 'text_delta') {
@@ -107,6 +107,10 @@ export class HeadlessQueryEngine implements QueryEngineWrapper {
 
 	private getProvider(): ProviderConfig | undefined {
 		return (this.config as unknown as {provider?: ProviderConfig}).provider
+	}
+
+	private getAbortSignal(): AbortSignal | undefined {
+		return (this.config as {abortController?: AbortController}).abortController?.signal
 	}
 
 	private async* streamAnthropic({

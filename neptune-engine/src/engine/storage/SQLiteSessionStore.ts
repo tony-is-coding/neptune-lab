@@ -1,4 +1,5 @@
 import {Database} from 'bun:sqlite'
+import type {SQLQueryBindings} from 'bun:sqlite'
 import {Session} from '../Session'
 import type {SessionSnapshot} from '../Session'
 import type {ISessionStore} from './ISessionStore'
@@ -52,7 +53,7 @@ export class SQLiteSessionStore implements ISessionStore {
 	 * 非阻塞包装：将同步数据库操作转为异步
 	 * 使用 setImmediate 让出事件循环，避免阻塞
 	 */
-	private async runAsync(sql: string, params: unknown[]): Promise<void> {
+	private async runAsync(sql: string, params: SQLQueryBindings[]): Promise<void> {
 		await new Promise(resolve => setImmediate(resolve))
 		this.db.run(sql, params)
 	}
@@ -60,7 +61,7 @@ export class SQLiteSessionStore implements ISessionStore {
 	/**
 	 * 非阻塞包装：将同步查询操作转为异步
 	 */
-	private async queryAsync(sql: string, params: unknown[]): Promise<SessionRow[]> {
+	private async queryAsync(sql: string, params: SQLQueryBindings[]): Promise<SessionRow[]> {
 		await new Promise(resolve => setImmediate(resolve))
 		return this.db.query(sql).all(...params) as SessionRow[]
 	}
@@ -68,7 +69,7 @@ export class SQLiteSessionStore implements ISessionStore {
 	/**
 	 * 非阻塞包装：查询单行
 	 */
-	private async queryGetAsync(sql: string, params: unknown[]): Promise<SessionRow | undefined> {
+	private async queryGetAsync(sql: string, params: SQLQueryBindings[]): Promise<SessionRow | undefined> {
 		await new Promise(resolve => setImmediate(resolve))
 		return this.db.query(sql).get(...params) as SessionRow | undefined
 	}

@@ -1,10 +1,23 @@
 import {existsSync, readFileSync, writeFileSync} from 'fs'
 import {dirname} from 'path'
 import {mkdirSync} from 'fs'
-import {z} from 'zod/v4'
 import {buildTool, type Tool, type Tools} from '../types/tool.js'
 import type {ToolRegistry, ToolSet} from '../types/tool.js'
 import type {ToolPermissionContext} from '../types/permissions.js'
+
+const anyObjectInputSchema = {
+	type: 'object',
+	additionalProperties: true,
+}
+
+function strictObjectInputSchema(properties: Record<string, unknown>) {
+	return {
+		type: 'object',
+		properties,
+		required: Object.keys(properties),
+		additionalProperties: false,
+	}
+}
 
 function stringifyResult(data: unknown): string {
 	if (typeof data === 'string') return data
@@ -24,7 +37,7 @@ function createTextTool(name: string, description: string): Tool {
 		name,
 		maxResultSizeChars: 100_000,
 		strict: true,
-		inputSchema: z.record(z.string(), z.unknown()),
+		inputSchema: anyObjectInputSchema,
 		async description() {
 			return description
 		},
@@ -52,8 +65,8 @@ const ReadTool = buildTool({
 	name: 'Read',
 	maxResultSizeChars: Infinity,
 	strict: true,
-	inputSchema: z.strictObject({
-		file_path: z.string(),
+	inputSchema: strictObjectInputSchema({
+		file_path: {type: 'string'},
 	}),
 	async description() {
 		return 'Read a file from the workspace.'
@@ -84,9 +97,9 @@ const WriteTool = buildTool({
 	name: 'Write',
 	maxResultSizeChars: 100_000,
 	strict: true,
-	inputSchema: z.strictObject({
-		file_path: z.string(),
-		content: z.string(),
+	inputSchema: strictObjectInputSchema({
+		file_path: {type: 'string'},
+		content: {type: 'string'},
 	}),
 	async description() {
 		return 'Write a file in the workspace.'
@@ -150,12 +163,19 @@ export class HeadlessToolRegistry implements ToolRegistry {
 			}
 		}
 
-		this.cache = tools.filter(tool => tool.isEnabled?.() ?? true)
+		this.cache = tools.filter(tool => {
+			const isEnabled = tool.isEnabled
+			return typeof isEnabled === 'function' ? isEnabled() : true
+		})
 		return [...this.cache]
 	}
 
 	getToolByName(name: string): Tool | undefined {
 		return this.getTools({} as ToolPermissionContext).find(tool => tool.name === name)
+	}
+
+	getTool(name: string): Tool | undefined {
+		return this.getToolByName(name)
 	}
 
 	filterTools(filterFn: (tool: Tool) => boolean): Tool[] {

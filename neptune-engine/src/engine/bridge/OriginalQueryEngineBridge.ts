@@ -42,23 +42,20 @@ type QueryEngineConfig = Record<string, unknown> & {
 	customDeps?: unknown
 }
 /** @see neptune-engine-product/Tool.ts */
-type Tool = {name?: string; [key: string]: unknown}
-type Tools = Tool[]
+import type {Tool, Tools, ToolInputJSONSchema} from '../types/tool.js'
 type ToolUseContext = Record<string, unknown>
-type ToolInputJSONSchema = Record<string, unknown>
 /** @see neptune-engine-product/query/deps.ts */
 type QueryDeps = Record<string, unknown>
 import type {Message, AssistantMessage} from '../types/message.js'
 import type {Command} from '../types/command.js'
 import type {CanUseToolFn} from '../types/permissions.js'
-import {z} from 'zod'
 import type {CCRuntime} from '../cc-runtime/CCRuntime.js'
 import {getGlobalCCRuntime} from '../cc-runtime/DefaultCCRuntime.js'
 import type {CoreAppState} from '../types/CoreAppState.js'
 import {createDefaultCoreAppState} from '../state/CoreAppStateFactory.js'
 import type {PermissionDelegate} from '../permissions/PermissionDelegate.js'
 import type {UnifiedConfig} from '../config/UnifiedConfig.js'
-import {getGlobalProviderRegistry} from '../provider/ProviderRegistry.js'
+import type {ProviderRegistry} from '../provider/ProviderRegistry.js'
 import type {ProviderAdapter} from '../provider/ProviderAdapter.js'
 import {EngineError, EngineErrorCode} from '../errors.js'
 import type {SDKTool} from '../types/tool-extension.js'
@@ -185,7 +182,7 @@ export function initializeRuntime(runtime?: CCRuntime, workspace?: string): void
 async function createProviderWithConfig(
 	providerType: string,
 	config?: Record<string, unknown>,
-	options?: { providerRegistry?: Awaited<ReturnType<typeof getGlobalProviderRegistry>> },
+	options?: { providerRegistry?: ProviderRegistry },
 ): Promise<ProviderAdapter | undefined> {
 	try {
 		// T7: 优先使用传入的自定义 ProviderRegistry
@@ -196,6 +193,7 @@ async function createProviderWithConfig(
 
 		// 如果没有提供配置，使用全局注册表中的默认 Provider
 		if (!config || Object.keys(config).length === 0) {
+			const {getGlobalProviderRegistry} = await import('../provider/ProviderRegistry.js')
 			const registry = await getGlobalProviderRegistry()
 			return registry.get(providerType)
 		}
@@ -341,9 +339,6 @@ export async function buildQueryEngineConfig(config: UnifiedConfig, runtime?: CC
 			{providerRegistry: config.providerRegistry}
 		)
 		if (providerAdapter) {
-			const {productionDeps} = await import('../../query/deps.js')
-			const originalDeps = productionDeps()
-
 			// 获取 Provider 的 CircuitBreaker（通过 unknown 中间类型避免类型错误）
 			// ProviderAdapter 实现类（如 BaseProvider）有 circuitBreaker 属性
 			const baseProvider = providerAdapter as unknown as {
@@ -355,7 +350,6 @@ export async function buildQueryEngineConfig(config: UnifiedConfig, runtime?: CC
 			}
 
 			customDeps = {
-				...originalDeps,
 				// 使用 CircuitBreaker 包装 callModel（async generator 匹配 queryModelWithStreaming 返回类型）
 				callModel: async function* (params) {
 					// 关键日志：LLM API 调用入口
@@ -386,8 +380,20 @@ export async function buildQueryEngineConfig(config: UnifiedConfig, runtime?: CC
 					}
 
 					try {
-						// 委托原始 callModel（AsyncGenerator），透传所有流式事件
-						yield* originalDeps.callModel(params)
+						for await (const event of providerAdapter.query({
+							model:
+								typeof provider?.config?.model === 'string'
+									? provider.config.model
+									: '',
+							messages: (params as {messages?: Message[]}).messages ?? [],
+							tools: (params as {tools?: Tools}).tools ?? [],
+							systemPrompt: Array.isArray((params as {systemPrompt?: unknown}).systemPrompt)
+								? ((params as {systemPrompt: string[]}).systemPrompt).join('\n\n')
+								: undefined,
+							signal: (params as {signal?: AbortSignal}).signal,
+						})) {
+							yield event
+						}
 						// 成功时记录
 						baseProvider.circuitBreaker.recordSuccess()
 					} catch (error) {
@@ -515,10 +521,11 @@ export function adaptToolExtension(ext: ToolExtension): Tool {
 
 	const sdkTool: SDKTool = {
 		name: ext.name,
-		// Zod schema — 用 z.record 作为宽松 fallback，避免 zodToJsonSchema 崩溃
-		inputSchema: z.record(z.string(), z.unknown()),
+		// Opaque schema fallback. Engine kernel must not require a validator runtime
+		// just to adapt SDK tools; API callers should prefer inputJSONSchema below.
+		inputSchema: jsonSchema,
 		// JSON Schema — API 层优先使用此字段，不走 zodToJsonSchema
-		inputJSONSchema: jsonSchema,
+		inputJSONSchema: jsonSchema as SDKTool['inputJSONSchema'],
 		isEnabled: () => true,
 		isReadOnly: () => false,
 		isConcurrencySafe: () => true,

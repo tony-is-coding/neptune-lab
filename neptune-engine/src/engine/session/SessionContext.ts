@@ -26,7 +26,15 @@ export type ModelUsage = {
 	cacheCreationInputTokens?: number
 	[key: string]: unknown
 }
-import type {AgentColorName} from '@neptune/builtin-tools/tools/AgentTool/agentColorManager.js'
+export type AgentColorName =
+	| 'red'
+	| 'blue'
+	| 'green'
+	| 'yellow'
+	| 'purple'
+	| 'orange'
+	| 'pink'
+	| 'cyan'
 import type {TokenBudgetState} from './TokenBudgetManager.js'
 import type {SessionContextSnapshot} from '../types.js'
 import {SERIALIZATION_PROTOCOL_VERSION} from '../types.js'

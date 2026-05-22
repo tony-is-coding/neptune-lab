@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Neptune agent harness kernel. Houses the SDK wrapper, provider adapters, permissions, storage, hooks, EventBus, and CC runtime — i.e. the K + K-DEFAULT layer described in 2026-05-21 harness extraction spec. Retains a transitional reverse-dependency on @neptune/engine-product for unmigrated boundary-blur targets (Tool.ts, utils/*, types/*, services/*), to be cleared in spec phase 2.",
+  "description": "Independent Neptune agent runtime kernel. Houses the SDK wrapper, provider adapters, permissions, storage, hooks, EventBus, and CC runtime without product-layer reverse dependencies.",
   "engines": {
     "bun": ">=1.2.0"
   },
@@ -20,9 +20,7 @@
     "./events": "./src/events.ts"
   },
   "dependencies": {
-    "@neptune/engine-product": "workspace:*",
     "@neptune/engine-tools": "workspace:*",
-    "@neptune/builtin-tools": "workspace:*",
     "@neptune/mcp-client": "workspace:*",
     "@anthropic-ai/sdk": "^0.80.0",
     "drizzle-orm": "^0.36.4",

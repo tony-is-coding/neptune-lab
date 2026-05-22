@@ -39,33 +39,9 @@ export class FoundryProvider extends BaseProvider<FoundryProviderConfig> {
 	 * @returns 异步生成器，产出 ProviderMessage
 	 */
 	async* query(params: ProviderQueryParams): AsyncGenerator<ProviderMessage> {
-		const {queryModelWithStreaming} = await import('../../../services/api/claude.js')
-		const {asSystemPrompt} = await import('../../../utils/systemPromptType.js')
-
 		try {
-			const systemPrompt = asSystemPrompt(params.systemPrompt ? [params.systemPrompt] : [])
-			const options = this.buildOptions(params)
-
-			const stream = queryModelWithStreaming({
-				messages: params.messages,
-				systemPrompt,
-				thinkingConfig: {type: 'disabled'},
-				tools: params.tools ?? [],
-				signal: params.signal || new AbortController().signal,
-				options,
-			})
-
-			try {
-				for await (const event of stream) {
-					yield this.convertToProviderMessage(event)
-				}
-			} finally {
-				// 确保在提前退出/中断/超时场景下清理 stream
-				const iterator = stream[Symbol.asyncIterator]()
-				if (typeof iterator.return === 'function') {
-					await iterator.return()
-				}
-			}
+			void params
+			yield this.unsupportedProductRuntimeProvider()
 		} catch (error) {
 			yield this.createErrorResponse(error)
 		}

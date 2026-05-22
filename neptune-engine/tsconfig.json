@@ -1,28 +1,5 @@
 {
-  "compilerOptions": {
-    "target": "ESNext",
-    "module": "ESNext",
-    "moduleResolution": "bundler",
-    "strict": false,
-    "skipLibCheck": true,
-    "noEmit": true,
-    "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true,
-    "resolveJsonModule": true,
-    "jsx": "react-jsx",
-    "isolatedModules": true,
-    "types": [
-      "bun"
-    ],
-    "paths": {
-      "@neptune/engine-tools": ["./packages/agent-tools/src/index.ts"],
-      "@neptune/engine-tools/*": ["./packages/agent-tools/src/*"],
-      "@neptune/builtin-tools": ["./packages/builtin-tools/src/index.ts"],
-      "@neptune/builtin-tools/*": ["./packages/builtin-tools/src/*"],
-      "@neptune/mcp-client": ["./packages/mcp-client/src/index.ts"],
-      "@neptune/mcp-client/*": ["./packages/mcp-client/src/*"]
-    }
-  },
+  "extends": "./tsconfig.base.json",
   "include": [
     "src/**/*.ts",
     "src/**/*.tsx"

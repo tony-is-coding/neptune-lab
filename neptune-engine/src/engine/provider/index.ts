@@ -25,24 +25,3 @@ export {ProviderRegistry, getGlobalProviderRegistry, resetGlobalProviderRegistry
 // CircuitBreaker 熔断器
 export type {CircuitBreakerConfig, CircuitBreakerState, CircuitBreakerStateChangedEvent} from './CircuitBreaker.js'
 export {CircuitBreaker} from './CircuitBreaker.js'
-
-// Anthropic Provider
-export {AnthropicProvider} from './adapters/AnthropicProvider.js'
-
-// OpenAI Provider
-export {OpenAIProvider} from './adapters/OpenAIProvider.js'
-
-// Gemini Provider
-export {GeminiProvider} from './adapters/GeminiProvider.js'
-
-// Grok Provider
-export {GrokProvider} from './adapters/GrokProvider.js'
-
-// Bedrock Provider (可选依赖)
-export {BedrockProvider} from './adapters/BedrockProvider.js'
-
-// Vertex Provider (可选依赖)
-export {VertexProvider} from './adapters/VertexProvider.js'
-
-// Foundry Provider (可选依赖)
-export {FoundryProvider} from './adapters/FoundryProvider.js'

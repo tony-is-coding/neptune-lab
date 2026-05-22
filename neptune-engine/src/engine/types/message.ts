@@ -1,7 +1,7 @@
 /**
  * engine/types/message.ts — Message 类型集（engine 自有定义）
  *
- * 从 product src/types/message.ts 迁入。仅依赖 @anthropic-ai/sdk + crypto + @neptune/builtin-tools。
+ * 从 product src/types/message.ts 迁入。仅依赖 @anthropic-ai/sdk + crypto。
  * engine 内部不再反向依赖 @neptune/engine-product/types/message。
  */
 
@@ -11,11 +11,16 @@ import type {
 	ContentBlock,
 } from '@anthropic-ai/sdk/resources/index.mjs'
 import type {BetaUsage} from '@anthropic-ai/sdk/resources/beta/messages/messages.mjs'
-import type {
-	BranchAction,
-	CommitKind,
-	PrAction,
-} from '@neptune/builtin-tools/tools/shared/gitOperationTracking.js'
+
+export type CommitKind = 'committed' | 'amended' | 'cherry-picked'
+export type BranchAction = 'merged' | 'rebased'
+export type PrAction =
+	| 'created'
+	| 'edited'
+	| 'merged'
+	| 'commented'
+	| 'closed'
+	| 'ready'
 
 /**
  * Discriminant tag for messages, refined by individual subtypes below.

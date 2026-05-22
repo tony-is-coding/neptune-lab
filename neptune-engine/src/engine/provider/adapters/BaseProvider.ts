@@ -27,7 +27,7 @@ type Options = {
 	enablePromptCaching?: boolean
 	mcpTools?: unknown[]
 }
-import {getEmptyToolPermissionContext} from '../types/tool.js'
+import {getEmptyToolPermissionContext} from '../../types/tool.js'
 import {EngineErrorCode, type EngineErrorCodeType} from '../../errors.js'
 import {APIConnectionError, APIConnectionTimeoutError, APIError} from '@anthropic-ai/sdk'
 import {LogUtil} from '../../log/LogUtil.js'
@@ -161,6 +161,14 @@ export abstract class BaseProvider<TConfig extends BaseProviderConfig = BaseProv
 			enablePromptCaching: false,
 			mcpTools: [],
 		}
+	}
+
+	protected unsupportedProductRuntimeProvider(): ProviderMessage {
+		return this.createErrorResponse(
+			new Error(
+				`Provider "${this.type}" requires a host runtime adapter. The independent engine kernel does not import product-layer API modules.`,
+			),
+		)
 	}
 
 	/**
