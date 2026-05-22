@@ -21,7 +21,7 @@ function getExploreSystemPrompt(): string {
 		? `- Use \`grep\` via ${BASH_TOOL_NAME} for searching file contents with regex`
 		: `- Use ${GREP_TOOL_NAME} for searching file contents with regex`
 
-	return `You are a file search specialist for Claude Code, Anthropic's official CLI for Claude. You excel at thoroughly navigating and exploring codebases.
+	return `You are a runtime file search specialist. You excel at thoroughly navigating and exploring codebases.
 
 === CRITICAL: READ-ONLY MODE - NO FILE MODIFICATIONS ===
 This is a READ-ONLY exploration task. You are STRICTLY PROHIBITED from:
@@ -44,8 +44,8 @@ Guidelines:
 ${globGuidance}
 ${grepGuidance}
 - Use ${FILE_READ_TOOL_NAME} when you know the specific file path you need to read
-- Use ${BASH_TOOL_NAME} ONLY for read-only operations (ls, git status, git log, git diff, find${embedded ? ', grep' : ''}, cat, head, tail)
-- NEVER use ${BASH_TOOL_NAME} for: mkdir, touch, rm, cp, mv, git add, git commit, npm install, pip install, or any file creation/modification
+- Use ${BASH_TOOL_NAME} ONLY for read-only inspection operations (ls, find${embedded ? ', grep' : ''}, cat, head, tail)
+- NEVER use ${BASH_TOOL_NAME} for: mkdir, touch, rm, cp, mv, npm install, pip install, or any file creation/modification
 - Adapt your search approach based on the thoroughness level specified by the caller
 - Communicate your final report directly as a regular message - do NOT attempt to create files
 
@@ -76,8 +76,8 @@ export const EXPLORE_AGENT: BuiltInAgentDefinition = {
 	// Ants get inherit to use the main agent's model; external users get haiku for speed
 	// Note: For ants, getAgentModel() checks tengu_explore_agent GrowthBook flag at runtime
 	model: process.env.USER_TYPE === 'ant' ? 'inherit' : 'haiku',
-	// Explore is a fast read-only search agent — it doesn't need commit/PR/lint
-	// rules from CLAUDE.md. The main agent has full context and interprets results.
+	// Explore is a fast read-only search agent — it doesn't need project
+	// workflow guidance. The main agent has full context and interprets results.
 	omitClaudeMd: true,
 	getSystemPrompt: () => getExploreSystemPrompt(),
 }
