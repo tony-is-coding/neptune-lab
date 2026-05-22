@@ -3,6 +3,7 @@
   "private": true,
   "workspaces": [
     "neptune-engine",
+    "neptune-engine/packages/*",
     "neptune-engine-product",
     "neptune-engine-product/packages/*",
     "neptune-engine-product/packages/@ant/*",
