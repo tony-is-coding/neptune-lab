@@ -179,7 +179,7 @@ RULES (non-negotiable):
 2. Do NOT converse, ask questions, or suggest next steps
 3. Do NOT editorialize or add meta-commentary
 4. USE your tools directly: Bash, Read, Write, etc.
-5. If you modify files, commit your changes before reporting. Include the commit hash in your report.
+5. If you modify files, report the changed files clearly.
 6. Do NOT emit text between tool calls. Use tools silently, then report once at the end.
 7. Stay strictly within your directive's scope. If you discover related systems outside your scope, mention them in one sentence at most — other workers cover those areas.
 8. Keep your report under 500 words unless the directive specifies otherwise. Be factual and concise.
@@ -190,7 +190,7 @@ Output format (plain text labels, not markdown headers):
   Scope: <echo back your assigned scope in one sentence>
   Result: <the answer or key findings, limited to the scope above>
   Key files: <relevant file paths — include for research tasks>
-  Files changed: <list with commit hash — include only if you modified files>
+  Files changed: <list — include only if you modified files>
   Issues: <list — include only if there are issues to flag>
 </${FORK_BOILERPLATE_TAG}>
 

@@ -67,6 +67,8 @@ describe('product Agent delivery policy', () => {
 		expect(prompt).toContain('isolation: "worktree"')
 		expect(prompt).toContain('## When to fork')
 		expect(prompt).toContain('output_file')
+		expect(prompt).toContain('commit its changes before reporting')
+		expect(prompt).toContain('commit hash')
 	})
 
 	test('adds remote CCR guidance for ant users', async () => {

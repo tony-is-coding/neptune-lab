@@ -1,4 +1,6 @@
 import {describe, expect, mock, test} from 'bun:test'
+import {readFileSync} from 'node:fs'
+import {fileURLToPath} from 'node:url'
 
 mock.module('src/services/analytics/growthbook.js', () => ({
 	getFeatureValue_CACHED_MAY_BE_STALE() {
@@ -45,6 +47,11 @@ mock.module('../constants.js', () => ({
 
 const {getPrompt} = await import('../prompt.js')
 
+const forkSubagentSourcePath = fileURLToPath(
+	new URL('../forkSubagent.ts', import.meta.url),
+)
+const forkSubagentSource = readFileSync(forkSubagentSourcePath, 'utf8')
+
 describe('AgentTool prompt runtime boundary', () => {
 	test('excludes product fork, worktree, remote, and parallel delivery policy', async () => {
 		const prompt = await getPrompt(
@@ -66,5 +73,24 @@ describe('AgentTool prompt runtime boundary', () => {
 		expect(prompt).not.toContain('output_file')
 		expect(prompt).not.toContain('run agents "in parallel"')
 		expect(prompt).not.toContain('SendMessage')
+	})
+
+	test('keeps fork child boilerplate free of product commit delivery policy', () => {
+		const boilerplateStart = forkSubagentSource.indexOf('RULES (non-negotiable):')
+		const boilerplateEnd = forkSubagentSource.indexOf(
+			'${FORK_DIRECTIVE_PREFIX}${directive}',
+			boilerplateStart,
+		)
+		expect(boilerplateStart).toBeGreaterThanOrEqual(0)
+		expect(boilerplateEnd).toBeGreaterThan(boilerplateStart)
+		const boilerplate = forkSubagentSource.slice(
+			boilerplateStart,
+			boilerplateEnd,
+		)
+
+		expect(boilerplate).toContain('Files changed:')
+		expect(boilerplate).not.toContain('commit your changes')
+		expect(boilerplate).not.toContain('commit hash')
+		expect(boilerplate).not.toContain('git commit')
 	})
 })
