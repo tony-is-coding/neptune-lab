@@ -2,9 +2,9 @@ import {existsSync, readFileSync, writeFileSync} from 'fs'
 import {dirname} from 'path'
 import {mkdirSync} from 'fs'
 import {z} from 'zod/v4'
-import {buildTool, type Tool, type Tools} from '@neptune/engine-product/Tool.js'
-import type {ToolRegistry, ToolSet} from '@neptune/engine-product/ToolRegistry.js'
-import type {ToolPermissionContext} from '@neptune/engine-product/types/permissions.js'
+import {buildTool, type Tool, type Tools} from '../types/tool.js'
+import type {ToolRegistry, ToolSet} from '../types/tool.js'
+import type {ToolPermissionContext} from '../types/permissions.js'
 
 function stringifyResult(data: unknown): string {
 	if (typeof data === 'string') return data

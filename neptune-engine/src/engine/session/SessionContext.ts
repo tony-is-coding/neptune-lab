@@ -12,9 +12,20 @@
  */
 
 import type {SessionId} from '../types/ids.js'
-import type {ModelSetting} from '@neptune/engine-product/utils/model/model.js'
-import type {ModelStrings} from '@neptune/engine-product/utils/model/modelStrings.js'
-import type {ModelUsage} from '@neptune/engine-product/entrypoints/agentSdkTypes.js'
+
+// Inlined from @neptune/engine-product — pure type definitions, no runtime deps
+/** Model name or alias string, or null for default */
+export type ModelSetting = string | null
+/** Map of model key to provider-specific model ID string */
+export type ModelStrings = Record<string, string>
+/** Per-model token usage record */
+export type ModelUsage = {
+	inputTokens: number
+	outputTokens: number
+	cacheReadInputTokens?: number
+	cacheCreationInputTokens?: number
+	[key: string]: unknown
+}
 import type {AgentColorName} from '@neptune/builtin-tools/tools/AgentTool/agentColorManager.js'
 import type {TokenBudgetState} from './TokenBudgetManager.js'
 import type {SessionContextSnapshot} from '../types.js'

@@ -21,8 +21,8 @@ import type {
 	TranscriptLoadResult,
 } from './CCRuntime.js'
 import {DEFAULT_MACROS} from './CCRuntime.js'
-import type {Tools} from '@neptune/engine-product/Tool.js'
-import type {ToolRegistry} from '@neptune/engine-product/ToolRegistry.js'
+import type {Tools} from '../types/tool.js'
+import type {ToolRegistry} from '../types/tool.js'
 import {HeadlessToolRegistry} from './HeadlessToolRegistry.js'
 import {HeadlessQueryEngine} from './HeadlessQueryEngine.js'
 

@@ -14,8 +14,40 @@
 import {LogUtil} from '../log/index.js'
 
 const log = LogUtil.getInstance().child('EngineBridge')
-import type {QueryEngineConfig} from '@neptune/engine-product/QueryEngine.js'
-import type {Tools, Tool, ToolUseContext, ToolInputJSONSchema} from '@neptune/engine-product/Tool.js'
+// Opaque product types — engine bridges through these but does not own their shape.
+// Using `unknown`-based aliases keeps compile-time safety while eliminating product imports.
+/** @see neptune-engine-product/QueryEngine.ts */
+type QueryEngineConfig = Record<string, unknown> & {
+	cwd: string
+	tools: unknown[]
+	commands: unknown[]
+	mcpClients: unknown[]
+	agents: unknown[]
+	canUseTool: unknown
+	getAppState: () => unknown
+	setAppState: (fn: (prev: unknown) => unknown) => void
+	readFileCache: unknown
+	verbose: boolean
+	abortController: AbortController
+	includePartialMessages?: boolean
+	isNonInteractiveSession?: boolean
+	hasAppendSystemPrompt?: boolean
+	maxTurns?: number
+	maxBudgetUsd?: number
+	userSpecifiedModel?: string
+	fallbackModel?: string
+	customSystemPrompt?: string
+	identityOverride?: string
+	provider?: unknown
+	customDeps?: unknown
+}
+/** @see neptune-engine-product/Tool.ts */
+type Tool = {name?: string; [key: string]: unknown}
+type Tools = Tool[]
+type ToolUseContext = Record<string, unknown>
+type ToolInputJSONSchema = Record<string, unknown>
+/** @see neptune-engine-product/query/deps.ts */
+type QueryDeps = Record<string, unknown>
 import type {Message, AssistantMessage} from '../types/message.js'
 import type {Command} from '../types/command.js'
 import type {CanUseToolFn} from '../types/permissions.js'
@@ -28,7 +60,6 @@ import type {PermissionDelegate} from '../permissions/PermissionDelegate.js'
 import type {UnifiedConfig} from '../config/UnifiedConfig.js'
 import {getGlobalProviderRegistry} from '../provider/ProviderRegistry.js'
 import type {ProviderAdapter} from '../provider/ProviderAdapter.js'
-import type {QueryDeps} from '@neptune/engine-product/query/deps.js'
 import {EngineError, EngineErrorCode} from '../errors.js'
 import type {SDKTool} from '../types/tool-extension.js'
 

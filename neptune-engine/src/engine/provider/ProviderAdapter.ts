@@ -12,7 +12,7 @@
  */
 
 import type {Message} from '../types/message.js'
-import type {Tools} from '@neptune/engine-product/Tool.js'
+import type {Tools} from '../types/tool.js'
 
 // ============================================================
 // 类型定义

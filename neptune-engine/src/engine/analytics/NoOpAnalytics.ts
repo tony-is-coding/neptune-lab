@@ -7,7 +7,10 @@
  * 所有方法都是空操作，零性能开销。
  */
 
-import type {AnalyticsSink} from '@neptune/engine-product/services/analytics/index.js'
+// Inlined from @neptune/engine-product/services/analytics/index.ts
+export type AnalyticsSink = {
+	logEvent(eventName: string, properties?: Record<string, unknown>): void
+}
 
 /**
  * No-Op Analytics Sink
@@ -61,6 +64,6 @@ export const noOpAnalyticsSink = new NoOpAnalyticsSink()
  * ```
  */
 export function attachNoOpAnalytics(): void {
-	const {attachAnalyticsSink} = require('@neptune/engine-product/services/analytics/index.js')
+	// attachAnalyticsSink is not available in engine layer (product-only); skipping auto-attachment
 	attachAnalyticsSink(noOpAnalyticsSink)
 }

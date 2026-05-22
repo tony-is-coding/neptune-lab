@@ -13,8 +13,21 @@
  */
 
 import type {ProviderAdapter, ProviderQueryParams, ProviderMessage} from '../ProviderAdapter.js'
-import type {Options} from '@neptune/engine-product/services/api/claude.js'
-import {getEmptyToolPermissionContext} from '@neptune/engine-product/Tool.js'
+/** Inlined from @neptune/engine-product/services/api/claude.js — engine-local subset */
+type Options = {
+	model: string
+	getToolPermissionContext: () => Promise<unknown>
+	toolChoice?: unknown
+	isNonInteractiveSession?: boolean
+	extraToolSchemas?: unknown[]
+	maxOutputTokensOverride?: number
+	querySource?: string
+	agents?: unknown[]
+	hasAppendSystemPrompt?: boolean
+	enablePromptCaching?: boolean
+	mcpTools?: unknown[]
+}
+import {getEmptyToolPermissionContext} from '../types/tool.js'
 import {EngineErrorCode, type EngineErrorCodeType} from '../../errors.js'
 import {APIConnectionError, APIConnectionTimeoutError, APIError} from '@anthropic-ai/sdk'
 import {LogUtil} from '../../log/LogUtil.js'

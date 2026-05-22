@@ -8,8 +8,12 @@
  */
 
 import type {CoreAppState} from '../types/CoreAppState.js'
-import type {ToolPermissionContext} from '@neptune/engine-product/Tool.js'
-import type {AttributionState} from '@neptune/engine-product/utils/commitAttribution.js'
+import type {ToolPermissionContext} from '../types/tool.js'
+/** Inline from @neptune/engine-product/utils/commitAttribution.js — pure type, no AppState dep */
+export type AttributionState = {
+	commits?: {sha: string; [key: string]: unknown}[]
+	[key: string]: unknown
+}
 
 /**
  * 创建空的 ToolPermissionContext 的函数类型

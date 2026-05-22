@@ -28,7 +28,8 @@
 
 import type {AgentEngineConfig, ProviderConfig} from '../AgentEngine.js'
 import type {EngineConfig} from './ConfigValidation.js'
-import type {SettingsJson} from '@neptune/engine-product/utils/settings/types.js'
+/** Inlined from @neptune/engine-product/utils/settings/types.js — engine-local subset (pure type, no AppState dep) */
+export type SettingsJson = Record<string, unknown>
 import type {ToolExtension} from '../bridge/OriginalQueryEngineBridge.js'
 import type {PermissionConfig} from '../bridge/OriginalQueryEngineBridge.js'
 import type {ProviderRegistry} from '../provider/ProviderRegistry.js'

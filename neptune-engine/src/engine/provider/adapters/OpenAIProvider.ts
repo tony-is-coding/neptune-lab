@@ -13,7 +13,7 @@
  */
 
 import type {ProviderQueryParams, ProviderMessage} from '../ProviderAdapter.js'
-import {asSystemPrompt} from '@neptune/engine-product/utils/systemPromptType.js'
+import {asSystemPrompt} from '../types/system-prompt.js'
 import {BaseProvider, type BaseProviderConfig} from './BaseProvider.js'
 import type {OpenAIProviderConfig} from '../types/ProviderConfigs.js'
 
