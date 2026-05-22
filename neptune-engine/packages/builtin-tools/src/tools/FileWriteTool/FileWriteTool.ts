@@ -1,7 +1,6 @@
 import {dirname, sep} from 'path'
 import {logEvent} from 'src/services/analytics/index.js'
 import {z} from 'zod/v4'
-import {getFeatureValue_CACHED_MAY_BE_STALE} from 'src/services/analytics/growthbook.js'
 import {diagnosticTracker} from 'src/services/diagnosticTracking.js'
 import {clearDeliveredDiagnosticsForFile} from 'src/services/lsp/LSPDiagnosticRegistry.js'
 import {getLspServerManager} from 'src/services/lsp/manager.js'
@@ -27,10 +26,6 @@ import {
 import {logFileOperation} from 'src/utils/fileOperationAnalytics.js'
 import {readFileSyncWithMetadata} from 'src/utils/fileRead.js'
 import {getFsImplementation} from 'src/utils/fsOperations.js'
-import {
-	fetchSingleFileGitDiff,
-	type ToolUseDiff,
-} from 'src/utils/gitDiff.js'
 import {lazySchema} from '../../utils/lazySchema.js'
 import {logError} from 'src/utils/log.js'
 import {expandPath} from 'src/utils/path.js'
@@ -41,7 +36,7 @@ import {
 import type {PermissionDecision} from 'src/utils/permissions/PermissionResult.js'
 import {matchWildcardPattern} from 'src/utils/permissions/shellRuleMatching.js'
 import {FILE_UNEXPECTEDLY_MODIFIED_ERROR} from '../FileEditTool/constants.js'
-import {gitDiffSchema, hunkSchema} from '../FileEditTool/types.js'
+import {hunkSchema} from '../FileEditTool/types.js'
 import {FILE_WRITE_TOOL_NAME, getWriteToolDescription} from './prompt.js'
 import {
 	getToolUseSummary,
@@ -83,7 +78,6 @@ const outputSchema = lazySchema(() =>
 			.describe(
 				'The original file content before the write (null for new files)',
 			),
-		gitDiff: gitDiffSchema().optional(),
 	}),
 )
 type OutputSchema = ReturnType<typeof outputSchema>
@@ -342,21 +336,6 @@ export const FileWriteTool = buildTool({
 			logEvent('tengu_write_claudemd', {})
 		}
 
-		let gitDiff: ToolUseDiff | undefined
-		if (
-			isEnvTruthy(process.env.CLAUDE_CODE_REMOTE) &&
-			getFeatureValue_CACHED_MAY_BE_STALE('tengu_quartz_lantern', false)
-		) {
-			const startTime = Date.now()
-			const diff = await fetchSingleFileGitDiff(fullFilePath)
-			if (diff) gitDiff = diff
-			logEvent('tengu_tool_use_diff_computed', {
-				isWriteTool: true,
-				durationMs: Date.now() - startTime,
-				hasDiff: !!diff,
-			})
-		}
-
 		if (oldContent) {
 			const patch = getPatchForDisplay({
 				filePath: file_path,
@@ -376,7 +355,6 @@ export const FileWriteTool = buildTool({
 				content,
 				structuredPatch: patch,
 				originalFile: oldContent,
-				...(gitDiff && {gitDiff}),
 			}
 			// Track lines added and removed for file updates, right before yielding result
 			countLinesChanged(patch)
@@ -399,7 +377,6 @@ export const FileWriteTool = buildTool({
 			content,
 			structuredPatch: [],
 			originalFile: null,
-			...(gitDiff && {gitDiff}),
 		}
 
 		// For creation of new files, count all lines as additions, right before yielding the result

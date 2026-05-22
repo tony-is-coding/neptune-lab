@@ -133,6 +133,7 @@ import {
 	runPostToolUseHooks,
 	runPreToolUseHooks,
 } from './toolHooks.js'
+import {enrichFileToolGitDiff} from './fileToolGitDiffEnrichment.js'
 
 /** Minimum total hook duration (ms) to show inline timing summary */
 export const HOOK_TIMING_DISPLAY_THRESHOLD_MS = 500
@@ -1240,6 +1241,10 @@ async function checkPermissionsAndCallTool(
 				})
 			},
 		)
+		result.data = await enrichFileToolGitDiff({
+			toolName: tool.name,
+			output: result.data,
+		}) as typeof result.data
 		const durationMs = Date.now() - startTime
 		addToToolDuration(durationMs)
 
