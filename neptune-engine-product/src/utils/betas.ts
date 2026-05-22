@@ -1,4 +1,4 @@
-import {LogUtil} from 'src/engine/log'
+import {LogUtil} from '@neptune/engine/log'
 import {feature} from 'bun:bundle'
 import memoize from 'lodash-es/memoize.js'
 import {

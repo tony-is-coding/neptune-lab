@@ -1,1 +1,1 @@
-export * from '@neptune/engine-product/engine/permissions';
+export * from './engine/permissions/index.js';

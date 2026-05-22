@@ -13,7 +13,7 @@ import {
 	getHeapStatistics,
 	type HeapSpaceInfo,
 } from 'v8'
-import {getSessionId} from '../engine/session/SessionContext.js'
+import {getSessionId} from '@neptune/engine/session/SessionContext.js'
 import {logEvent} from '../services/analytics/index.js'
 import {logForDebugging} from './debug.js'
 import {toError} from './errors.js'

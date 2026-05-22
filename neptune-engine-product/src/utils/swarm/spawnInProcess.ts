@@ -14,7 +14,7 @@
  */
 
 import sample from 'lodash-es/sample.js'
-import {getSessionId} from '../../engine/session/SessionContext.js'
+import {getSessionId} from '@neptune/engine/session/SessionContext.js'
 import {getSpinnerVerbs} from '../../constants/spinnerVerbs.js'
 import {TURN_COMPLETION_VERBS} from '../../constants/turnCompletionVerbs.js'
 import type {AppState} from '../../state/AppState.js'

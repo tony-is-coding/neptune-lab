@@ -1,1 +1,1 @@
-export * from '@neptune/engine-product/engine/log';
+export * from './engine/log/index.js';

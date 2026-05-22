@@ -1,7 +1,7 @@
 import chokidar, {type FSWatcher} from 'chokidar'
 import {stat} from 'fs/promises'
 import * as platformPath from 'path'
-import {getIsRemoteMode} from '../../engine/session/SessionContext.js'
+import {getIsRemoteMode} from '@neptune/engine/session/SessionContext.js'
 import {registerCleanup} from '../cleanupRegistry.js'
 import {logForDebugging} from '../debug.js'
 import {errorMessage} from '../errors.js'

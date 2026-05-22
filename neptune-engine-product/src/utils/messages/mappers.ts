@@ -1,7 +1,7 @@
 import type {BetaContentBlock} from '@anthropic-ai/sdk/resources/beta/messages/messages.mjs'
 import type {UUID} from 'crypto'
 import {randomUUID} from 'crypto'
-import {getSessionId} from 'src/engine/session/SessionContext.js'
+import {getSessionId} from '@neptune/engine/session/SessionContext.js'
 import {
 	LOCAL_COMMAND_STDERR_TAG,
 	LOCAL_COMMAND_STDOUT_TAG,

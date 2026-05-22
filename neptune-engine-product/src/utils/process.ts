@@ -1,4 +1,4 @@
-import {LogUtil} from 'src/engine/log'
+import {LogUtil} from '@neptune/engine/log'
 
 const logger = LogUtil.getInstance()
 

@@ -1,1 +1,1 @@
-export * from '@neptune/engine-product/engine/hooks';
+export * from './engine/hooks/index.js';

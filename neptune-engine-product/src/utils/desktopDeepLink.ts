@@ -1,7 +1,7 @@
 import {readdir} from 'fs/promises'
 import {join} from 'path'
 import {coerce as semverCoerce} from 'semver'
-import {getSessionId} from '../engine/session/SessionContext.js'
+import {getSessionId} from '@neptune/engine/session/SessionContext.js'
 import {getCwd} from './cwd.js'
 import {logForDebugging} from './debug.js'
 import {execFileNoThrow} from './execFileNoThrow.js'

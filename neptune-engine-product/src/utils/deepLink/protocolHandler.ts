@@ -1,5 +1,5 @@
 /** @cli-only */
-import {LogUtil} from 'src/engine/log'
+import {LogUtil} from '@neptune/engine/log'
 /**
  * Protocol Handler
  *

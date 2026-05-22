@@ -1,4 +1,4 @@
-import {LogUtil} from 'src/engine/log'
+import {LogUtil} from '@neptune/engine/log'
 import {createHash, type UUID} from 'crypto'
 import {diffLines} from 'diff'
 import type {Stats} from 'fs'

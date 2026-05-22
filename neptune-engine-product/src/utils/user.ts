@@ -1,6 +1,6 @@
 import {execa} from 'execa'
 import memoize from 'lodash-es/memoize.js'
-import {getSessionId} from '../engine/session/SessionContext.js'
+import {getSessionId} from '@neptune/engine/session/SessionContext.js'
 import {
 	getOauthAccountInfo,
 	getRateLimitTier,

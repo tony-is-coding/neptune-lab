@@ -1,4 +1,4 @@
-import {LogUtil} from 'src/engine/log'
+import {LogUtil} from '@neptune/engine/log'
 import axios from 'axios'
 import {constants as fsConstants} from 'fs'
 import {access, writeFile} from 'fs/promises'

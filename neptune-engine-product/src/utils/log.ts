@@ -1,4 +1,4 @@
-import {LogUtil} from 'src/engine/log'
+import {LogUtil} from '@neptune/engine/log'
 import {feature} from 'bun:bundle'
 import type {BetaMessageStreamParams} from '@anthropic-ai/sdk/resources/beta/messages/messages.mjs'
 import {readdir, readFile, stat} from 'fs/promises'

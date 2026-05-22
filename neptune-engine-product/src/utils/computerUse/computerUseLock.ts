@@ -1,6 +1,6 @@
 import {mkdir, readFile, unlink, writeFile} from 'fs/promises'
 import {join} from 'path'
-import {getSessionId} from '../../engine/session/SessionContext.js'
+import {getSessionId} from '@neptune/engine/session/SessionContext.js'
 import {registerCleanup} from '../../utils/cleanupRegistry.js'
 import {logForDebugging} from '../../utils/debug.js'
 import {getClaudeConfigHomeDir} from '../../utils/envUtils.js'

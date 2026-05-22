@@ -1,4 +1,4 @@
-import { EngineState } from '../engine/EngineState.js';
+import { EngineState } from '@neptune/engine/EngineState.js';
 type Listener = () => void;
 type OnChange<T> = (args: {
     newState: T;

@@ -1,1 +1,1 @@
-export * from '@neptune/engine-product/engine/events';
+export * from './engine/events/EventBus.js';

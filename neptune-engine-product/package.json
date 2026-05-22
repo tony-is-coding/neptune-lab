@@ -84,7 +84,9 @@
       "types": "./dist/sdk/engine/events/EventBus.d.ts",
       "bun": "./src/engine/events/EventBus.ts",
       "default": "./dist/sdk/engine/events/EventBus.js"
-    }
+    },
+    "./*.js": "./src/*.ts",
+    "./*": "./src/*"
   },
   "types": "./dist/sdk/index.d.ts",
   "workspaces": [
@@ -122,6 +124,7 @@
     "docs:api": "typedoc --options typedoc.json"
   },
   "dependencies": {
+    "@neptune/engine": "workspace:*",
     "drizzle-orm": "^0.36.4",
     "ioredis": "^5.5.0",
     "postgres": "^3.4.5",

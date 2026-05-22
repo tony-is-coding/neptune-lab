@@ -8,7 +8,7 @@ import {
 	unlink,
 } from 'fs/promises'
 import {join} from 'path'
-import {getSessionId} from '../../engine/session/SessionContext.js'
+import {getSessionId} from '@neptune/engine/session/SessionContext.js'
 import {getErrnoCode} from '../errors.js'
 import {readFileRange, tailFile} from '../fsOperations.js'
 import {logError} from '../log.js'

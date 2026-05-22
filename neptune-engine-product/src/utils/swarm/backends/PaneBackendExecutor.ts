@@ -1,4 +1,4 @@
-import {getSessionId} from '../../../engine/session/SessionContext.js'
+import {getSessionId} from '@neptune/engine/session/SessionContext.js'
 import type {ToolUseContext} from '../../../Tool.js'
 import {formatAgentId, parseAgentId} from '../../../utils/agentId.js'
 import {quote} from '../../../utils/bash/shellQuote.js'

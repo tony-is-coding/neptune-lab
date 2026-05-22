@@ -69,9 +69,17 @@
     },
     "neptune-engine": {
       "name": "@neptune/engine",
-      "version": "0.0.1",
+      "version": "0.1.0",
       "dependencies": {
+        "@anthropic-ai/sdk": "^0.80.0",
+        "@neptune/builtin-tools": "workspace:*",
         "@neptune/engine-product": "workspace:*",
+        "@neptune/engine-tools": "workspace:*",
+        "@neptune/mcp-client": "workspace:*",
+        "drizzle-orm": "^0.36.4",
+        "ioredis": "^5.5.0",
+        "postgres": "^3.4.5",
+        "zod": "^4.3.6",
       },
     },
     "neptune-engine-product": {
@@ -83,6 +91,7 @@
         "claude-code-best": "dist/cli-node.js",
       },
       "dependencies": {
+        "@neptune/engine": "workspace:*",
         "drizzle-orm": "^0.36.4",
         "ioredis": "^5.5.0",
         "postgres": "^3.4.5",

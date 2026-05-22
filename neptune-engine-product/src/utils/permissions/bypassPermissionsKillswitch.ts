@@ -8,7 +8,7 @@ import {
 	type AppStateStore,
 } from 'src/state/AppState.js'
 import type {ToolPermissionContext} from 'src/Tool.js'
-import {getIsRemoteMode} from '../../engine/session/SessionContext.js'
+import {getIsRemoteMode} from '@neptune/engine/session/SessionContext.js'
 import {
 	createDisabledBypassPermissionsContext,
 	shouldDisableBypassPermissions,

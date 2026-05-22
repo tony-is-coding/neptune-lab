@@ -1,1 +1,1 @@
-export * from '@neptune/engine-product/engine/session';
+export * from './engine/session/index.js';

@@ -1,4 +1,4 @@
-import {LogUtil} from 'src/engine/log'
+import {LogUtil} from '@neptune/engine/log'
 import {feature} from 'bun:bundle'
 import chalk from 'chalk'
 import {spawnSync} from 'child_process'

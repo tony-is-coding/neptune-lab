@@ -1,7 +1,7 @@
 import {appendFile, mkdir, symlink, unlink} from 'fs/promises'
 import memoize from 'lodash-es/memoize.js'
 import {dirname, join} from 'path'
-import {getSessionId} from 'src/engine/session/SessionContext.js'
+import {getSessionId} from '@neptune/engine/session/SessionContext.js'
 
 import {type BufferedWriter, createBufferedWriter} from './bufferedWriter.js'
 import {registerCleanup} from './cleanupRegistry.js'

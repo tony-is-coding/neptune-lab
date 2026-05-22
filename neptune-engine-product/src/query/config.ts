@@ -1,4 +1,4 @@
-import {getSessionId} from '../engine/session/SessionContext.js'
+import {getSessionId} from '@neptune/engine/session/SessionContext.js'
 import {checkStatsigFeatureGate_CACHED_MAY_BE_STALE} from '../services/analytics/growthbook.js'
 import type {SessionId} from '../types/ids.js'
 import {isEnvTruthy} from '../utils/envUtils.js'

@@ -1,4 +1,4 @@
-import {LogUtil} from 'src/engine/log'
+import {LogUtil} from '@neptune/engine/log'
 import chalk from 'chalk'
 import {exec} from 'child_process'
 import {execa} from 'execa'

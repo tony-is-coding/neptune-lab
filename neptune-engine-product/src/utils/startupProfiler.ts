@@ -10,7 +10,7 @@
  */
 
 import {dirname, join} from 'path'
-import {getSessionId} from 'src/engine/session/SessionContext.js'
+import {getSessionId} from '@neptune/engine/session/SessionContext.js'
 import {
 	type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
 	logEvent,

@@ -1,4 +1,4 @@
-import {LogUtil} from 'src/engine/log'
+import {LogUtil} from '@neptune/engine/log'
 import Anthropic, {type ClientOptions} from '@anthropic-ai/sdk'
 import {randomUUID} from 'crypto'
 import type {GoogleAuth} from 'google-auth-library'

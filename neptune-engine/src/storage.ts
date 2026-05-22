@@ -1,1 +1,1 @@
-export * from '@neptune/engine-product/engine/storage';
+export * from './engine/storage/index.js';

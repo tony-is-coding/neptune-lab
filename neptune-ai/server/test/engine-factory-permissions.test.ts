@@ -9,7 +9,7 @@ const captured: {
 	sessionWorkspace?: string
 } = {}
 
-mock.module('claude-code-best/engine', () => ({
+mock.module('@neptune/engine', () => ({
 	AgentEngine: {
 		create: (config: any, runtime: any) => {
 			captured.config = config

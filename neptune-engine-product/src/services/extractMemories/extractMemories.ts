@@ -15,7 +15,7 @@
 
 import {feature} from 'bun:bundle'
 import {basename} from 'path'
-import {getIsRemoteMode} from '../../engine/session/SessionContext.js'
+import {getIsRemoteMode} from '@neptune/engine/session/SessionContext.js'
 import type {CanUseToolFn} from '../../types/permissions.js'
 import {ENTRYPOINT_NAME} from '../../memdir/memdir.js'
 import {

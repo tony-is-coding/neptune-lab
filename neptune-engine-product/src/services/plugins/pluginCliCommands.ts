@@ -6,7 +6,7 @@
  *
  * For the core operations (without CLI side effects), see pluginOperations.ts
  */
-import {LogUtil} from 'src/engine/log'
+import {LogUtil} from '@neptune/engine/log'
 import figures from 'figures'
 import {errorMessage} from '../../utils/errors.js'
 import {gracefulShutdown} from '../../utils/gracefulShutdown.js'

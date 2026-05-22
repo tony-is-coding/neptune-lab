@@ -26,7 +26,7 @@ import {
 	type ScreenshotDims,
 } from '@ant/computer-use-mcp'
 import * as React from 'react'
-import {getSessionId} from '../../engine/session/SessionContext.js'
+import {getSessionId} from '@neptune/engine/session/SessionContext.js'
 import {getDialogComponent} from '../componentRegistry.js'
 import type {Tool, ToolUseContext} from '../../Tool.js'
 import {logForDebugging} from '../debug.js'

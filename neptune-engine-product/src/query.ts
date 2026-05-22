@@ -102,7 +102,7 @@ import {
 	getTurnOutputTokens,
 	incrementBudgetContinuationCount,
 	getSessionId,
-} from './engine/session/SessionContext.js'
+} from '@neptune/engine/session/SessionContext.js'
 import {createBudgetTracker, checkTokenBudget} from './query/tokenBudget.js'
 import {count} from './utils/array.js'
 import {createTrace, endTrace, isLangfuseEnabled} from './services/langfuse/index.js'

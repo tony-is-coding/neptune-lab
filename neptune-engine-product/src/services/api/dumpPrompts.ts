@@ -2,7 +2,7 @@ import type {ClientOptions} from '@anthropic-ai/sdk'
 import {createHash} from 'crypto'
 import {promises as fs} from 'fs'
 import {dirname, join} from 'path'
-import {getSessionId} from 'src/engine/session/SessionContext.js'
+import {getSessionId} from '@neptune/engine/session/SessionContext.js'
 import {getClaudeConfigHomeDir} from '../../utils/envUtils.js'
 import {jsonParse, jsonStringify} from '../../utils/slowOperations.js'
 

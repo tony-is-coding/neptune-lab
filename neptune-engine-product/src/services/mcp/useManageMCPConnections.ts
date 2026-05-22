@@ -1,7 +1,7 @@
 import {feature} from 'bun:bundle'
 import {basename} from 'path'
 import {useCallback, useEffect, useRef} from 'react'
-import {getSessionId} from '../../engine/session/SessionContext.js'
+import {getSessionId} from '@neptune/engine/session/SessionContext.js'
 import type {Command} from '../../commands.js'
 import type {Tool} from '../../Tool.js'
 import {

@@ -1,5 +1,5 @@
 import type {Attributes} from '@opentelemetry/api'
-import {getSessionId} from 'src/engine/session/SessionContext.js'
+import {getSessionId} from '@neptune/engine/session/SessionContext.js'
 import {getOauthAccountInfo} from './auth.js'
 import {getOrCreateUserID} from './config.js'
 import {envDynamic} from './envDynamic.js'

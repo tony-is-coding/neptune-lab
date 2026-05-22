@@ -1,5 +1,5 @@
 import React from 'react';
-import { EngineState } from '../engine/EngineState.js';
+import { EngineState } from '@neptune/engine/EngineState.js';
 import { type AppState, type AppStateStore } from './AppStateStore.js';
 export { type AppState, type AppStateStore, type CompletionBoundary, getDefaultAppState, IDLE_SPECULATION_STATE, type SpeculationResult, type SpeculationState, } from './AppStateStore.js';
 export { createAppStateStore } from './createAppStateStore.js';

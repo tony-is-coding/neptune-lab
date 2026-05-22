@@ -1,1 +1,1 @@
-export * from '@neptune/engine-product/engine/bootstrap';
+export * from './engine/bootstrap/index.js';

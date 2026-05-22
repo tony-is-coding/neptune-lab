@@ -39,7 +39,7 @@ export {
 	createDefaultSessionContext,
 	type SessionContext,
 	type SessionCronTask,
-} from './engine/session/index.js'
+} from '@neptune/engine/session/index.js'
 
 // Token Budget
 export {
@@ -53,15 +53,15 @@ export {
 	clearTokenBudgetState,
 	tokenBudgetStates,
 	type TokenBudgetState,
-} from './engine/session/index.js'
+} from '@neptune/engine/session/index.js'
 
 // 日志系统
-export {LogUtil} from './engine/log/index.js'
-export {MDC} from './engine/log/index.js'
-export {StandardLogFormatter} from './engine/log/index.js'
-export {JsonLogFormatter} from './engine/log/index.js'
-export {ConsoleLogProvider} from './engine/log/index.js'
-export {FileLogStore} from './engine/log/index.js'
+export {LogUtil} from '@neptune/engine/log/index.js'
+export {MDC} from '@neptune/engine/log/index.js'
+export {StandardLogFormatter} from '@neptune/engine/log/index.js'
+export {JsonLogFormatter} from '@neptune/engine/log/index.js'
+export {ConsoleLogProvider} from '@neptune/engine/log/index.js'
+export {FileLogStore} from '@neptune/engine/log/index.js'
 export type {
 	LogLevel,
 	EngineLogger,
@@ -73,11 +73,11 @@ export type {
 	LogStore,
 	MDCContext,
 	FileLogStoreOptions,
-} from './engine/log/index.js'
+} from '@neptune/engine/log/index.js'
 
 // AgentEngine 核心
-export {AgentEngine} from './engine/AgentEngine.js'
-export type {AgentEngineConfig, QueryOptions, EngineStats, ProviderConfig} from './engine/AgentEngine.js'
+export {AgentEngine} from '@neptune/engine/AgentEngine.js'
+export type {AgentEngineConfig, QueryOptions, EngineStats, ProviderConfig} from '@neptune/engine/AgentEngine.js'
 export type {
 	SessionStatus,
 	SessionConfig,
@@ -87,55 +87,55 @@ export type {
 	SessionContextSnapshot,
 	EngineSnapshot,
 	SessionInfo,
-} from './engine/types.js'
+} from '@neptune/engine/types.js'
 
 // 桥接层类型导出（ToolExtension, PermissionConfig）
-export type {ToolExtension, PermissionConfig} from './engine/bridge/OriginalQueryEngineBridge.js'
+export type {ToolExtension, PermissionConfig} from '@neptune/engine/bridge/OriginalQueryEngineBridge.js'
 
 // Skill 类型导出（SkillExtension）
-export type {SkillExtension} from './engine/skill/SkillLoader.js'
-export {SERIALIZATION_PROTOCOL_VERSION} from './engine/types.js'
-export {EngineError, EngineErrorCode} from './engine/errors.js'
-export type {EngineErrorCodeType} from './engine/errors.js'
+export type {SkillExtension} from '@neptune/engine/skill/SkillLoader.js'
+export {SERIALIZATION_PROTOCOL_VERSION} from '@neptune/engine/types.js'
+export {EngineError, EngineErrorCode} from '@neptune/engine/errors.js'
+export type {EngineErrorCodeType} from '@neptune/engine/errors.js'
 
 // 引擎配置验证模块（从 initializeEngine 提取）
 export {
 	validateEngineConfig,
-} from './engine/config/index.js'
+} from '@neptune/engine/config/index.js'
 export type {
 	EngineConfig,
 	McpServerConfig,
-} from './engine/config/index.js'
+} from '@neptune/engine/config/index.js'
 
 // 核心状态管理
-export {EngineState} from './engine/EngineState.js'
-export type {EngineStateData, EngineStateEvent} from './engine/EngineState.js'
+export {EngineState} from '@neptune/engine/EngineState.js'
+export type {EngineStateData, EngineStateEvent} from '@neptune/engine/EngineState.js'
 
 // Hook 系统（新增）
-export {createHookCore, buildBaseHookInput} from './engine/hooks/index.js'
-export type {HookExecutor, HookContext, HookResult} from './engine/hooks/index.js'
+export {createHookCore, buildBaseHookInput} from '@neptune/engine/hooks/index.js'
+export type {HookExecutor, HookContext, HookResult} from '@neptune/engine/hooks/index.js'
 
 // Session 存储
-export type {ISessionStore} from './engine/storage/ISessionStore.js'
-export {InMemorySessionStore} from './engine/storage/InMemorySessionStore.js'
-export {SQLiteSessionStore} from './engine/storage/SQLiteSessionStore.js'
+export type {ISessionStore} from '@neptune/engine/storage/ISessionStore.js'
+export {InMemorySessionStore} from '@neptune/engine/storage/InMemorySessionStore.js'
+export {SQLiteSessionStore} from '@neptune/engine/storage/SQLiteSessionStore.js'
 
 // 通用存储后端（新增）
-export type {IBackend} from './engine/storage/IBackend.js'
-export {InMemoryBackend} from './engine/storage/InMemoryBackend.js'
-export {FilesystemBackend} from './engine/storage/FilesystemBackend.js'
-export {CompositeBackend} from './engine/storage/CompositeBackend.js'
+export type {IBackend} from '@neptune/engine/storage/IBackend.js'
+export {InMemoryBackend} from '@neptune/engine/storage/InMemoryBackend.js'
+export {FilesystemBackend} from '@neptune/engine/storage/FilesystemBackend.js'
+export {CompositeBackend} from '@neptune/engine/storage/CompositeBackend.js'
 
 // 事件系统
-export {EventBus} from './engine/events/EventBus.js'
+export {EventBus} from '@neptune/engine/events/EventBus.js'
 
 // CCRuntime（新增）
 export {
 	DefaultCCRuntime,
 	createDefaultCCRuntime,
 	getGlobalCCRuntime,
-} from './engine/cc-runtime/index.js'
-export type {CCRuntime} from './engine/cc-runtime/index.js'
+} from '@neptune/engine/cc-runtime/index.js'
+export type {CCRuntime} from '@neptune/engine/cc-runtime/index.js'
 
 // Tool 适配器（新增）
 export {
@@ -143,14 +143,14 @@ export {
 	coreToolToTool,
 	hasUIImplementation,
 	filterToCoreTools,
-} from './engine/tools/ToolAdapter.js'
+} from '@neptune/engine/tools/ToolAdapter.js'
 
 // 权限系统（新增）
-export type {PermissionDelegate, PermissionDecision} from './engine/permissions/index.js'
-export {ReadOnlyPermissionDelegate} from './engine/permissions/index.js'
-export {RBACPermissionDelegate} from './engine/permissions/index.js'
-export {AuditPermissionDelegate} from './engine/permissions/index.js'
-export type {RolePermissionMap, ToolPermissionRule} from './engine/permissions/index.js'
+export type {PermissionDelegate, PermissionDecision} from '@neptune/engine/permissions/index.js'
+export {ReadOnlyPermissionDelegate} from '@neptune/engine/permissions/index.js'
+export {RBACPermissionDelegate} from '@neptune/engine/permissions/index.js'
+export {AuditPermissionDelegate} from '@neptune/engine/permissions/index.js'
+export type {RolePermissionMap, ToolPermissionRule} from '@neptune/engine/permissions/index.js'
 
 // ============================================================
 // 第二层：Query 系统（CLI 核心依赖）
@@ -185,27 +185,27 @@ export type {ICommandProvider} from './types/commandProvider.js'
 export {getSystemContext, getUserContext} from './context.js'
 
 // Provider 系统（新增）
-export {ProviderRegistry} from './engine/provider/index.js'
-export type {ProviderAdapter, ProviderQueryParams, ProviderMessage} from './engine/provider/index.js'
-export type {ProviderType} from './engine/AgentEngine.js'
-export {AnthropicProvider} from './engine/provider/index.js'
-export type {AnthropicProviderConfig} from './engine/provider/index.js'
-export {OpenAIProvider} from './engine/provider/index.js'
-export type {OpenAIProviderConfig} from './engine/provider/index.js'
-export {GeminiProvider} from './engine/provider/index.js'
-export type {GeminiProviderConfig} from './engine/provider/index.js'
-export {GrokProvider} from './engine/provider/index.js'
-export type {GrokProviderConfig} from './engine/provider/index.js'
-export {BedrockProvider} from './engine/provider/index.js'
-export type {BedrockProviderConfig} from './engine/provider/index.js'
-export {VertexProvider} from './engine/provider/index.js'
-export type {VertexProviderConfig} from './engine/provider/index.js'
-export {FoundryProvider} from './engine/provider/index.js'
-export type {FoundryProviderConfig} from './engine/provider/index.js'
+export {ProviderRegistry} from '@neptune/engine/provider/index.js'
+export type {ProviderAdapter, ProviderQueryParams, ProviderMessage} from '@neptune/engine/provider/index.js'
+export type {ProviderType} from '@neptune/engine/AgentEngine.js'
+export {AnthropicProvider} from '@neptune/engine/provider/index.js'
+export type {AnthropicProviderConfig} from '@neptune/engine/provider/index.js'
+export {OpenAIProvider} from '@neptune/engine/provider/index.js'
+export type {OpenAIProviderConfig} from '@neptune/engine/provider/index.js'
+export {GeminiProvider} from '@neptune/engine/provider/index.js'
+export type {GeminiProviderConfig} from '@neptune/engine/provider/index.js'
+export {GrokProvider} from '@neptune/engine/provider/index.js'
+export type {GrokProviderConfig} from '@neptune/engine/provider/index.js'
+export {BedrockProvider} from '@neptune/engine/provider/index.js'
+export type {BedrockProviderConfig} from '@neptune/engine/provider/index.js'
+export {VertexProvider} from '@neptune/engine/provider/index.js'
+export type {VertexProviderConfig} from '@neptune/engine/provider/index.js'
+export {FoundryProvider} from '@neptune/engine/provider/index.js'
+export type {FoundryProviderConfig} from '@neptune/engine/provider/index.js'
 
 // 辅助工具（新增）
-export {waitForResult} from './engine/helpers/waitForResult.js'
-export {collectText} from './engine/helpers/collectText.js'
+export {waitForResult} from '@neptune/engine/helpers/waitForResult.js'
+export {collectText} from '@neptune/engine/helpers/collectText.js'
 
 // ============================================================
 // 第七层：CLI 专用（CLI 宿主特有，SDK 不依赖）

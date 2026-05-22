@@ -17,7 +17,7 @@
  */
 
 import {spawn, spawnSync} from 'child_process'
-import {getSessionId} from '../engine/session/SessionContext.js'
+import {getSessionId} from '@neptune/engine/session/SessionContext.js'
 import {instances} from '@anthropic/ink'
 import {registerCleanup} from './cleanupRegistry.js'
 import {pwd} from './cwd.js'

@@ -1,6 +1,6 @@
 import {resolve} from 'path'
 import type {HookEvent} from 'src/entrypoints/agentSdkTypes.js'
-import {getSessionId} from '../../engine/session/SessionContext.js'
+import {getSessionId} from '@neptune/engine/session/SessionContext.js'
 import type {AppState} from '../../state/AppState.js'
 import type {EditableSettingSource} from '../settings/constants.js'
 import {SOURCES} from '../settings/constants.js'

@@ -2,7 +2,7 @@
 
 import type {HttpConfig} from '@neptune/mcp-client'
 import {getMCPUserAgent} from '../../../utils/http.js'
-import {getSessionId} from '../../../engine/session/SessionContext.js'
+import {getSessionId} from '@neptune/engine/session/SessionContext.js'
 
 /**
  * Creates an HttpConfig implementation using the host's user agent and session ID.

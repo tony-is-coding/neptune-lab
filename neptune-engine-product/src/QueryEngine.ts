@@ -5,7 +5,7 @@ import last from 'lodash-es/last.js'
 import {
 	getSessionId,
 	isSessionPersistenceDisabled,
-} from 'src/engine/session/SessionContext.js'
+} from '@neptune/engine/session/SessionContext.js'
 import type {
 	PermissionMode,
 	SDKCompactBoundaryMessage,

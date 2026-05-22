@@ -26,7 +26,7 @@ import {feature} from 'bun:bundle'
 import {mkdirSync, writeFileSync} from 'fs'
 import {mkdir, writeFile} from 'fs/promises'
 import {dirname, join} from 'path'
-import {getSessionId} from '../../engine/session/SessionContext.js'
+import {getSessionId} from '@neptune/engine/session/SessionContext.js'
 import {registerCleanup} from '../cleanupRegistry.js'
 import {logForDebugging} from '../debug.js'
 import {

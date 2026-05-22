@@ -5,7 +5,7 @@ import React, {
 	useState,
 	useSyncExternalStore,
 } from 'react'
-import {EngineState} from '../engine/EngineState.js'
+import {EngineState} from '@neptune/engine/EngineState.js'
 
 // DCE: voice context is ant-only. External builds get a passthrough.
 /* eslint-disable @typescript-eslint/no-require-imports */
