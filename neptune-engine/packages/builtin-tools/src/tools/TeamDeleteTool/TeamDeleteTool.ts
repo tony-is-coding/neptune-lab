@@ -1,10 +1,10 @@
 import {z} from 'zod/v4'
 import {logEvent} from 'src/services/analytics/index.js'
 import type {AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS} from 'src/services/analytics/metadata.js'
-import type {Tool} from 'src/Tool.js'
-import {buildTool, type ToolDef} from 'src/Tool.js'
+import type {Tool} from '../../tool.js'
+import {buildTool, type ToolDef} from '../../tool.js'
 import {isAgentSwarmsEnabled} from 'src/utils/agentSwarmsEnabled.js'
-import {lazySchema} from 'src/utils/lazySchema.js'
+import {lazySchema} from '../../utils/lazySchema.js'
 import {jsonStringify} from 'src/utils/slowOperations.js'
 import {TEAM_LEAD_NAME} from 'src/utils/swarm/constants.js'
 import {

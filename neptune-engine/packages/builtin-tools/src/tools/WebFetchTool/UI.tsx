@@ -2,9 +2,9 @@ import React from 'react'
 import {MessageResponse} from '../../../../../src/ui/components/MessageResponse'
 import {TOOL_SUMMARY_MAX_LENGTH} from 'src/constants/toolLimits.js'
 import {Box, Text} from '@anthropic/ink'
-import type {ToolProgressData} from 'src/Tool.js'
+import type {ToolProgressData} from '../../tool.js'
 import type {ProgressMessage} from 'src/types/message.js'
-import {formatFileSize, truncate} from 'src/utils/format.js'
+import {formatFileSize, truncate} from '../../utils/format.js'
 import type {Output} from './WebFetchTool.js'
 
 export function renderToolUseMessage(

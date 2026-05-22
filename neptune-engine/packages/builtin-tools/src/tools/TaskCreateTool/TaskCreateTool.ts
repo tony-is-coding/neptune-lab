@@ -1,10 +1,10 @@
 import {z} from 'zod/v4'
-import {buildTool, type ToolDef} from 'src/Tool.js'
+import {buildTool, type ToolDef} from '../../tool.js'
 import {
 	executeTaskCreatedHooks,
 	getTaskCreatedHookMessage,
 } from 'src/utils/hooks.js'
-import {lazySchema} from 'src/utils/lazySchema.js'
+import {lazySchema} from '../../utils/lazySchema.js'
 import {
 	createTask,
 	deleteTask,

@@ -12,14 +12,14 @@ import {FileEditToolUpdatedMessage} from '../../../../../src/ui/components/FileE
 
 import {Text} from '@anthropic/ink'
 import {FilePathLink} from '../../../../../src/ui/components/FilePathLink'
-import type {Tools} from 'src/Tool.js'
+import type {Tools} from '../../tool.js'
 import type {Message, ProgressMessage} from 'src/types/message.js'
 import {adjustHunkLineNumbers, CONTEXT_LINES} from 'src/utils/diff.js'
 import {FILE_NOT_FOUND_CWD_NOTE, getDisplayPath} from 'src/utils/file.js'
 import {logError} from 'src/utils/log.js'
 import {getPlansDirectory} from 'src/utils/plans.js'
 import {readEditContext} from 'src/utils/readEditContext.js'
-import {firstLineOf} from 'src/utils/stringUtils.js'
+import {firstLineOf} from '../../utils/string.js'
 import type {ThemeName} from 'src/utils/theme.js'
 import type {FileEditOutput} from './types.js'
 import {

@@ -1,7 +1,7 @@
 import {z} from 'zod/v4'
-import type {ToolResultBlockParam} from 'src/Tool.js'
-import {buildTool} from 'src/Tool.js'
-import {truncate} from 'src/utils/format.js'
+import type {ToolResultBlockParam} from '../../tool.js'
+import {buildTool} from '../../tool.js'
+import {truncate} from '../../utils/truncate.js'
 import {WORKFLOW_TOOL_NAME} from './constants.js'
 
 const inputSchema = z.object({

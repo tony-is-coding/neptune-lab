@@ -5,10 +5,10 @@ import {FallbackToolUseErrorMessage} from '../../../../../src/ui/components/Fall
 import {MessageResponse} from '../../../../../src/ui/components/MessageResponse'
 import {TOOL_SUMMARY_MAX_LENGTH} from 'src/constants/toolLimits.js'
 import {Box, Text} from '@anthropic/ink'
-import type {ToolProgressData} from 'src/Tool.js'
+import type {ToolProgressData} from '../../tool.js'
 import type {ProgressMessage} from 'src/types/message.js'
 import {FILE_NOT_FOUND_CWD_NOTE, getDisplayPath} from 'src/utils/file.js'
-import {truncate} from 'src/utils/format.js'
+import {truncate} from '../../utils/truncate.js'
 import {extractTag} from 'src/utils/messages.js'
 
 // Reusable component for search result summaries

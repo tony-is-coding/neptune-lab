@@ -22,8 +22,8 @@ import type {
 	ToolCallProgress,
 	ToolUseContext,
 	ValidationResult,
-} from 'src/Tool.js'
-import {buildTool, type ToolDef} from 'src/Tool.js'
+} from '../../tool.js'
+import {buildTool, type ToolDef} from '../../tool.js'
 import {
 	backgroundExistingForegroundTask,
 	markTaskNotified,
@@ -54,7 +54,7 @@ import {
 } from 'src/utils/fileHistory.js'
 import {truncate} from 'src/utils/format.js'
 import {getFsImplementation} from 'src/utils/fsOperations.js'
-import {lazySchema} from 'src/utils/lazySchema.js'
+import {lazySchema} from '../../utils/lazySchema.js'
 import {expandPath} from 'src/utils/path.js'
 import type {PermissionResult} from 'src/utils/permissions/PermissionResult.js'
 import {maybeRecordPluginHint} from 'src/utils/plugins/hintRecommendation.js'

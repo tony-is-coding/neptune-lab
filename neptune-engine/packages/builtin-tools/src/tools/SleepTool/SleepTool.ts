@@ -1,8 +1,8 @@
 import {feature} from 'bun:bundle'
 import {z} from 'zod/v4'
-import type {ToolResultBlockParam} from 'src/Tool.js'
-import {buildTool} from 'src/Tool.js'
-import {lazySchema} from 'src/utils/lazySchema.js'
+import type {ToolResultBlockParam, ToolUseContext} from '../../tool.js'
+import {buildTool} from '../../tool.js'
+import {lazySchema} from '../../utils/lazySchema.js'
 import {SLEEP_TOOL_NAME, DESCRIPTION, SLEEP_TOOL_PROMPT} from './prompt.js'
 
 const inputSchema = lazySchema(() =>
@@ -66,7 +66,7 @@ export const SleepTool = buildTool({
 		}
 	},
 
-	async call(input: SleepInput, context) {
+	async call(input: SleepInput, context: ToolUseContext) {
 		// Refuse to sleep when proactive mode is off — prevents the model from
 		// re-issuing Sleep after an interruption caused by /proactive disable.
 		if (feature('PROACTIVE') || feature('KAIROS')) {
@@ -90,7 +90,7 @@ export const SleepTool = buildTool({
 				const timer = setTimeout(resolve, duration_seconds * 1000)
 
 				// Abort via user interrupt
-				context.abortController.signal.addEventListener(
+				context.abortController?.signal.addEventListener(
 					'abort',
 					() => {
 						clearTimeout(timer)

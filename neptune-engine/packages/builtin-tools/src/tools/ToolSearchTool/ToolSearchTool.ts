@@ -11,10 +11,10 @@ import {
 	type Tool,
 	type ToolDef,
 	type Tools,
-} from 'src/Tool.js'
+} from '../../tool.js'
 import {logForDebugging} from 'src/utils/debug.js'
-import {lazySchema} from 'src/utils/lazySchema.js'
-import {escapeRegExp} from 'src/utils/stringUtils.js'
+import {lazySchema} from '../../utils/lazySchema.js'
+import {escapeRegExp} from '../../utils/string.js'
 import {isToolSearchEnabledOptimistic} from 'src/utils/toolSearch.js'
 import {getPrompt, isDeferredTool, TOOL_SEARCH_TOOL_NAME} from './prompt.js'
 

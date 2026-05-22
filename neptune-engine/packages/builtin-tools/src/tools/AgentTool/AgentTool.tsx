@@ -1,6 +1,6 @@
 import {feature} from 'bun:bundle'
 import * as React from 'react'
-import {buildTool, type ToolDef, toolMatchesName} from 'src/Tool.js'
+import {buildTool, type ToolDef, toolMatchesName} from '../../tool.js'
 import type {
 	AssistantMessage,
 	Message as MessageType,
@@ -56,7 +56,7 @@ import {logForDebugging} from 'src/utils/debug.js'
 import {isEnvTruthy} from 'src/utils/envUtils.js'
 import {AbortError, errorMessage, toError} from 'src/utils/errors.js'
 import type {CacheSafeParams} from 'src/utils/forkedAgent.js'
-import {lazySchema} from 'src/utils/lazySchema.js'
+import {lazySchema} from '../../utils/lazySchema.js'
 import {
 	createUserMessage,
 	extractTextContent,

@@ -190,7 +190,7 @@ describe('BraveSearchAdapter.search', () => {
 		const controller = new AbortController()
 		controller.abort()
 
-		const {AbortError} = await import('src/utils/errors')
+		const {AbortError} = await import('../../../utils/errors')
 		await expect(
 			adapter.search('test', {signal: controller.signal}),
 		).rejects.toThrow(AbortError)

@@ -15,7 +15,7 @@ import {
 	type Tool,
 	type ToolDef,
 	toolMatchesName,
-} from 'src/Tool.js'
+} from '../../tool.js'
 import {formatAgentId, generateRequestId} from 'src/utils/agentId.js'
 import {isAgentSwarmsEnabled} from 'src/utils/agentSwarmsEnabled.js'
 import {logForDebugging} from 'src/utils/debug.js'
@@ -23,7 +23,7 @@ import {
 	findInProcessTeammateTaskId,
 	setAwaitingPlanApproval,
 } from 'src/utils/inProcessTeammateHelpers.js'
-import {lazySchema} from 'src/utils/lazySchema.js'
+import {lazySchema} from '../../utils/lazySchema.js'
 import {logError} from 'src/utils/log.js'
 import {
 	getPlan,

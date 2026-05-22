@@ -14,8 +14,8 @@ import type {
 	ToolResult,
 	ToolUseContext,
 	ValidationResult,
-} from 'src/Tool.js'
-import {buildTool, type ToolDef} from 'src/Tool.js'
+} from '../../tool.js'
+import {buildTool, type ToolDef} from '../../tool.js'
 import type {Command} from 'src/types/command.js'
 import type {
 	AssistantMessage,
@@ -46,13 +46,13 @@ import {
 	logEvent,
 } from 'src/services/analytics/index.js'
 import {getAgentContext} from 'src/utils/agentContext.js'
-import {errorMessage} from 'src/utils/errors.js'
+import {errorMessage} from '../../utils/errors.js'
 import {
 	extractResultText,
 	prepareForkedCommandContext,
 } from 'src/utils/forkedAgent.js'
 import {parseFrontmatter} from 'src/utils/frontmatterParser.js'
-import {lazySchema} from 'src/utils/lazySchema.js'
+import {lazySchema} from '../../utils/lazySchema.js'
 import {createUserMessage, normalizeMessages} from 'src/utils/messages.js'
 import type {ModelAlias} from 'src/utils/model/aliases.js'
 import {resolveSkillModelOverride} from 'src/utils/model/model.js'

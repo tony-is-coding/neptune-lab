@@ -4,7 +4,7 @@
  */
 
 import axios from 'axios'
-import {AbortError} from 'src/utils/errors.js'
+import {AbortError} from '../../../utils/errors.js'
 import type {SearchResult, SearchOptions, WebSearchAdapter} from './types.js'
 
 const FETCH_TIMEOUT_MS = 30_000

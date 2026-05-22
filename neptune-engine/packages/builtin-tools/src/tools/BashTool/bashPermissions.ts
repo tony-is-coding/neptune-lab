@@ -6,9 +6,9 @@ import {
 	type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
 	logEvent,
 } from 'src/services/analytics/index.js'
-import type {ToolPermissionContext, ToolUseContext} from 'src/Tool.js'
+import type {ToolPermissionContext, ToolUseContext} from '../../tool.js'
 import type {PendingClassifierCheck} from 'src/types/permissions.js'
-import {count} from 'src/utils/array.js'
+import {count} from '../../utils/array.js'
 import {
 	checkSemantics,
 	nodeTypeId,

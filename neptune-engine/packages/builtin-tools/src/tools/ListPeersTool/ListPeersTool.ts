@@ -1,7 +1,7 @@
 import {z} from 'zod/v4'
-import type {ToolResultBlockParam} from 'src/Tool.js'
-import {buildTool} from 'src/Tool.js'
-import {lazySchema} from 'src/utils/lazySchema.js'
+import type {ToolResultBlockParam, ToolUseContext} from '../../tool.js'
+import {buildTool} from '../../tool.js'
+import {lazySchema} from '../../utils/lazySchema.js'
 
 const LIST_PEERS_TOOL_NAME = 'ListPeers'
 
@@ -79,7 +79,7 @@ Use this tool to discover messaging targets before sending cross-session message
 		}
 	},
 
-	async call(_input: ListPeersInput, context) {
+	async call(_input: ListPeersInput, context: ToolUseContext) {
 		// Peer discovery uses the concurrent sessions PID registry and
 		// UDS socket directory. The implementation scans for live sockets
 		// and optionally includes Remote Control bridge peers.
@@ -87,7 +87,7 @@ Use this tool to discover messaging targets before sending cross-session message
 
 		// Discovery is handled by the UDS messaging subsystem initialized in setup.ts.
 		// Return discovered peers from the app state.
-		const appState = context.getAppState()
+		const appState = context.getAppState?.() ?? {}
 		const messagingSocketPath = (appState as Record<string, unknown>).messagingSocketPath as string | undefined
 		if (messagingSocketPath) {
 			// Self entry for reference

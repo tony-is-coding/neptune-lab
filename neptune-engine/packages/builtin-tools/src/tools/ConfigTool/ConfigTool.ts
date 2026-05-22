@@ -4,15 +4,15 @@ import {
 	type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
 	logEvent,
 } from 'src/services/analytics/index.js'
-import {buildTool, type ToolDef} from 'src/Tool.js'
+import {buildTool, type ToolDef} from '../../tool.js'
 import {
 	type GlobalConfig,
 	getGlobalConfig,
 	getRemoteControlAtStartup,
 	saveGlobalConfig,
 } from 'src/utils/config.js'
-import {errorMessage} from 'src/utils/errors.js'
-import {lazySchema} from 'src/utils/lazySchema.js'
+import {errorMessage} from '../../utils/errors.js'
+import {lazySchema} from '../../utils/lazySchema.js'
 import {logError} from 'src/utils/log.js'
 import {
 	getInitialSettings,

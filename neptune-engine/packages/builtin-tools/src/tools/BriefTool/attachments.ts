@@ -8,11 +8,11 @@
 import {feature} from 'bun:bundle'
 import {stat} from 'fs/promises'
 
-import type {ValidationResult} from 'src/Tool.js'
+import type {ValidationResult} from '../../tool.js'
 
 import {getCwd} from 'src/utils/cwd.js'
 import {isEnvTruthy} from 'src/utils/envUtils.js'
-import {getErrnoCode} from 'src/utils/errors.js'
+import {getErrnoCode} from '../../utils/errors.js'
 import {IMAGE_EXTENSION_REGEX} from 'src/utils/imagePaste.js'
 import {expandPath} from 'src/utils/path.js'
 

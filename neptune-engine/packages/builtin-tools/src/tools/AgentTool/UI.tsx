@@ -24,16 +24,16 @@ import {MessageResponse} from '../../../../../src/ui/components/MessageResponse'
 import {ToolUseLoader} from '../../../../../src/ui/components/ToolUseLoader'
 import {Box, Text} from '@anthropic/ink'
 import {getDumpPromptsPath} from 'src/services/api/dumpPrompts.js'
-import {findToolByName, type Tools} from 'src/Tool.js'
+import {findToolByName, type Tools} from '../../tool.js'
 import type {Message, ProgressMessage} from 'src/types/message.js'
 import type {AgentToolProgress} from 'src/types/tools.js'
-import {count} from 'src/utils/array.js'
+import {count} from '../../utils/array.js'
 import {
 	getSearchOrReadFromContent,
 	getSearchReadSummaryText,
 } from 'src/utils/collapseReadSearch.js'
 import {getDisplayPath} from 'src/utils/file.js'
-import {formatDuration, formatNumber} from 'src/utils/format.js'
+import {formatDuration, formatNumber} from '../../utils/format.js'
 import {
 	buildSubagentLookups,
 	createAssistantMessage,

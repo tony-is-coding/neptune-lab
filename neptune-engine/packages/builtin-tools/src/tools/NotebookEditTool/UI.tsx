@@ -13,7 +13,7 @@ import {
 } from '../../../../../src/ui/components/NotebookEditToolUseRejectedMessage'
 import {Box, Text} from '@anthropic/ink'
 import {FilePathLink} from '../../../../../src/ui/components/FilePathLink'
-import type {Tools} from 'src/Tool.js'
+import type {Tools} from '../../tool.js'
 import {getDisplayPath} from 'src/utils/file.js'
 import type {inputSchema, Output} from './NotebookEditTool.js'
 

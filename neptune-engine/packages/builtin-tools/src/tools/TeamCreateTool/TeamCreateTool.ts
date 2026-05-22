@@ -2,12 +2,12 @@ import {z} from 'zod/v4'
 import {getSessionId} from 'src/bootstrap/state.js'
 import {logEvent} from 'src/services/analytics/index.js'
 import type {AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS} from 'src/services/analytics/metadata.js'
-import type {Tool} from 'src/Tool.js'
-import {buildTool, type ToolDef} from 'src/Tool.js'
+import type {Tool} from '../../tool.js'
+import {buildTool, type ToolDef} from '../../tool.js'
 import {formatAgentId} from 'src/utils/agentId.js'
 import {isAgentSwarmsEnabled} from 'src/utils/agentSwarmsEnabled.js'
 import {getCwd} from 'src/utils/cwd.js'
-import {lazySchema} from 'src/utils/lazySchema.js'
+import {lazySchema} from '../../utils/lazySchema.js'
 import {
 	getDefaultMainLoopModel,
 	parseUserSpecifiedModel,

@@ -21,8 +21,8 @@ import type {
 	Tool,
 	ToolCallProgress,
 	ValidationResult,
-} from 'src/Tool.js'
-import {buildTool, type ToolDef} from 'src/Tool.js'
+} from '../../tool.js'
+import {buildTool, type ToolDef} from '../../tool.js'
 import {
 	backgroundExistingForegroundTask,
 	markTaskNotified,
@@ -39,7 +39,7 @@ import {
 	ShellError,
 } from 'src/utils/errors.js'
 import {truncate} from 'src/utils/format.js'
-import {lazySchema} from 'src/utils/lazySchema.js'
+import {lazySchema} from '../../utils/lazySchema.js'
 import {logError} from 'src/utils/log.js'
 import type {PermissionResult} from 'src/utils/permissions/PermissionResult.js'
 import {getPlatform} from 'src/utils/platform.js'

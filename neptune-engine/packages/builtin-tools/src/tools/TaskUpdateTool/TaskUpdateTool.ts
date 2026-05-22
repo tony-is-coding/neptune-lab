@@ -1,13 +1,13 @@
 import {feature} from 'bun:bundle'
 import {z} from 'zod/v4'
 import {getFeatureValue_CACHED_MAY_BE_STALE} from 'src/services/analytics/growthbook.js'
-import {buildTool, type ToolDef} from 'src/Tool.js'
+import {buildTool, type ToolDef} from '../../tool.js'
 import {isAgentSwarmsEnabled} from 'src/utils/agentSwarmsEnabled.js'
 import {
 	executeTaskCompletedHooks,
 	getTaskCompletedHookMessage,
 } from 'src/utils/hooks.js'
-import {lazySchema} from 'src/utils/lazySchema.js'
+import {lazySchema} from '../../utils/lazySchema.js'
 import {
 	blockTask,
 	deleteTask,

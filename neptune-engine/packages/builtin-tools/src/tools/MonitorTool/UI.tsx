@@ -7,7 +7,7 @@
 
 import * as React from 'react'
 import {Text} from '@anthropic/ink'
-import {truncate} from 'src/utils/format.js'
+import {truncate} from '../../utils/truncate.js'
 import type {MonitorInput, MonitorOutput} from './MonitorTool.js'
 
 /**

@@ -1,10 +1,10 @@
 import {z} from 'zod/v4'
-import {buildTool, type ToolDef} from 'src/Tool.js'
 import {cronToHuman} from 'src/utils/cron.js'
 import {listAllCronTasks} from 'src/utils/cronTasks.js'
-import {truncate} from 'src/utils/format.js'
-import {lazySchema} from 'src/utils/lazySchema.js'
 import {getTeammateContext} from 'src/utils/teammateContext.js'
+import {buildTool, type ToolDef} from '../../tool.js'
+import {lazySchema} from '../../utils/lazySchema.js'
+import {truncate} from '../../utils/truncate.js'
 import {
 	buildCronListPrompt,
 	CRON_LIST_DESCRIPTION,

@@ -1,8 +1,8 @@
 import type {PermissionResult} from 'src/utils/permissions/PermissionResult.js'
 import {z} from 'zod/v4'
-import {buildTool, type ToolDef} from 'src/Tool.js'
-import {lazySchema} from 'src/utils/lazySchema.js'
 import {jsonStringify} from 'src/utils/slowOperations.js'
+import {buildTool, type ToolDef, type ToolUseContext} from '../../tool.js'
+import {lazySchema} from '../../utils/lazySchema.js'
 import {createAdapter} from './adapters/index.js'
 import {getWebSearchPrompt, WEB_SEARCH_TOOL_NAME} from './prompt.js'
 import {
@@ -140,7 +140,7 @@ export const WebSearchTool = buildTool({
 		}
 		return {result: true}
 	},
-	async call(input, context, _canUseTool, _parentMessage, onProgress) {
+	async call(input, context: ToolUseContext, _canUseTool, _parentMessage, onProgress) {
 		const startTime = performance.now()
 		const {query} = input
 

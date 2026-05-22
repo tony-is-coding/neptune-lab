@@ -1,6 +1,6 @@
 import {z} from 'zod/v4'
-import {buildTool, type ToolDef} from 'src/Tool.js'
-import {lazySchema} from 'src/utils/lazySchema.js'
+import {buildTool, type ToolDef} from '../../tool.js'
+import {lazySchema} from '../../utils/lazySchema.js'
 import {renderToolUseMessage, renderToolResultMessage} from './UI.js'
 
 const REVIEW_ARTIFACT_TOOL_NAME = 'ReviewArtifact'

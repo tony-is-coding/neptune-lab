@@ -1,12 +1,12 @@
 import {z} from 'zod/v4'
-import {buildTool, type ToolDef} from 'src/Tool.js'
-import {lazySchema} from 'src/utils/lazySchema.js'
 import {
 	getTask,
 	getTaskListId,
 	isTodoV2Enabled,
 	TaskStatusSchema,
 } from 'src/utils/tasks.js'
+import {buildTool, type ToolDef} from '../../tool.js'
+import {lazySchema} from '../../utils/lazySchema.js'
 import {TASK_GET_TOOL_NAME} from './constants.js'
 import {DESCRIPTION, PROMPT} from './prompt.js'
 

@@ -4,9 +4,9 @@ import {
 	getQuestionPreviewFormat,
 } from 'src/bootstrap/state.js'
 import {z} from 'zod/v4'
-import type {Tool} from 'src/Tool.js'
-import {buildTool, type ToolDef} from 'src/Tool.js'
-import {lazySchema} from 'src/utils/lazySchema.js'
+import type {Tool} from '../../tool.js'
+import {buildTool, type ToolDef} from '../../tool.js'
+import {lazySchema} from '../../utils/lazySchema.js'
 import {
 	ASK_USER_QUESTION_TOOL_CHIP_WIDTH,
 	ASK_USER_QUESTION_TOOL_NAME,

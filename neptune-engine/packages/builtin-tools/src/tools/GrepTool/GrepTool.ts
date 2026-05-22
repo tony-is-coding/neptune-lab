@@ -1,14 +1,14 @@
 import {z} from 'zod/v4'
-import type {ValidationResult} from 'src/Tool.js'
-import {buildTool, type ToolDef} from 'src/Tool.js'
+import type {ValidationResult} from '../../tool.js'
+import {buildTool, type ToolDef} from '../../tool.js'
 import {getCwd} from 'src/utils/cwd.js'
-import {isENOENT} from 'src/utils/errors.js'
+import {isENOENT} from '../../utils/errors.js'
 import {
 	FILE_NOT_FOUND_CWD_NOTE,
 	suggestPathUnderCwd,
 } from 'src/utils/file.js'
 import {getFsImplementation} from 'src/utils/fsOperations.js'
-import {lazySchema} from 'src/utils/lazySchema.js'
+import {lazySchema} from '../../utils/lazySchema.js'
 import {expandPath, toRelativePath} from 'src/utils/path.js'
 import {
 	checkReadPermissionForTool,
@@ -21,7 +21,7 @@ import {getGlobExclusionsForPluginCache} from 'src/utils/plugins/orphanedPluginF
 import {ripGrep} from 'src/utils/ripgrep.js'
 import {semanticBoolean} from 'src/utils/semanticBoolean.js'
 import {semanticNumber} from 'src/utils/semanticNumber.js'
-import {plural} from 'src/utils/stringUtils.js'
+import {plural} from '../../utils/string.js'
 import {GREP_TOOL_NAME, getDescription} from './prompt.js'
 import {
 	getToolUseSummary,

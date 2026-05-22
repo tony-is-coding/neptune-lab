@@ -1,7 +1,7 @@
 import {feature} from 'bun:bundle'
 import {isReplBridgeActive} from 'src/bootstrap/state.js'
 import {getFeatureValue_CACHED_MAY_BE_STALE} from 'src/services/analytics/growthbook.js'
-import type {Tool} from 'src/Tool.js'
+import type {Tool} from '../../tool.js'
 import {AGENT_TOOL_NAME} from '../AgentTool/constants.js'
 
 // Dead code elimination: Brief tool name only needed when KAIROS or KAIROS_BRIEF is on

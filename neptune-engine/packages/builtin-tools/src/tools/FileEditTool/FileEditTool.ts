@@ -11,13 +11,13 @@ import {
 	addSkillDirectories,
 	discoverSkillDirsForPaths,
 } from 'src/skills/loadSkillsDir.js'
-import type {ToolUseContext} from 'src/Tool.js'
-import {buildTool, type ToolDef} from 'src/Tool.js'
+import type {ToolUseContext} from '../../tool.js'
+import {buildTool, type ToolDef} from '../../tool.js'
 import {getCwd} from 'src/utils/cwd.js'
 import {logForDebugging} from 'src/utils/debug.js'
 import {countLinesChanged} from 'src/utils/diff.js'
 import {isEnvTruthy} from 'src/utils/envUtils.js'
-import {isENOENT} from 'src/utils/errors.js'
+import {isENOENT} from '../../utils/errors.js'
 import {
 	FILE_NOT_FOUND_CWD_NOTE,
 	findSimilarFile,
@@ -34,7 +34,7 @@ import {
 	type LineEndingType,
 	readFileSyncWithMetadata,
 } from 'src/utils/fileRead.js'
-import {formatFileSize} from 'src/utils/format.js'
+import {formatFileSize} from '../../utils/format.js'
 import {getFsImplementation} from 'src/utils/fsOperations.js'
 import {
 	fetchSingleFileGitDiff,

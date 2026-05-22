@@ -12,13 +12,13 @@ import {
 	addSkillDirectories,
 	discoverSkillDirsForPaths,
 } from 'src/skills/loadSkillsDir.js'
-import type {ToolUseContext} from 'src/Tool.js'
-import {buildTool, type ToolDef} from 'src/Tool.js'
+import type {ToolUseContext} from '../../tool.js'
+import {buildTool, type ToolDef} from '../../tool.js'
 import {getCwd} from 'src/utils/cwd.js'
 import {logForDebugging} from 'src/utils/debug.js'
 import {countLinesChanged, getPatchForDisplay} from 'src/utils/diff.js'
 import {isEnvTruthy} from 'src/utils/envUtils.js'
-import {isENOENT} from 'src/utils/errors.js'
+import {isENOENT} from '../../utils/errors.js'
 import {getFileModificationTime, writeTextContent} from 'src/utils/file.js'
 import {
 	fileHistoryEnabled,
@@ -31,7 +31,7 @@ import {
 	fetchSingleFileGitDiff,
 	type ToolUseDiff,
 } from 'src/utils/gitDiff.js'
-import {lazySchema} from 'src/utils/lazySchema.js'
+import {lazySchema} from '../../utils/lazySchema.js'
 import {logError} from 'src/utils/log.js'
 import {expandPath} from 'src/utils/path.js'
 import {

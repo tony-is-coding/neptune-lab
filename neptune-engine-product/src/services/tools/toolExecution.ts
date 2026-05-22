@@ -62,9 +62,9 @@ import {count} from '../../utils/array.js'
 import {createAttachmentMessage} from '../../utils/attachments.js'
 import {logForDebugging} from '../../utils/debug.js'
 import {
-	AbortError,
 	errorMessage,
 	getErrnoCode,
+	isAbortError,
 	ShellError,
 	TelemetrySafeError_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
 } from '../../utils/errors.js'
@@ -1667,7 +1667,7 @@ async function checkPermissionsAndCallTool(
 			})
 		}
 
-		if (!(error instanceof AbortError)) {
+		if (!isAbortError(error)) {
 			const errorMsg = errorMessage(error)
 			logForDebugging(
 				`${tool.name} tool error (${durationMs}ms): ${errorMsg.slice(0, 200)}`,
@@ -1730,7 +1730,7 @@ async function checkPermissionsAndCallTool(
 		const content = formatError(error)
 
 		// Determine if this was a user interrupt
-		const isInterrupt = error instanceof AbortError
+		const isInterrupt = isAbortError(error)
 
 		// Run PostToolUseFailure hooks
 		const hookMessages: MessageUpdateLazy<
