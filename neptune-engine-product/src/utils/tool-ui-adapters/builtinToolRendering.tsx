@@ -126,9 +126,36 @@ export function getBuiltinToolUiOverrides(
 			return enterPlanModeOverrides
 		case 'TaskStop':
 			return taskStopOverrides
+		case 'TaskOutput':
+			return taskOutputOverrides
 		default:
 			return {}
 	}
+}
+
+const taskOutputOverrides: ProductToolUiOverrides = {
+	get renderToolUseMessage() {
+		return getTaskOutputRendering().renderToolUseMessage
+	},
+	get renderToolUseTag() {
+		return getTaskOutputRendering().renderToolUseTag
+	},
+	get renderToolUseProgressMessage() {
+		return getTaskOutputRendering().renderToolUseProgressMessage
+	},
+	get renderToolResultMessage() {
+		return getTaskOutputRendering().renderToolResultMessage
+	},
+	get renderToolUseRejectedMessage() {
+		return getTaskOutputRendering().renderToolUseRejectedMessage
+	},
+	get renderToolUseErrorMessage() {
+		return getTaskOutputRendering().renderToolUseErrorMessage
+	},
+}
+
+function getTaskOutputRendering(): typeof import('./taskOutputRendering.js') {
+	return require('./taskOutputRendering.js') as typeof import('./taskOutputRendering.js')
 }
 
 const grepOverrides: ProductToolUiOverrides = {

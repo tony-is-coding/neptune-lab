@@ -11,6 +11,27 @@ mock.module('../../slowOperations.js', () => ({
 	slowLogging: {enabled: false},
 }))
 
+mock.module('../taskOutputRendering.js', () => ({
+	renderToolUseMessage(input: {block?: boolean}) {
+		return input.block === false ? 'non-blocking' : ''
+	},
+	renderToolUseTag() {
+		return 'task-tag'
+	},
+	renderToolUseProgressMessage() {
+		return 'task-progress'
+	},
+	renderToolResultMessage() {
+		return 'task-result'
+	},
+	renderToolUseRejectedMessage() {
+		return 'task-rejected'
+	},
+	renderToolUseErrorMessage() {
+		return 'task-error'
+	},
+}))
+
 const {getBuiltinToolUiOverrides} = await import('../builtinToolRendering.js')
 
 describe('built-in tool product UI rendering', () => {
@@ -54,5 +75,18 @@ describe('built-in tool product UI rendering', () => {
 				{verbose: false},
 			),
 		).toBe('pattern: "**/*.ts", path: "neptune-engine-product"')
+	})
+
+	test('provides complete product UI overrides for TaskOutput', () => {
+		const overrides = getBuiltinToolUiOverrides('TaskOutput')
+
+		expect(
+			overrides.renderToolUseMessage?.({block: false}, {verbose: false}),
+		).toBe('non-blocking')
+		expect(overrides.renderToolUseTag).toBeFunction()
+		expect(overrides.renderToolUseProgressMessage).toBeFunction()
+		expect(overrides.renderToolResultMessage).toBeFunction()
+		expect(overrides.renderToolUseRejectedMessage).toBeFunction()
+		expect(overrides.renderToolUseErrorMessage).toBeFunction()
 	})
 })

@@ -1,5 +1,4 @@
 import {z} from 'zod/v4'
-import type {Tool} from '../../tool.js'
 import {buildTool, type ToolDef} from '../../tool.js'
 import type {TaskType} from 'src/Task.js'
 import type {LocalAgentTaskState} from 'src/tasks/LocalAgentTask/LocalAgentTask.js'
@@ -10,25 +9,31 @@ import {AbortError} from 'src/utils/errors.js'
 import {lazySchema} from '../../utils/lazySchema.js'
 import {semanticBoolean} from '../../utils/semanticBoolean.js'
 import {sleep} from 'src/utils/sleep.js'
-import {countCharInString} from '../../utils/string.js'
 import {getTaskOutput} from 'src/utils/task/diskOutput.js'
 import {updateTaskState} from 'src/utils/task/framework.js'
 import {formatTaskOutput} from 'src/utils/task/outputFormatting.js'
 import {extractTextContent} from '../../utils/messages.js'
 import {TASK_OUTPUT_TOOL_NAME} from './constants.js'
-import {
-	renderToolUseMessage,
-	renderToolUseTag,
-	renderToolUseProgressMessage,
-	renderToolResultMessage,
-	renderToolUseRejectedMessage,
-	renderToolUseErrorMessage,
-	type TaskOutput,
-	type TaskOutputToolOutput,
-} from './UI.js'
 
 // Re-export Progress from centralized types to break import cycles
 export type {TaskOutputProgress as Progress} from 'src/types/tools.js'
+
+export type TaskOutput = {
+	task_id: string
+	task_type: TaskType
+	status: string
+	description: string
+	output: string
+	exitCode?: number | null
+	error?: string
+	prompt?: string
+	result?: string
+}
+
+export type TaskOutputToolOutput = {
+	retrieval_status: 'success' | 'timeout' | 'not_ready'
+	task: TaskOutput | null
+}
 
 const inputSchema = lazySchema(() =>
 	z.strictObject({
@@ -47,6 +52,16 @@ const inputSchema = lazySchema(() =>
 type InputSchema = ReturnType<typeof inputSchema>
 
 type TaskOutputToolInput = z.infer<InputSchema>
+
+type TaskOutputAppState = {
+	tasks?: Record<string, TaskState>
+}
+
+type TaskOutputToolContext = {
+	getAppState: () => TaskOutputAppState
+	setAppState: (updater: (prev: any) => any) => void
+	abortController?: AbortController
+}
 
 // Get output for any task type
 async function getTaskOutputData(task: TaskState): Promise<TaskOutput> {
@@ -147,44 +162,43 @@ async function waitForTaskCompletion(
 	return (finalState.tasks?.[taskId] as TaskState) ?? null
 }
 
-export const TaskOutputTool: Tool<InputSchema, TaskOutputToolOutput> =
-	buildTool({
-		name: TASK_OUTPUT_TOOL_NAME,
-		searchHint: 'read output/logs from a background task',
-		maxResultSizeChars: 100_000,
-		shouldDefer: true,
-		// Backwards-compatible aliases for renamed tools
-		aliases: ['AgentOutputTool', 'BashOutputTool'],
+export const TaskOutputTool = buildTool({
+	name: TASK_OUTPUT_TOOL_NAME,
+	searchHint: 'read output/logs from a background task',
+	maxResultSizeChars: 100_000,
+	shouldDefer: true,
+	// Backwards-compatible aliases for renamed tools
+	aliases: ['AgentOutputTool', 'BashOutputTool'],
 
-		userFacingName() {
-			return 'Task Output'
-		},
+	userFacingName() {
+		return 'Task Output'
+	},
 
-		get inputSchema(): InputSchema {
-			return inputSchema()
-		},
+	get inputSchema(): InputSchema {
+		return inputSchema()
+	},
 
-		async description() {
-			return '[Deprecated] — prefer Read on the task output file path'
-		},
+	async description() {
+		return '[Deprecated] - prefer Read on the task output file path'
+	},
 
-		isConcurrencySafe(_input) {
-			return this.isReadOnly?.(_input) ?? false
-		},
+	isConcurrencySafe(_input) {
+		return this.isReadOnly?.(_input) ?? false
+	},
 
-		isEnabled() {
-			return process.env.USER_TYPE !== 'ant'
-		},
+	isEnabled() {
+		return process.env.USER_TYPE !== 'ant'
+	},
 
-		isReadOnly(_input) {
-			return true
-		},
-		toAutoClassifierInput(input) {
-			return input.task_id
-		},
+	isReadOnly(_input) {
+		return true
+	},
+	toAutoClassifierInput(input) {
+		return input.task_id
+	},
 
-		async prompt() {
-			return `DEPRECATED: Prefer using the Read tool on the task's output file path instead. Background tasks return their output file path in the tool result, and you receive a <task-notification> with the same path when the task completes — Read that file directly.
+	async prompt() {
+		return `DEPRECATED: Prefer using the Read tool on the task's output file path instead. Background tasks return their output file path in the tool result, and you receive a <task-notification> with the same path when the task completes - Read that file directly.
 
 - Retrieves output from a running or completed task (background shell, agent, or remote session)
 - Takes a task_id parameter identifying the task
@@ -193,167 +207,159 @@ export const TaskOutputTool: Tool<InputSchema, TaskOutputToolOutput> =
 - Use block=false for non-blocking check of current status
 - Task IDs can be found using the /tasks command
 - Works with all task types: background shells, async agents, and remote sessions`
-		},
+	},
 
-		async validateInput({task_id}, {getAppState}) {
-			if (!task_id) {
-				return {
-					result: false,
-					message: 'Task ID is required',
-					errorCode: 1,
-				}
+	async validateInput({task_id}, {getAppState}) {
+		if (!task_id) {
+			return {
+				result: false,
+				message: 'Task ID is required',
+				errorCode: 1,
 			}
+		}
 
-			const appState = getAppState()
-			const task = appState.tasks?.[task_id] as TaskState | undefined
+		const appState = getAppState()
+		const task = appState.tasks?.[task_id] as TaskState | undefined
 
-			if (!task) {
-				return {
-					result: false,
-					message: `No task found with ID: ${task_id}`,
-					errorCode: 2,
-				}
+		if (!task) {
+			return {
+				result: false,
+				message: `No task found with ID: ${task_id}`,
+				errorCode: 2,
 			}
+		}
 
-			return {result: true}
-		},
+		return {result: true}
+	},
 
-		async call(
-			input: TaskOutputToolInput,
-			toolUseContext,
-			_canUseTool,
-			_parentMessage,
-			onProgress,
-		) {
-			const {task_id, block, timeout} = input
+	async call(
+		input: TaskOutputToolInput,
+		toolUseContext: TaskOutputToolContext,
+		_canUseTool,
+		_parentMessage,
+		onProgress,
+	) {
+		const {task_id, block, timeout} = input
 
-			const appState = toolUseContext.getAppState()
-			const task = appState.tasks?.[task_id] as TaskState | undefined
+		const appState = toolUseContext.getAppState()
+		const task = appState.tasks?.[task_id] as TaskState | undefined
 
-			if (!task) {
-				throw new Error(`No task found with ID: ${task_id}`)
-			}
+		if (!task) {
+			throw new Error(`No task found with ID: ${task_id}`)
+		}
 
-			if (!block) {
-				// Non-blocking: return current state
-				if (task.status !== 'running' && task.status !== 'pending') {
-					// Mark as notified
-					updateTaskState(task_id, toolUseContext.setAppState, t => ({
-						...t,
-						notified: true,
-					}))
-					return {
-						data: {
-							retrieval_status: 'success' as const,
-							task: await getTaskOutputData(task),
-						},
-					}
-				}
+		if (!block) {
+			// Non-blocking: return current state
+			if (task.status !== 'running' && task.status !== 'pending') {
+				// Mark as notified
+				updateTaskState(task_id, toolUseContext.setAppState, t => ({
+					...t,
+					notified: true,
+				}))
 				return {
 					data: {
-						retrieval_status: 'not_ready' as const,
+						retrieval_status: 'success' as const,
 						task: await getTaskOutputData(task),
 					},
 				}
 			}
-
-			// Blocking: wait for completion
-			if (onProgress) {
-				onProgress({
-					toolUseID: `task-output-waiting-${Date.now()}`,
-					data: {
-						type: 'waiting_for_task',
-						taskDescription: task.description,
-						taskType: task.type,
-					},
-				})
-			}
-
-			const completedTask = await waitForTaskCompletion(
-				task_id,
-				toolUseContext.getAppState,
-				timeout,
-				toolUseContext.abortController,
-			)
-
-			if (!completedTask) {
-				return {
-					data: {
-						retrieval_status: 'timeout' as const,
-						task: null,
-					},
-				}
-			}
-
-			if (
-				completedTask.status === 'running' ||
-				completedTask.status === 'pending'
-			) {
-				return {
-					data: {
-						retrieval_status: 'timeout' as const,
-						task: await getTaskOutputData(completedTask),
-					},
-				}
-			}
-
-			// Mark as notified
-			updateTaskState(task_id, toolUseContext.setAppState, t => ({
-				...t,
-				notified: true,
-			}))
-
 			return {
 				data: {
-					retrieval_status: 'success' as const,
+					retrieval_status: 'not_ready' as const,
+					task: await getTaskOutputData(task),
+				},
+			}
+		}
+
+		// Blocking: wait for completion
+		if (onProgress) {
+			onProgress({
+				toolUseID: `task-output-waiting-${Date.now()}`,
+				data: {
+					type: 'waiting_for_task',
+					taskDescription: task.description,
+					taskType: task.type,
+				},
+			})
+		}
+
+		const completedTask = await waitForTaskCompletion(
+			task_id,
+			toolUseContext.getAppState,
+			timeout,
+			toolUseContext.abortController,
+		)
+
+		if (!completedTask) {
+			return {
+				data: {
+					retrieval_status: 'timeout' as const,
+					task: null,
+				},
+			}
+		}
+
+		if (
+			completedTask.status === 'running' ||
+			completedTask.status === 'pending'
+		) {
+			return {
+				data: {
+					retrieval_status: 'timeout' as const,
 					task: await getTaskOutputData(completedTask),
 				},
 			}
-		},
+		}
 
-		mapToolResultToToolResultBlockParam(data, toolUseID) {
-			const parts: string[] = []
+		// Mark as notified
+		updateTaskState(task_id, toolUseContext.setAppState, t => ({
+			...t,
+			notified: true,
+		}))
 
-			parts.push(
-				`<retrieval_status>${data.retrieval_status}</retrieval_status>`,
-			)
+		return {
+			data: {
+				retrieval_status: 'success' as const,
+				task: await getTaskOutputData(completedTask),
+			},
+		}
+	},
 
-			if (data.task) {
-				parts.push(`<task_id>${data.task.task_id}</task_id>`)
-				parts.push(`<task_type>${data.task.task_type}</task_type>`)
-				parts.push(`<status>${data.task.status}</status>`)
+	mapToolResultToToolResultBlockParam(data, toolUseID) {
+		const parts: string[] = []
 
-				if (data.task.exitCode !== undefined && data.task.exitCode !== null) {
-					parts.push(`<exit_code>${data.task.exitCode}</exit_code>`)
-				}
+		parts.push(
+			`<retrieval_status>${data.retrieval_status}</retrieval_status>`,
+		)
 
-				if (data.task.output?.trim()) {
-					const {content} = formatTaskOutput(
-						data.task.output,
-						data.task.task_id,
-					)
-					parts.push(`<output>\n${content.trimEnd()}\n</output>`)
-				}
+		if (data.task) {
+			parts.push(`<task_id>${data.task.task_id}</task_id>`)
+			parts.push(`<task_type>${data.task.task_type}</task_type>`)
+			parts.push(`<status>${data.task.status}</status>`)
 
-				if (data.task.error) {
-					parts.push(`<error>${data.task.error}</error>`)
-				}
+			if (data.task.exitCode !== undefined && data.task.exitCode !== null) {
+				parts.push(`<exit_code>${data.task.exitCode}</exit_code>`)
 			}
 
-			return {
-				tool_use_id: toolUseID,
-				type: 'tool_result' as const,
-				content: parts.join('\n\n'),
+			if (data.task.output?.trim()) {
+				const {content} = formatTaskOutput(
+					data.task.output,
+					data.task.task_id,
+				)
+				parts.push(`<output>\n${content.trimEnd()}\n</output>`)
 			}
-		},
 
-		renderToolUseMessage,
-		renderToolUseTag,
-		renderToolUseProgressMessage,
-		renderToolResultMessage,
-		renderToolUseRejectedMessage,
-		renderToolUseErrorMessage,
-	} satisfies ToolDef<InputSchema, TaskOutputToolOutput>)
+			if (data.task.error) {
+				parts.push(`<error>${data.task.error}</error>`)
+			}
+		}
 
+		return {
+			tool_use_id: toolUseID,
+			type: 'tool_result' as const,
+			content: parts.join('\n\n'),
+		}
+	},
+} satisfies ToolDef<InputSchema, TaskOutputToolOutput>)
 
 export default TaskOutputTool
