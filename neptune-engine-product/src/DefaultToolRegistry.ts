@@ -11,6 +11,7 @@ import type {ToolPermissionContext} from './Tool.js'
 import type {Tool, Tools} from './Tool.js'
 import type {ToolRegistry, ToolSet} from './ToolRegistry.js'
 import {applyProductToolUiOverrides} from './utils/tool-ui-adapters/registry.js'
+import {isWorktreeModeEnabled} from './utils/worktreeModeEnabled.js'
 
 // 核心工具导入（无条件加载，SDK 必需）
 import {AgentTool} from '@neptune/builtin-tools/tools/AgentTool/AgentTool.js'
@@ -175,12 +176,12 @@ export class DefaultToolRegistry implements ToolRegistry {
 
 		// Worktree 工具
 		try {
-			const {EnterWorktreeTool} = require('@neptune/builtin-tools/tools/EnterWorktreeTool/EnterWorktreeTool.js')
-			const {ExitWorktreeTool} = require('@neptune/builtin-tools/tools/ExitWorktreeTool/ExitWorktreeTool.js')
+			const {EnterWorktreeTool} = require('./product-tools/worktree/EnterWorktreeTool.js')
+			const {ExitWorktreeTool} = require('./product-tools/worktree/ExitWorktreeTool.js')
 			if (isWorktreeModeEnabled()) {
 				tools.push(
-					applyProductToolUiOverrides(EnterWorktreeTool),
-					applyProductToolUiOverrides(ExitWorktreeTool),
+					EnterWorktreeTool,
+					ExitWorktreeTool,
 				)
 			}
 		} catch {
@@ -208,14 +209,5 @@ export class DefaultToolRegistry implements ToolRegistry {
 
 	private invalidateCache(): void {
 		this.allToolsCache = null
-	}
-}
-
-// 辅助函数
-function isWorktreeModeEnabled(): boolean {
-	try {
-		return process.env.CLAUDE_CODE_WORKTREE_MODE === 'true'
-	} catch {
-		return false
 	}
 }

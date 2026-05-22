@@ -26,8 +26,10 @@ import {TOOL_SEARCH_TOOL_NAME} from '@neptune/builtin-tools/tools/ToolSearchTool
 import {
 	SYNTHETIC_OUTPUT_TOOL_NAME
 } from '@neptune/builtin-tools/tools/SyntheticOutputTool/SyntheticOutputTool.js'
-import {ENTER_WORKTREE_TOOL_NAME} from '@neptune/builtin-tools/tools/EnterWorktreeTool/constants.js'
-import {EXIT_WORKTREE_TOOL_NAME} from '@neptune/builtin-tools/tools/ExitWorktreeTool/constants.js'
+import {
+	ENTER_WORKTREE_TOOL_NAME,
+	EXIT_WORKTREE_TOOL_NAME,
+} from '../product-tools/worktree/constants.js'
 import {WORKFLOW_TOOL_NAME} from '@neptune/builtin-tools/tools/WorkflowTool/constants.js'
 import {
 	CRON_CREATE_TOOL_NAME,
