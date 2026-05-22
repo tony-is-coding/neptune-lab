@@ -63,11 +63,15 @@ import {TungstenTool} from '@neptune/builtin-tools/tools/TungstenTool/TungstenTo
 // Lazy require to break circular dependency: tools.ts -> TeamCreateTool/TeamDeleteTool -> ... -> tools.ts
 /* eslint-disable @typescript-eslint/no-require-imports */
 const getTeamCreateTool = () =>
-	require('@neptune/builtin-tools/tools/TeamCreateTool/TeamCreateTool.js')
-		.TeamCreateTool as typeof import('@neptune/builtin-tools/tools/TeamCreateTool/TeamCreateTool.js').TeamCreateTool
+	applyProductToolUiOverrides(
+		require('@neptune/builtin-tools/tools/TeamCreateTool/TeamCreateTool.js')
+			.TeamCreateTool as typeof import('@neptune/builtin-tools/tools/TeamCreateTool/TeamCreateTool.js').TeamCreateTool,
+	)
 const getTeamDeleteTool = () =>
-	require('@neptune/builtin-tools/tools/TeamDeleteTool/TeamDeleteTool.js')
-		.TeamDeleteTool as typeof import('@neptune/builtin-tools/tools/TeamDeleteTool/TeamDeleteTool.js').TeamDeleteTool
+	applyProductToolUiOverrides(
+		require('@neptune/builtin-tools/tools/TeamDeleteTool/TeamDeleteTool.js')
+			.TeamDeleteTool as typeof import('@neptune/builtin-tools/tools/TeamDeleteTool/TeamDeleteTool.js').TeamDeleteTool,
+	)
 const getSendMessageTool = () =>
 	applyProductToolUiOverrides(
 		require('@neptune/builtin-tools/tools/SendMessageTool/SendMessageTool.js')
@@ -250,8 +254,8 @@ export function getAllBaseTools(): Tools {
 		...(SleepTool ? [SleepTool] : []),
 		...cronTools,
 		...(RemoteTriggerTool ? [applyProductToolUiOverrides(RemoteTriggerTool)] : []),
-		...(MonitorTool ? [MonitorTool] : []),
-		BriefTool,
+		...(MonitorTool ? [applyProductToolUiOverrides(MonitorTool)] : []),
+		applyProductToolUiOverrides(BriefTool),
 		...(SendUserFileTool ? [SendUserFileTool] : []),
 		...(PushNotificationTool ? [PushNotificationTool] : []),
 		...(SubscribePRTool ? [SubscribePRTool] : []),

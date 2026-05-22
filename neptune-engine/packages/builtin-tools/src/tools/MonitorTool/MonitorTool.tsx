@@ -10,7 +10,6 @@ import {truncate} from '../../utils/truncate.js'
 import {exec} from 'src/utils/Shell.js'
 import {getTaskOutputPath} from 'src/utils/task/diskOutput.js'
 import {logEvent} from 'src/services/analytics/index.js'
-import {renderToolUseMessage, renderToolResultMessage} from './UI.js'
 
 const MONITOR_TOOL_NAME = 'Monitor'
 
@@ -167,7 +166,6 @@ Examples:
 		}
 	},
 
-	renderToolUseMessage,
 	mapToolResultToToolResultBlockParam(
 		content: MonitorOutput,
 		toolUseId: string,
@@ -178,5 +176,4 @@ Examples:
 			content: `Monitor started (task ${content.taskId}). Output file: ${content.outputFile}`,
 		}
 	},
-	renderToolResultMessage,
 })

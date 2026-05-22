@@ -12,6 +12,7 @@ import type {Tool, Tools} from './Tool.js'
 import type {ToolRegistry, ToolSet} from './ToolRegistry.js'
 import {applyBashDeliveryPolicy} from './product-tools/bash-delivery/prompt.js'
 import {applyProductToolUiOverrides} from './utils/tool-ui-adapters/registry.js'
+import {isAgentSwarmsEnabled} from './utils/agentSwarmsEnabled.js'
 import {isWorktreeModeEnabled} from './utils/worktreeModeEnabled.js'
 
 // 核心工具导入（无条件加载，SDK 必需）
@@ -139,7 +140,29 @@ export class DefaultToolRegistry implements ToolRegistry {
 		try {
 			// BriefTool
 			const {BriefTool} = require('@neptune/builtin-tools/tools/BriefTool/BriefTool.js')
-			tools.push(BriefTool)
+			tools.push(applyProductToolUiOverrides(BriefTool))
+		} catch {
+		}
+
+		try {
+			// MonitorTool
+			if (feature('MONITOR_TOOL')) {
+				const {MonitorTool} = require('@neptune/builtin-tools/tools/MonitorTool/MonitorTool.js')
+				tools.push(applyProductToolUiOverrides(MonitorTool))
+			}
+		} catch {
+		}
+
+		try {
+			// Team tools
+			if (isAgentSwarmsEnabled()) {
+				const {TeamCreateTool} = require('@neptune/builtin-tools/tools/TeamCreateTool/TeamCreateTool.js')
+				const {TeamDeleteTool} = require('@neptune/builtin-tools/tools/TeamDeleteTool/TeamDeleteTool.js')
+				tools.push(
+					applyProductToolUiOverrides(TeamCreateTool),
+					applyProductToolUiOverrides(TeamDeleteTool),
+				)
+			}
 		} catch {
 		}
 

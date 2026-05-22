@@ -31,7 +31,12 @@ export type ProductToolUiOverrides = Partial<{
 	renderToolResultMessage(
 		output: unknown,
 		progressMessages: unknown[],
-		options: {verbose: boolean; input?: unknown},
+		options: {
+			verbose: boolean
+			input?: unknown
+			isTranscriptMode?: boolean
+			isBriefOnly?: boolean
+		},
 	): React.ReactNode
 	isResultTruncated(output: unknown): boolean
 }>

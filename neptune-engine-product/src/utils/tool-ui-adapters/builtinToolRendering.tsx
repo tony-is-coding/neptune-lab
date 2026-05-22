@@ -1,17 +1,17 @@
 import * as React from 'react'
 import {Box, Text, stringWidth} from '@anthropic/ink'
-import {BLACK_CIRCLE} from '../../constants/figures.js'
+import figures from 'figures'
 import {MessageResponse} from '../../ui/components/MessageResponse.js'
 import {homedir} from 'os'
 import {isAbsolute, relative, sep} from 'path'
-import {getModeColor} from '../permissions/PermissionMode.js'
-import {jsonParse, jsonStringify} from '../slowOperations.js'
 import {countCharInString} from '../stringUtils.js'
 import {formatFileSize} from '../format.js'
-import {truncateToWidthNoEllipsis} from '../truncate.js'
+import {formatBriefTimestamp} from '../formatBriefTimestamp.js'
+import {truncate, truncateToWidthNoEllipsis} from '../truncate.js'
 import type {ProductToolUiOverrides} from './registry.js'
 
 const FILE_NOT_FOUND_CWD_NOTE = 'Note: your current working directory is'
+const BLACK_CIRCLE = process.platform === 'darwin' ? '\u23fa' : '\u25cf'
 
 type WebSearchResult = {
 	tool_use_id: string
@@ -91,6 +91,39 @@ type SendMessageOutput = {
 	target?: string
 }
 
+type BriefAttachment = {
+	path: string
+	size: number
+	isImage: boolean
+	file_uuid?: string
+}
+
+type BriefOutput = {
+	message: string
+	attachments?: BriefAttachment[]
+	sentAt?: string
+}
+
+type MonitorInput = {
+	command?: string
+	description?: string
+}
+
+type MonitorOutput = {
+	taskId: string
+	outputFile: string
+}
+
+type TeamCreateInput = {
+	team_name?: string
+}
+
+type TeamDeleteOutput = {
+	success: boolean
+	message: string
+	team_name?: string
+}
+
 type ReviewArtifactOutput = {
 	artifact: string
 	title?: string
@@ -122,6 +155,15 @@ export function getBuiltinToolUiOverrides(
 			return sendMessageOverrides
 		case 'ReviewArtifact':
 			return reviewArtifactOverrides
+		case 'SendUserMessage':
+		case 'Brief':
+			return briefOverrides
+		case 'Monitor':
+			return monitorOverrides
+		case 'TeamCreate':
+			return teamCreateOverrides
+		case 'TeamDelete':
+			return teamDeleteOverrides
 		case 'EnterPlanMode':
 			return enterPlanModeOverrides
 		case 'TaskStop':
@@ -505,7 +547,7 @@ const configOverrides: ProductToolUiOverrides = {
 		}
 		return (
 			<Text dimColor>
-				Setting {config.setting} to {jsonStringify(config.value)}
+					Setting {config.setting} to {jsonStringify(config.value)}
 			</Text>
 		)
 	},
@@ -585,6 +627,18 @@ const sendMessageOverrides: ProductToolUiOverrides = {
 	},
 }
 
+function jsonParse<T = unknown>(value: string): T {
+	const {jsonParse: parse} =
+		require('../slowOperations.js') as {jsonParse(input: string): T}
+	return parse(value)
+}
+
+function jsonStringify(value: unknown): string {
+	const {jsonStringify: stringify} =
+		require('../slowOperations.js') as {jsonStringify(input: unknown): string}
+	return stringify(value)
+}
+
 const reviewArtifactOverrides: ProductToolUiOverrides = {
 	renderToolUseMessage(input, {verbose}) {
 		const {
@@ -615,6 +669,145 @@ const reviewArtifactOverrides: ProductToolUiOverrides = {
 	},
 }
 
+const briefOverrides: ProductToolUiOverrides = {
+	userFacingName() {
+		return ''
+	},
+	renderToolUseMessage() {
+		return ''
+	},
+	renderToolResultMessage(output, _progressMessages, options) {
+		return renderBriefToolResultMessage(output as BriefOutput, options)
+	},
+}
+
+function renderBriefToolResultMessage(
+	output: BriefOutput,
+	options?: {
+		isTranscriptMode?: boolean
+		isBriefOnly?: boolean
+	},
+): React.ReactNode {
+	const hasAttachments = (output.attachments?.length ?? 0) > 0
+	if (!output.message && !hasAttachments) {
+		return null
+	}
+
+	if (options?.isTranscriptMode) {
+		return (
+			<Box flexDirection="row" marginTop={1}>
+				<Box minWidth={2}>
+					<Text color="text">{BLACK_CIRCLE}</Text>
+				</Box>
+				<Box flexDirection="column">
+					{output.message ? <BriefMarkdown>{output.message}</BriefMarkdown> : null}
+					<BriefAttachmentList attachments={output.attachments}/>
+				</Box>
+			</Box>
+		)
+	}
+
+	if (options?.isBriefOnly) {
+		const ts = output.sentAt ? formatBriefTimestamp(output.sentAt) : ''
+		return (
+			<Box flexDirection="column" marginTop={1} paddingLeft={2}>
+				<Box flexDirection="row">
+					<Text color="briefLabelClaude">Claude</Text>
+					{ts ? <Text dimColor> {ts}</Text> : null}
+				</Box>
+				<Box flexDirection="column">
+					{output.message ? <BriefMarkdown>{output.message}</BriefMarkdown> : null}
+					<BriefAttachmentList attachments={output.attachments}/>
+				</Box>
+			</Box>
+		)
+	}
+
+	return (
+		<Box flexDirection="row" marginTop={1}>
+			<Box minWidth={2}/>
+			<Box flexDirection="column">
+				{output.message ? <BriefMarkdown>{output.message}</BriefMarkdown> : null}
+				<BriefAttachmentList attachments={output.attachments}/>
+			</Box>
+		</Box>
+	)
+}
+
+function BriefMarkdown({children}: {children: string}): React.ReactNode {
+	const {Markdown} =
+		require('../../ui/components/Markdown.js') as {
+			Markdown(props: {children: string}): React.ReactNode
+		}
+	return <Markdown>{children}</Markdown>
+}
+
+function BriefAttachmentList({
+	attachments,
+}: {
+	attachments: BriefOutput['attachments']
+}): React.ReactNode {
+	if (!attachments || attachments.length === 0) {
+		return null
+	}
+	return (
+		<Box flexDirection="column" marginTop={1}>
+			{attachments.map(att => (
+				<Box key={att.path} flexDirection="row">
+					<Text dimColor>
+						{figures.pointerSmall} {att.isImage ? '[image]' : '[file]'}{' '}
+					</Text>
+					<Text>{getBriefAttachmentDisplayPath(att.path)}</Text>
+					<Text dimColor> ({formatFileSize(att.size)})</Text>
+				</Box>
+			))}
+		</Box>
+	)
+}
+
+function getBriefAttachmentDisplayPath(filePath: string): string {
+	const {getDisplayPath} =
+		require('../file.js') as {getDisplayPath(path: string): string}
+	return getDisplayPath(filePath)
+}
+
+const monitorOverrides: ProductToolUiOverrides = {
+	renderToolUseMessage(input) {
+		const {command, description} = input as MonitorInput
+		const desc = truncate(description || command || '', 80)
+		return `Monitor: ${desc}`
+	},
+	renderToolResultMessage(output) {
+		const {taskId, outputFile} = output as MonitorOutput
+		return <Text>Monitor started (task {taskId}). Output: {outputFile}</Text>
+	},
+}
+
+const teamCreateOverrides: ProductToolUiOverrides = {
+	renderToolUseMessage(input) {
+		const {team_name} = input as TeamCreateInput
+		return `create team: ${team_name}`
+	},
+}
+
+const teamDeleteOverrides: ProductToolUiOverrides = {
+	renderToolUseMessage() {
+		return 'cleanup team: current'
+	},
+	renderToolResultMessage(content) {
+		const result: TeamDeleteOutput =
+			typeof content === 'string'
+				? JSON.parse(content)
+				: (content as TeamDeleteOutput)
+
+		if ('success' in result && 'team_name' in result && 'message' in result) {
+			return null
+		}
+
+		return null
+	},
+}
+
 const enterPlanModeOverrides: ProductToolUiOverrides = {
 	renderToolUseMessage() {
 		return null
@@ -642,6 +835,10 @@ const enterPlanModeOverrides: ProductToolUiOverrides = {
 			</Box>
 		)
 	},
+}
+
+function getModeColor(mode: 'default' | 'plan'): 'text' | 'planMode' {
+	return mode === 'plan' ? 'planMode' : 'text'
 }
 
 const taskStopOverrides: ProductToolUiOverrides = {

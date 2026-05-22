@@ -66,22 +66,6 @@ mock.module('../mcpResourceToolRendering.js', () => ({
 	},
 }))
 
-mock.module('../builtinToolRendering.js', () => ({
-	getBuiltinToolUiOverrides(toolName: string) {
-		if (toolName === 'WebSearch') {
-			return {
-				userFacingName() {
-					return 'Web Search'
-				},
-				renderToolUseMessage(input: Record<string, unknown>) {
-					return typeof input.query === 'string' ? `"${input.query}"` : null
-				},
-			}
-		}
-		return {}
-	},
-}))
-
 const {applyProductToolUiOverrides, getProductToolUiOverrides} = await import(
 	'../registry.js'
 )
@@ -176,7 +160,7 @@ describe('product tool UI adapter registry', () => {
 		expect(
 			overrides.renderToolUseMessage?.({query: 'neptune engine'}, {verbose: false}),
 		).toBe('"neptune engine"')
-		expect(overrides.renderToolResultMessage).toBeUndefined()
+		expect(overrides.renderToolResultMessage).toBeFunction()
 		expect(defaultRendererLoaded).toBe(false)
 	})
 

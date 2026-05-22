@@ -115,6 +115,12 @@ mock.module('../utils/tool-ui-adapters/registry.js', () => ({
 	},
 }))
 
+mock.module('../utils/agentSwarmsEnabled.js', () => ({
+	isAgentSwarmsEnabled() {
+		return false
+	},
+}))
+
 mock.module('../utils/worktreeModeEnabled.js', () => ({
 	isWorktreeModeEnabled() {
 		return false

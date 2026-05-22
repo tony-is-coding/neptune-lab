@@ -32,7 +32,6 @@ import {
 import {generateWordSlug} from 'src/utils/words.js'
 import {TEAM_CREATE_TOOL_NAME} from './constants.js'
 import {getPrompt} from './prompt.js'
-import {renderToolUseMessage} from './UI.js'
 
 const inputSchema = lazySchema(() =>
 	z.strictObject({
@@ -236,5 +235,4 @@ export const TeamCreateTool: Tool<InputSchema, Output> = buildTool({
 		}
 	},
 
-	renderToolUseMessage,
 } satisfies ToolDef<InputSchema, Output>)
