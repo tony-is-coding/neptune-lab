@@ -111,4 +111,160 @@ describe('product Agent delivery policy', () => {
 
 		expect(prompt).toBe(basePrompt)
 	})
+
+	test('adds product delivery instructions to async launch results', () => {
+		const wrapped = applyAgentDeliveryPolicy({
+			name: 'Agent',
+			async prompt(_options: unknown) {
+				return 'Base Agent runtime prompt'
+			},
+			mapToolResultToToolResultBlockParam(output: unknown, toolUseID: string) {
+				const data = output as {agentId: string; outputFile: string}
+				return {
+					tool_use_id: toolUseID,
+					type: 'tool_result',
+					content: [
+						{
+							type: 'text',
+							text: `Async agent launched.\nagentId: ${data.agentId}\noutput_file: ${data.outputFile}`,
+						},
+					],
+				}
+			},
+		} as never)
+
+		const result = wrapped.mapToolResultToToolResultBlockParam(
+			{
+				status: 'async_launched',
+				agentId: 'agent-123',
+				outputFile: '/tmp/agent-output.jsonl',
+				canReadOutputFile: true,
+			},
+			'toolu-1',
+		)
+		const text = (result.content as Array<{type: string; text?: string}>)
+			.map(block => block.text ?? '')
+			.join('\n')
+
+		expect(text).toContain('Async agent launched.')
+		expect(text).toContain('SendMessage')
+		expect(text).toContain('Do not duplicate')
+		expect(text).toContain('output_file: /tmp/agent-output.jsonl')
+	})
+
+	test('adds product delivery instructions to completed result trailers', () => {
+		const wrapped = applyAgentDeliveryPolicy({
+			name: 'Agent',
+			async prompt(_options: unknown) {
+				return 'Base Agent runtime prompt'
+			},
+			mapToolResultToToolResultBlockParam(output: unknown, toolUseID: string) {
+				const data = output as {agentId: string}
+				return {
+					tool_use_id: toolUseID,
+					type: 'tool_result',
+					content: [
+						{
+							type: 'text',
+							text: `agentId: ${data.agentId}`,
+						},
+					],
+				}
+			},
+		} as never)
+
+		const result = wrapped.mapToolResultToToolResultBlockParam(
+			{
+				status: 'completed',
+				agentId: 'agent-456',
+			},
+			'toolu-2',
+		)
+		const text = (result.content as Array<{type: string; text?: string}>)
+			.map(block => block.text ?? '')
+			.join('\n')
+
+		expect(text).toContain("agentId: agent-456")
+		expect(text).toContain("Use SendMessage with to: 'agent-456'")
+	})
+
+	test('does not add continuation instructions to one-shot completed agents', () => {
+		const wrapped = applyAgentDeliveryPolicy({
+			name: 'Agent',
+			async prompt(_options: unknown) {
+				return 'Base Agent runtime prompt'
+			},
+			mapToolResultToToolResultBlockParam(_output: unknown, toolUseID: string) {
+				return {
+					tool_use_id: toolUseID,
+					type: 'tool_result',
+					content: [
+						{
+							type: 'text',
+							text: 'exploration done',
+						},
+					],
+				}
+			},
+		} as never)
+
+		const result = wrapped.mapToolResultToToolResultBlockParam(
+			{
+				status: 'completed',
+				agentId: 'agent-789',
+				agentType: 'Explore',
+			},
+			'toolu-4',
+		)
+		const text = (result.content as Array<{type: string; text?: string}>)
+			.map(block => block.text ?? '')
+			.join('\n')
+
+		expect(text).toContain('exploration done')
+		expect(text).not.toContain('SendMessage')
+		expect(text).not.toContain('continue this agent')
+	})
+
+	test('adds product delivery instructions to remote CCR launch results', () => {
+		const wrapped = applyAgentDeliveryPolicy({
+			name: 'Agent',
+			async prompt(_options: unknown) {
+				return 'Base Agent runtime prompt'
+			},
+			mapToolResultToToolResultBlockParam(output: unknown, toolUseID: string) {
+				const data = output as {
+					taskId: string
+					sessionUrl: string
+					outputFile: string
+				}
+				return {
+					tool_use_id: toolUseID,
+					type: 'tool_result',
+					content: [
+						{
+							type: 'text',
+							text: `Remote agent launched.\ntaskId: ${data.taskId}\nsession_url: ${data.sessionUrl}\noutput_file: ${data.outputFile}`,
+						},
+					],
+				}
+			},
+		} as never)
+
+		const result = wrapped.mapToolResultToToolResultBlockParam(
+			{
+				status: 'remote_launched',
+				taskId: 'task-1',
+				sessionUrl: 'https://example.test/session',
+				outputFile: '/tmp/remote-output.jsonl',
+			},
+			'toolu-3',
+		)
+		const text = (result.content as Array<{type: string; text?: string}>)
+			.map(block => block.text ?? '')
+			.join('\n')
+
+		expect(text).toContain('Remote agent launched.')
+		expect(text).toContain('Remote agent launched in CCR')
+		expect(text).toContain('Briefly tell the user')
+	})
 })

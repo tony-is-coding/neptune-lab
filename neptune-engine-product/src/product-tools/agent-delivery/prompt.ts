@@ -6,6 +6,7 @@ import {getSubscriptionType} from 'src/utils/auth.js'
 import {isEnvTruthy} from 'src/utils/envUtils.js'
 import {isTeammate} from 'src/utils/teammate.js'
 import {isInProcessTeammate} from 'src/utils/teammateContext.js'
+import {applyAgentDeliveryResultMapping} from './result.js'
 
 function getAgentDeliveryPolicyPrompt({
 	listViaAttachment,
@@ -68,10 +69,11 @@ Forks are cheap because they share your prompt cache. Don't set \`model\` on a f
 }
 
 export function applyAgentDeliveryPolicy(tool: Tool): Tool {
+	const toolWithResultMapping = applyAgentDeliveryResultMapping(tool)
 	return {
-		...tool,
+		...toolWithResultMapping,
 		async prompt(options) {
-			const basePrompt = await tool.prompt(options)
+			const basePrompt = await toolWithResultMapping.prompt(options)
 			const isCoordinatorPrompt =
 				basePrompt.includes('Launch a new agent to handle') &&
 				!basePrompt.includes('Usage notes:')

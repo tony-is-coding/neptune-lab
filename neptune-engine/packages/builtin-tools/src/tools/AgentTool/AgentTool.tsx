@@ -104,7 +104,6 @@ import {GENERAL_PURPOSE_AGENT} from './built-in/generalPurposeAgent.js'
 import {
 	AGENT_TOOL_NAME,
 	LEGACY_AGENT_TOOL_NAME,
-	ONE_SHOT_BUILTIN_AGENT_TYPES,
 } from './constants.js'
 import {
 	buildForkedMessages,
@@ -120,6 +119,7 @@ import {
 	isBuiltInAgent,
 } from './loadAgentsDir.js'
 import {getPrompt} from './prompt.js'
+import {mapAgentToolResultToBlock} from './resultMapping.js'
 import {runAgent} from './runAgent.js'
 import {
 	renderGroupedAgentToolUse,
@@ -177,13 +177,13 @@ const baseInputSchema = lazySchema(() =>
 			.enum(['sonnet', 'opus', 'haiku'])
 			.optional()
 			.describe(
-				"Optional model override for this agent. Takes precedence over the agent definition's model frontmatter. If omitted, uses the agent definition's model, or inherits from the parent.",
+				'Optional model override for this agent. Takes precedence over the agent definition default. If omitted, runtime uses the agent definition model or inherits from the parent.',
 			),
 		run_in_background: z
 			.boolean()
 			.optional()
 			.describe(
-				'Set to true to run this agent in the background. You will be notified when it completes.',
+				'Set to true to start this agent asynchronously and return launch metadata immediately.',
 			),
 	}),
 )
@@ -195,40 +195,34 @@ const fullInputSchema = lazySchema(() => {
 		name: z
 			.string()
 			.optional()
-			.describe(
-				'Name for the spawned agent. Makes it addressable via SendMessage({to: name}) while running.',
-			),
+			.describe('Optional runtime handle for the spawned agent.'),
 		team_name: z
 			.string()
 			.optional()
-			.describe(
-				'Team name for spawning. Uses current team context if omitted.',
-			),
+			.describe('Optional group context identifier for spawning.'),
 		mode: permissionModeSchema()
 			.optional()
-			.describe(
-				'Permission mode for spawned teammate (e.g., "plan" to require plan approval).',
-			),
+			.describe('Permission mode to apply to the spawned agent.'),
 	})
 
 	return baseInputSchema()
 		.merge(multiAgentInputSchema)
 		.extend({
 			isolation: (process.env.USER_TYPE === 'ant'
-					? z.enum(['worktree', 'remote'])
-					: z.enum(['worktree'])
+				? z.enum(['worktree', 'remote'])
+				: z.enum(['worktree'])
 			)
 				.optional()
 				.describe(
 					process.env.USER_TYPE === 'ant'
-						? 'Isolation mode. "worktree" creates a temporary git worktree so the agent works on an isolated copy of the repo. "remote" launches the agent in a remote CCR environment (always runs in background).'
-						: 'Isolation mode. "worktree" creates a temporary git worktree so the agent works on an isolated copy of the repo.',
+						? 'Execution isolation mode for the spawned agent. Supported values select local isolated execution or remote isolated execution.'
+						: 'Execution isolation mode for the spawned agent.',
 				),
 			cwd: z
 				.string()
 				.optional()
 				.describe(
-					'Absolute path to run the agent in. Overrides the working directory for all filesystem and shell operations within this agent. Mutually exclusive with isolation: "worktree".',
+					'Absolute path to use as the agent working directory for filesystem and shell operations.',
 				),
 		})
 })
@@ -288,7 +282,7 @@ export const outputSchema = lazySchema(() => {
 			.boolean()
 			.optional()
 			.describe(
-				'Whether the calling agent has Read/Bash tools to check progress',
+				'Whether the caller can read output-file progress data',
 			),
 	})
 
@@ -1714,116 +1708,10 @@ export const AgentTool = buildTool({
 		}
 
 		return {behavior: 'allow', updatedInput: input}
-	},
-	mapToolResultToToolResultBlockParam(data, toolUseID) {
-		// Multi-agent spawn result
-		const internalData = data as InternalOutput
-		if (
-			typeof internalData === 'object' &&
-			internalData !== null &&
-			'status' in internalData &&
-			internalData.status === 'teammate_spawned'
-		) {
-			const spawnData = internalData as TeammateSpawnedOutput
-			return {
-				tool_use_id: toolUseID,
-				type: 'tool_result',
-				content: [
-					{
-						type: 'text',
-						text: `Spawned successfully.
-agent_id: ${spawnData.teammate_id}
-name: ${spawnData.name}
-team_name: ${spawnData.team_name}
-The agent is now running and will receive instructions via mailbox.`,
-					},
-				],
-			}
-		}
-		if ('status' in internalData && internalData.status === 'remote_launched') {
-			const r = internalData
-			return {
-				tool_use_id: toolUseID,
-				type: 'tool_result',
-				content: [
-					{
-						type: 'text',
-						text: `Remote agent launched in CCR.\ntaskId: ${r.taskId}\nsession_url: ${r.sessionUrl}\noutput_file: ${r.outputFile}\nThe agent is running remotely. You will be notified automatically when it completes.\nBriefly tell the user what you launched and end your response.`,
-					},
-				],
-			}
-		}
-		if (data.status === 'async_launched') {
-			const prefix = `Async agent launched successfully.\nagentId: ${data.agentId} (internal ID - do not mention to user. Use SendMessage with to: '${data.agentId}' to continue this agent.)\nThe agent is working in the background. You will be notified automatically when it completes.`
-			const instructions = data.canReadOutputFile
-				? `Do not duplicate this agent's work — avoid working with the same files or topics it is using. Work on non-overlapping tasks, or briefly tell the user what you launched and end your response.\noutput_file: ${data.outputFile}\nIf asked, you can check progress before completion by using ${FILE_READ_TOOL_NAME} or ${BASH_TOOL_NAME} tail on the output file.`
-				: `Briefly tell the user what you launched and end your response. Do not generate any other text — agent results will arrive in a subsequent message.`
-			const text = `${prefix}\n${instructions}`
-			return {
-				tool_use_id: toolUseID,
-				type: 'tool_result',
-				content: [
-					{
-						type: 'text',
-						text,
-					},
-				],
-			}
-		}
-		if (data.status === 'completed') {
-			const worktreeData = data as Record<string, unknown>
-			const worktreeInfoText = worktreeData.worktreePath
-				? `\nworktreePath: ${worktreeData.worktreePath}\nworktreeBranch: ${worktreeData.worktreeBranch}`
-				: ''
-			// If the subagent completes with no content, the tool_result is just the
-			// agentId/usage trailer below — a metadata-only block at the prompt tail.
-			// Some models read that as "nothing to act on" and end their turn
-			// immediately. Say so explicitly so the parent has something to react to.
-			const contentOrMarker =
-				data.content.length > 0
-					? data.content
-					: [
-						{
-							type: 'text' as const,
-							text: '(Subagent completed but returned no output.)',
-						},
-					]
-			// One-shot built-ins (Explore, Plan) are never continued via SendMessage
-			// — the agentId hint and <usage> block are dead weight (~135 chars ×
-			// 34M Explore runs/week ≈ 1-2 Gtok/week). Telemetry doesn't parse this
-			// block (it uses logEvent in finalizeAgentTool), so dropping is safe.
-			// agentType is optional for resume compat — missing means show trailer.
-			if (
-				data.agentType &&
-				ONE_SHOT_BUILTIN_AGENT_TYPES.has(data.agentType) &&
-				!worktreeInfoText
-			) {
-				return {
-					tool_use_id: toolUseID,
-					type: 'tool_result',
-					content: contentOrMarker,
-				}
-			}
-			return {
-				tool_use_id: toolUseID,
-				type: 'tool_result',
-				content: [
-					...contentOrMarker,
-					{
-						type: 'text',
-						text: `agentId: ${data.agentId} (use SendMessage with to: '${data.agentId}' to continue this agent)${worktreeInfoText}
-<usage>total_tokens: ${data.totalTokens}
-tool_uses: ${data.totalToolUseCount}
-duration_ms: ${data.totalDurationMs}</usage>`,
-					},
-				],
-			}
-		}
-		data satisfies never
-		throw new Error(
-			`Unexpected agent tool result status: ${(data as { status: string }).status}`,
-		)
-	},
+		},
+		mapToolResultToToolResultBlockParam(data, toolUseID) {
+			return mapAgentToolResultToBlock(data as InternalOutput, toolUseID)
+		},
 	renderToolResultMessage,
 	renderToolUseMessage,
 	renderToolUseTag,
