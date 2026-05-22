@@ -31,6 +31,7 @@ import type {
 	AgentDefinition,
 	AgentDefinitionsResult,
 } from '@neptune/builtin-tools/tools/AgentTool/loadAgentsDir.js'
+import type {McpResourceRuntime} from '@neptune/builtin-tools/tools/MCPResourceRuntime.js'
 import type {
 	AssistantMessage,
 	AttachmentMessage,
@@ -168,6 +169,7 @@ export type ToolUseContext = {
 		thinkingConfig: ThinkingConfig
 		mcpClients: MCPServerConnection[]
 		mcpResources: Record<string, ServerResource[]>
+		mcpResourceRuntime: McpResourceRuntime
 		isNonInteractiveSession: boolean
 		agentDefinitions: AgentDefinitionsResult
 		maxBudgetUsd?: number

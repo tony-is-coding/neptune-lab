@@ -1,16 +1,9 @@
 import {z} from 'zod/v4'
-import {
-	ensureConnectedClient,
-	fetchResourcesForClient,
-} from 'src/services/mcp/client.js'
-import {buildTool, type ToolDef} from 'src/Tool.js'
-import {errorMessage} from 'src/utils/errors.js'
-import {lazySchema} from 'src/utils/lazySchema.js'
-import {logMCPError} from 'src/utils/log.js'
-import {jsonStringify} from 'src/utils/slowOperations.js'
-import {isOutputLineTruncated} from '../../../../../src/ui/terminal'
+import {buildTool, type ToolDef} from '../../tool.js'
+import {jsonStringify} from '../../utils/json.js'
+import {lazySchema} from '../../utils/lazySchema.js'
+import {getMcpResourceRuntime} from '../MCPResourceRuntime.js'
 import {DESCRIPTION, LIST_MCP_RESOURCES_TOOL_NAME, PROMPT} from './prompt.js'
-import {renderToolResultMessage, renderToolUseMessage} from './UI.js'
 
 const inputSchema = lazySchema(() =>
 	z.object({
@@ -63,47 +56,13 @@ export const ListMcpResourcesTool = buildTool({
 	get outputSchema(): OutputSchema {
 		return outputSchema()
 	},
-	async call(input, {options: {mcpClients}}) {
+	async call(input, {options}) {
 		const {server: targetServer} = input
-
-		const clientsToProcess = targetServer
-			? mcpClients.filter(client => client.name === targetServer)
-			: mcpClients
-
-		if (targetServer && clientsToProcess.length === 0) {
-			throw new Error(
-				`Server "${targetServer}" not found. Available servers: ${mcpClients.map(c => c.name).join(', ')}`,
-			)
-		}
-
-		// fetchResourcesForClient is LRU-cached (by server name) and already
-		// warm from startup prefetch. Cache is invalidated on onclose and on
-		// resources/list_changed notifications, so results are never stale.
-		// ensureConnectedClient is a no-op when healthy (memoize hit), but after
-		// onclose it returns a fresh connection so the re-fetch succeeds.
-		const results = await Promise.all(
-			clientsToProcess.map(async client => {
-				if (client.type !== 'connected') return []
-				try {
-					const fresh = await ensureConnectedClient(client)
-					return await fetchResourcesForClient(fresh)
-				} catch (error) {
-					// One server's reconnect failure shouldn't sink the whole result.
-					logMCPError(client.name, errorMessage(error))
-					return []
-				}
-			}),
-		)
+		const runtime = getMcpResourceRuntime(options ?? {})
 
 		return {
-			data: results.flat(),
+			data: await runtime.listResources({server: targetServer}),
 		}
-	},
-	renderToolUseMessage,
-	userFacingName: () => 'listMcpResources',
-	renderToolResultMessage,
-	isResultTruncated(output: Output): boolean {
-		return isOutputLineTruncated(jsonStringify(output))
 	},
 	mapToolResultToToolResultBlockParam(content, toolUseID) {
 		if (!content || content.length === 0) {

@@ -2,12 +2,10 @@ import * as React from 'react'
 import {getPrimitiveComponent} from '../componentRegistry.js'
 import {supportsHyperlinks} from '@anthropic/ink'
 import {Link, Text} from '@anthropic/ink'
-import {
-	renderToolResultMessage as renderDefaultMCPToolResultMessage
-} from '@neptune/builtin-tools/tools/MCPTool/UI.js'
 import type {MCPToolResult} from '../../utils/mcpValidation.js'
 import {truncateToWidth} from '../format.js'
 import {trackClaudeInChromeTabId} from './common.js'
+import {renderProductMCPToolResultMessage} from './mcpFallbackRendering.js'
 
 export type {Tool} from '@modelcontextprotocol/sdk/types.js'
 
@@ -204,7 +202,7 @@ export function renderChromeToolResultMessage(
 	verbose: boolean,
 ): React.ReactNode {
 	if (verbose) {
-		return renderDefaultMCPToolResultMessage(output, [], {verbose})
+		return renderProductMCPToolResultMessage(output, {verbose})
 	}
 
 	let summary: string | null = null

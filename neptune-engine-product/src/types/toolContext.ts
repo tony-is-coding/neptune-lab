@@ -18,6 +18,7 @@ import type {Command} from '../commands.js'
 import type {ThinkingConfig} from '../utils/thinking.js'
 import type {MCPServerConnection, ServerResource} from '../services/mcp/types.js'
 import type {AgentDefinitionsResult} from '@neptune/builtin-tools/tools/AgentTool/loadAgentsDir.js'
+import type {McpResourceRuntime} from '@neptune/builtin-tools/tools/MCPResourceRuntime.js'
 import type {QuerySource} from '../constants/querySource.js'
 import type {Tools} from './toolTypes.js'
 import type {ElicitRequestURLParams, ElicitResult} from '@modelcontextprotocol/sdk/types.js'
@@ -56,6 +57,7 @@ export interface CoreToolContext {
 		thinkingConfig: ThinkingConfig
 		mcpClients: MCPServerConnection[]
 		mcpResources: Record<string, ServerResource[]>
+		mcpResourceRuntime: McpResourceRuntime
 		isNonInteractiveSession: boolean
 		agentDefinitions: AgentDefinitionsResult
 		maxBudgetUsd?: number

@@ -148,6 +148,7 @@ import {isEnvTruthy} from './utils/envUtils.js'
 import {isPowerShellToolEnabled} from './utils/shell/shellToolUtils.js'
 import {isAgentSwarmsEnabled} from './utils/agentSwarmsEnabled.js'
 import {isWorktreeModeEnabled} from './utils/worktreeModeEnabled.js'
+import {applyProductToolUiOverrides} from './utils/tool-ui-adapters/registry.js'
 import {
 	REPL_TOOL_NAME,
 	REPL_ONLY_TOOLS,
@@ -252,8 +253,8 @@ export function getAllBaseTools(): Tools {
 		...(getPowerShellTool() ? [getPowerShellTool()] : []),
 		...(SnipTool ? [SnipTool] : []),
 		...(process.env.NODE_ENV === 'test' ? [TestingPermissionTool] : []),
-		ListMcpResourcesTool,
-		ReadMcpResourceTool,
+		applyProductToolUiOverrides(ListMcpResourcesTool),
+		applyProductToolUiOverrides(ReadMcpResourceTool),
 		// Include ToolSearchTool when tool search might be enabled (optimistic check)
 		// The actual decision to defer tools happens at request time in claude.ts
 		...(isToolSearchEnabledOptimistic() ? [ToolSearchTool] : []),

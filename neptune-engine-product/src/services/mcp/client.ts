@@ -100,6 +100,10 @@ import {
 	persistToolResult,
 } from '../../utils/toolResultStorage.js'
 import {
+	applyProductToolUiOverrides,
+	getProductToolUiOverrides,
+} from '../../utils/tool-ui-adapters/registry.js'
+import {
 	type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
 	logEvent,
 } from '../analytics/index.js'
@@ -229,13 +233,7 @@ function getMcpToolTimeoutMs(): number {
 	)
 }
 
-import {isClaudeInChromeMCPServer} from '../../utils/claudeInChrome/common.js'
-
-// Lazy: toolRendering.tsx pulls React/ink; only needed when Claude-in-Chrome MCP server is connected
 /* eslint-disable @typescript-eslint/no-require-imports */
-const claudeInChromeToolRendering =
-	(): typeof import('../../utils/claudeInChrome/toolRendering.js') =>
-		require('../../utils/claudeInChrome/toolRendering.js')
 // Lazy: wrapper.tsx → hostAdapter.ts → executor.ts pulls both native modules
 // (@ant/computer-use-input + @ant/computer-use-swift). Runtime-gated by
 // GrowthBook tengu_malort_pedway (see gates.ts).
@@ -1982,12 +1980,11 @@ export const fetchToolsForClient = memoizeWithLRU(
 							const displayName = tool.annotations?.title || tool.name
 							return `${client.name} - ${displayName} (MCP)`
 						},
-						...(isClaudeInChromeMCPServer(client.name) &&
-						(client.config.type === 'stdio' || !client.config.type)
-							? claudeInChromeToolRendering().getClaudeInChromeMCPToolOverrides(
-								tool.name,
-							)
-							: {}),
+						...getProductToolUiOverrides({
+							serverName: client.name,
+							toolName: tool.name,
+							configType: client.config.type,
+						}),
 						...(feature('CHICAGO_MCP') &&
 						(client.config.type === 'stdio' || !client.config.type) &&
 						isComputerUseMCPServer!(client.name)
@@ -2194,7 +2191,10 @@ export async function reconnectMcpServerImpl(
 				tool => tools.some(t => toolMatchesName(t, tool.name)),
 			)
 			if (!hasResourceTools) {
-				resourceTools.push(ListMcpResourcesTool, ReadMcpResourceTool)
+				resourceTools.push(
+					applyProductToolUiOverrides(ListMcpResourcesTool),
+					applyProductToolUiOverrides(ReadMcpResourceTool),
+				)
 			}
 		}
 
@@ -2368,7 +2368,10 @@ export async function getMcpToolsCommandsAndResources(
 			const resourceTools: Tool[] = []
 			if (supportsResources && !resourceToolsAdded) {
 				resourceToolsAdded = true
-				resourceTools.push(ListMcpResourcesTool, ReadMcpResourceTool)
+				resourceTools.push(
+					applyProductToolUiOverrides(ListMcpResourcesTool),
+					applyProductToolUiOverrides(ReadMcpResourceTool),
+				)
 			}
 
 			onConnectionAttempt({

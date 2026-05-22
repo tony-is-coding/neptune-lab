@@ -37,6 +37,7 @@ import {query} from './query.js'
 import type {QueryDeps} from './query/deps.js'
 import {categorizeRetryableAPIError} from './services/api/errors.js'
 import type {MCPServerConnection} from './services/mcp/types.js'
+import {createMcpResourceRuntime} from './services/mcp/resourceRuntime.js'
 import type {AppState} from './state/AppStateStore.js'
 import {type Tools, type ToolUseContext, toolMatchesName} from './Tool.js'
 import type {AgentDefinition} from '@neptune/builtin-tools/tools/AgentTool/loadAgentsDir.js'
@@ -339,6 +340,7 @@ export class QueryEngine {
 			// Agent 扩展内容追加在 CC 核心能力之后
 			...(appendSystemPrompt ? [appendSystemPrompt] : []),
 		])
+		const mcpResourceRuntime = createMcpResourceRuntime(mcpClients)
 
 		// Register function hook for structured output enforcement
 		const hasStructuredOutputTool = tools.some(t =>
@@ -372,6 +374,7 @@ export class QueryEngine {
 				thinkingConfig: initialThinkingConfig,
 				mcpClients,
 				mcpResources: {},
+				mcpResourceRuntime,
 				ideInstallationStatus: null,
 				isNonInteractiveSession: true,
 				identityOverride,
@@ -526,6 +529,7 @@ export class QueryEngine {
 				thinkingConfig: initialThinkingConfig,
 				mcpClients,
 				mcpResources: {},
+				mcpResourceRuntime,
 				ideInstallationStatus: null,
 				isNonInteractiveSession: true,
 				identityOverride,

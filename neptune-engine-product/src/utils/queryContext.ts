@@ -13,6 +13,7 @@ import type {Command} from '../commands.js'
 import {getSystemPrompt} from '../constants/prompts.js'
 import {getSystemContext, getUserContext} from '../context.js'
 import type {MCPServerConnection} from '../services/mcp/types.js'
+import {createMcpResourceRuntime} from '../services/mcp/resourceRuntime.js'
 import type {AppState} from '../state/AppStateStore.js'
 import type {Tools, ToolUseContext} from '../Tool.js'
 import type {AgentDefinition} from '@neptune/builtin-tools/tools/AgentTool/loadAgentsDir.js'
@@ -112,6 +113,7 @@ export async function buildSideQuestionFallbackParams({
 }): Promise<CacheSafeParams> {
 	const mainLoopModel = getMainLoopModel()
 	const appState = getAppState()
+	const mcpResourceRuntime = createMcpResourceRuntime(mcpClients)
 
 	const {defaultSystemPrompt, userContext, systemContext} =
 		await fetchSystemPromptParts({
@@ -153,6 +155,7 @@ export async function buildSideQuestionFallbackParams({
 					: {type: 'disabled'}),
 			mcpClients,
 			mcpResources: {},
+			mcpResourceRuntime,
 			isNonInteractiveSession: true,
 			agentDefinitions: {activeAgents: agents, allAgents: []},
 			customSystemPrompt,

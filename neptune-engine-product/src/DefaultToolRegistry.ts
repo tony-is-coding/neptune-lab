@@ -10,6 +10,7 @@ import {feature} from 'bun:bundle'
 import type {ToolPermissionContext} from './Tool.js'
 import type {Tool, Tools} from './Tool.js'
 import type {ToolRegistry, ToolSet} from './ToolRegistry.js'
+import {applyProductToolUiOverrides} from './utils/tool-ui-adapters/registry.js'
 
 // 核心工具导入（无条件加载，SDK 必需）
 import {AgentTool} from '@neptune/builtin-tools/tools/AgentTool/AgentTool.js'
@@ -158,7 +159,10 @@ export class DefaultToolRegistry implements ToolRegistry {
 		try {
 			const {ListMcpResourcesTool} = require('@neptune/builtin-tools/tools/ListMcpResourcesTool/ListMcpResourcesTool.js')
 			const {ReadMcpResourceTool} = require('@neptune/builtin-tools/tools/ReadMcpResourceTool/ReadMcpResourceTool.js')
-			tools.push(ListMcpResourcesTool, ReadMcpResourceTool)
+			tools.push(
+				applyProductToolUiOverrides(ListMcpResourcesTool),
+				applyProductToolUiOverrides(ReadMcpResourceTool),
+			)
 		} catch {
 		}
 
