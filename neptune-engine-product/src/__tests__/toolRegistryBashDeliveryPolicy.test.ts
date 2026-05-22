@@ -227,3 +227,20 @@ describe('product tool registries Agent delivery policy', () => {
 		expect(prompt).toContain('## When to fork')
 	})
 })
+
+describe('product tool registries WebFetch delivery policy', () => {
+	test.each([
+		['sdk', () => new DefaultToolRegistry({mode: 'sdk'})],
+		['cli', () => new DefaultToolRegistry({mode: 'cli'})],
+	])('%s registry wraps WebFetch with product delivery policy', async (_, create) => {
+		const registry = create()
+		const webFetch = registry.getToolByName('WebFetch')
+
+		expect(webFetch).toBeDefined()
+		const prompt = await webFetch!.prompt({} as never)
+
+		expect(prompt).toContain('# WebFetch product routing')
+		expect(prompt).toContain('For GitHub URLs')
+		expect(prompt).toContain('gh pr view')
+	})
+})

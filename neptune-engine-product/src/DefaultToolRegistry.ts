@@ -12,6 +12,7 @@ import type {Tool, Tools} from './Tool.js'
 import type {ToolRegistry, ToolSet} from './ToolRegistry.js'
 import {applyAgentDeliveryPolicy} from './product-tools/agent-delivery/prompt.js'
 import {applyBashDeliveryPolicy} from './product-tools/bash-delivery/prompt.js'
+import {applyWebFetchDeliveryPolicy} from './product-tools/webfetch-delivery/prompt.js'
 import {applyProductToolUiOverrides} from './utils/tool-ui-adapters/registry.js'
 import {isAgentSwarmsEnabled} from './utils/agentSwarmsEnabled.js'
 import {isWorktreeModeEnabled} from './utils/worktreeModeEnabled.js'
@@ -37,6 +38,7 @@ import {ExitPlanModeV2Tool} from '@neptune/builtin-tools/tools/ExitPlanModeTool/
 
 const ProductBashTool: Tool = applyBashDeliveryPolicy(BashTool as Tool)
 const ProductAgentTool: Tool = applyAgentDeliveryPolicy(AgentTool as Tool)
+const ProductWebFetchTool: Tool = applyWebFetchDeliveryPolicy(WebFetchTool as Tool)
 
 /**
  * DefaultToolRegistry 实现
@@ -112,7 +114,7 @@ export class DefaultToolRegistry implements ToolRegistry {
 			applyProductToolUiOverrides(GlobTool),
 			applyProductToolUiOverrides(GrepTool),
 			applyProductToolUiOverrides(NotebookEditTool),
-			applyProductToolUiOverrides(WebFetchTool),
+			applyProductToolUiOverrides(ProductWebFetchTool),
 			applyProductToolUiOverrides(WebSearchTool),
 			applyProductToolUiOverrides(TaskCreateTool),
 			applyProductToolUiOverrides(TaskGetTool),

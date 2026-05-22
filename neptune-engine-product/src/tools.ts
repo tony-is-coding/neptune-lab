@@ -157,6 +157,7 @@ import {isWorktreeModeEnabled} from './utils/worktreeModeEnabled.js'
 import {applyProductToolUiOverrides} from './utils/tool-ui-adapters/registry.js'
 import {applyAgentDeliveryPolicy} from './product-tools/agent-delivery/prompt.js'
 import {applyBashDeliveryPolicy} from './product-tools/bash-delivery/prompt.js'
+import {applyWebFetchDeliveryPolicy} from './product-tools/webfetch-delivery/prompt.js'
 import {
 	REPL_TOOL_NAME,
 	REPL_ONLY_TOOLS,
@@ -166,6 +167,7 @@ import {
 export {REPL_ONLY_TOOLS}
 const ProductAgentTool: Tool = applyAgentDeliveryPolicy(AgentTool as Tool)
 const ProductBashTool: Tool = applyBashDeliveryPolicy(BashTool as Tool)
+const ProductWebFetchTool: Tool = applyWebFetchDeliveryPolicy(WebFetchTool as Tool)
 /* eslint-disable @typescript-eslint/no-require-imports */
 const getPowerShellTool = () => {
 	if (!isPowerShellToolEnabled()) return null
@@ -226,7 +228,7 @@ export function getAllBaseTools(): Tools {
 		applyProductToolUiOverrides(FileEditTool),
 		applyProductToolUiOverrides(FileWriteTool),
 		applyProductToolUiOverrides(NotebookEditTool),
-		applyProductToolUiOverrides(WebFetchTool),
+		applyProductToolUiOverrides(ProductWebFetchTool),
 		applyProductToolUiOverrides(TodoWriteTool),
 		applyProductToolUiOverrides(WebSearchTool),
 		applyProductToolUiOverrides(TaskStopTool),

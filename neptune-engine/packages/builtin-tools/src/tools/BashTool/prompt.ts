@@ -166,7 +166,7 @@ export function getSimplePrompt(): string {
 		: '`find`, `grep`, `cat`, `head`, `tail`, `sed`, `awk`, or `echo`'
 
 	const multipleCommandsSubitems = [
-		`If the commands are independent and can run in parallel, make multiple ${BASH_TOOL_NAME} tool calls in a single message. Example: if you need to run "git status" and "git diff", send a single message with two ${BASH_TOOL_NAME} tool calls in parallel.`,
+		`If the commands are independent and can run in parallel, make multiple ${BASH_TOOL_NAME} tool calls in a single message. Example: if you need to run "pwd" and "node --version", send a single message with two ${BASH_TOOL_NAME} tool calls in parallel.`,
 		`If the commands depend on each other and must run sequentially, use a single ${BASH_TOOL_NAME} call with '&&' to chain them together.`,
 		"Use ';' only when you need to run commands sequentially but don't care if earlier commands fail.",
 		'DO NOT use newlines to separate commands (newlines are ok in quoted strings).',
