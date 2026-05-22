@@ -1,29 +1,16 @@
 /**
- * engine/types/command.ts - 重新导出 src/types/command.ts 的类型
+ * engine/types/command.ts
  *
- * 此文件作为 engine/ 内部的类型声明层，避免从 engine/ 向外穿透到 src/types/
- * engine/ 内的文件应该从这里导入类型，而不是直接从 src/types/ 导入
+ * Command 最小接口 — engine-local opaque type
+ *
+ * engine 层只需要把 Command 当作不透明容器传递给 QueryEngine，
+ * 不需要完整的 product Command 类型。
+ * 内联于此，消除对 @neptune/engine-product 的反向依赖。
  */
 
-// 重新导出命令类型
-export type {
-	Command,
-	CommandBase,
-	PromptCommand,
-	LocalCommandModule,
-	LocalJSXCommandModule,
-	LocalCommandCall,
-	LocalJSXCommandCall,
-	LocalCommandResult,
-	LocalJSXCommandContext,
-	LocalJSXCommandOnDone,
-	ResumeEntrypoint,
-	CommandResultDisplay,
-	CommandAvailability,
-} from '@neptune/engine-product/types/command.js'
-
-// 重新导出辅助函数
-export {
-	getCommandName,
-	isCommandEnabled,
-} from '@neptune/engine-product/types/command.js'
+/** Opaque Command type — engine 内部只做透传，不解构 */
+export type Command = {
+	readonly name: string
+	readonly description?: string
+	[key: string]: unknown
+}

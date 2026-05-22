@@ -5,7 +5,7 @@ import {
 	hasUIImplementation,
 	filterToCoreTools,
 } from '../ToolAdapter.js'
-import type {CoreTool, Tool, UITool} from '@neptune/engine-product/types/toolTypes.js'
+import type {CoreTool, Tool, UITool} from '../../types/tool.js'
 import {z} from 'zod/v4'
 
 describe('ToolAdapter', () => {
