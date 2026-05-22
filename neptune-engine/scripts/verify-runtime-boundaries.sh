@@ -59,9 +59,14 @@ check_empty \
 check_max_count \
   "builtin-tools host/product reverse dependencies must not increase" \
   "(@neptune/engine-product|from ['\"]src/|\\b(require|import)\\(['\"]src/|from ['\"]\\.\\./\\.\\./\\.\\./\\.\\./\\.\\./src/)" \
-  753 \
+  750 \
   packages/builtin-tools/src \
   packages/builtin-tools/package.json
+
+check_empty \
+  "builtin Bash prompt must not contain product git delivery policy" \
+  "(# Committing changes with git|# Creating pull requests|gh pr create|/commit-push-pr|shouldIncludeGitInstructions|getAttributionTexts|getUndercoverInstructions)" \
+  packages/builtin-tools/src/tools/BashTool/prompt.ts
 
 check_max_count \
   "builtin-tools React/Ink/product UI imports must not increase" \

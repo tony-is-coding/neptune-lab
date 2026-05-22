@@ -10,6 +10,7 @@ import {feature} from 'bun:bundle'
 import type {ToolPermissionContext} from './Tool.js'
 import type {Tool, Tools} from './Tool.js'
 import type {ToolRegistry, ToolSet} from './ToolRegistry.js'
+import {applyBashDeliveryPolicy} from './product-tools/bash-delivery/prompt.js'
 import {applyProductToolUiOverrides} from './utils/tool-ui-adapters/registry.js'
 import {isWorktreeModeEnabled} from './utils/worktreeModeEnabled.js'
 
@@ -31,6 +32,8 @@ import {TaskListTool} from '@neptune/builtin-tools/tools/TaskListTool/TaskListTo
 import {TaskStopTool} from '@neptune/builtin-tools/tools/TaskStopTool/TaskStopTool.js'
 import {TaskOutputTool} from '@neptune/builtin-tools/tools/TaskOutputTool/TaskOutputTool.js'
 import {ExitPlanModeV2Tool} from '@neptune/builtin-tools/tools/ExitPlanModeTool/ExitPlanModeV2Tool.js'
+
+const ProductBashTool: Tool = applyBashDeliveryPolicy(BashTool as Tool)
 
 /**
  * DefaultToolRegistry 实现
@@ -99,7 +102,7 @@ export class DefaultToolRegistry implements ToolRegistry {
 	private getCoreTools(): Tool[] {
 		return [
 			applyProductToolUiOverrides(AgentTool),
-			applyProductToolUiOverrides(BashTool),
+			applyProductToolUiOverrides(ProductBashTool),
 			applyProductToolUiOverrides(FileEditTool),
 			applyProductToolUiOverrides(FileReadTool),
 			applyProductToolUiOverrides(FileWriteTool),
