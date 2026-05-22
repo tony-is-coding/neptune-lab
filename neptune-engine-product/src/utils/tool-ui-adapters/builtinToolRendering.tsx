@@ -2,12 +2,16 @@ import * as React from 'react'
 import {Box, Text, stringWidth} from '@anthropic/ink'
 import {BLACK_CIRCLE} from '../../constants/figures.js'
 import {MessageResponse} from '../../ui/components/MessageResponse.js'
+import {homedir} from 'os'
+import {isAbsolute, relative, sep} from 'path'
 import {getModeColor} from '../permissions/PermissionMode.js'
 import {jsonParse, jsonStringify} from '../slowOperations.js'
 import {countCharInString} from '../stringUtils.js'
 import {formatFileSize} from '../format.js'
 import {truncateToWidthNoEllipsis} from '../truncate.js'
 import type {ProductToolUiOverrides} from './registry.js'
+
+const FILE_NOT_FOUND_CWD_NOTE = 'Note: your current working directory is'
 
 type WebSearchResult = {
 	tool_use_id: string
@@ -33,6 +37,22 @@ type WebFetchOutput = {
 	result: string
 	durationMs: number
 	url: string
+}
+
+type GrepOutput = {
+	mode?: 'content' | 'files_with_matches' | 'count'
+	numFiles: number
+	filenames: string[]
+	content?: string
+	numLines?: number
+	numMatches?: number
+}
+
+type GlobOutput = {
+	durationMs: number
+	numFiles: number
+	filenames: string[]
+	truncated: boolean
 }
 
 type ConfigInput = {
@@ -86,6 +106,10 @@ export function getBuiltinToolUiOverrides(
 	toolName: string,
 ): ProductToolUiOverrides {
 	switch (toolName) {
+		case 'Grep':
+			return grepOverrides
+		case 'Glob':
+			return globOverrides
 		case 'WebSearch':
 			return webSearchOverrides
 		case 'WebFetch':
@@ -105,6 +129,53 @@ export function getBuiltinToolUiOverrides(
 		default:
 			return {}
 	}
+}
+
+const grepOverrides: ProductToolUiOverrides = {
+	userFacingName() {
+		return 'Search'
+	},
+	renderToolUseMessage(input, {verbose}) {
+		const {pattern, path} = input as Partial<{pattern: string; path?: string}>
+		if (!pattern) return null
+		const parts = [`pattern: "${pattern}"`]
+		if (path) {
+			parts.push(`path: "${verbose ? path : getSearchDisplayPath(path)}"`)
+		}
+		return parts.join(', ')
+	},
+	renderToolUseErrorMessage(result, {verbose}) {
+		return renderSearchToolUseErrorMessage(result, verbose)
+	},
+	renderToolResultMessage(output, _progressMessages, {verbose}) {
+		return renderSearchToolResultMessage(output as GrepOutput, verbose)
+	},
+}
+
+const globOverrides: ProductToolUiOverrides = {
+	userFacingName() {
+		return 'Search'
+	},
+	renderToolUseMessage(input, {verbose}) {
+		const {pattern, path} = input as Partial<{pattern: string; path?: string}>
+		if (!pattern) return null
+		if (!path) return `pattern: "${pattern}"`
+		return `pattern: "${pattern}", path: "${verbose ? path : getSearchDisplayPath(path)}"`
+	},
+	renderToolUseErrorMessage(result, {verbose}) {
+		return renderSearchToolUseErrorMessage(result, verbose)
+	},
+	renderToolResultMessage(output, _progressMessages, {verbose}) {
+		const {filenames, numFiles} = output as GlobOutput
+		return renderSearchToolResultMessage(
+			{
+				mode: 'files_with_matches',
+				filenames,
+				numFiles,
+			},
+			verbose,
+		)
+	},
 }
 
 const webSearchOverrides: ProductToolUiOverrides = {
@@ -219,6 +290,183 @@ const webFetchOverrides: ProductToolUiOverrides = {
 			</MessageResponse>
 		)
 	},
+}
+
+function renderSearchToolUseErrorMessage(
+	result: unknown,
+	verbose: boolean,
+): React.ReactNode {
+	if (
+		!verbose &&
+		typeof result === 'string' &&
+		extractTag(result, 'tool_use_error')
+	) {
+		const errorMessage = extractTag(result, 'tool_use_error')
+		if (errorMessage?.includes(FILE_NOT_FOUND_CWD_NOTE)) {
+			return (
+				<MessageResponse>
+					<Text color="error">File not found</Text>
+				</MessageResponse>
+			)
+		}
+		return (
+			<MessageResponse>
+				<Text color="error">Error searching files</Text>
+			</MessageResponse>
+		)
+	}
+	return renderSearchFallbackError(result, verbose)
+}
+
+function renderSearchToolResultMessage(
+	{
+		mode = 'files_with_matches',
+		filenames,
+		numFiles,
+		content,
+		numLines,
+		numMatches,
+	}: GrepOutput,
+	verbose: boolean,
+): React.ReactNode {
+	if (mode === 'content') {
+		return (
+			<SearchResultSummary
+				count={numLines ?? 0}
+				countLabel="lines"
+				content={content}
+				verbose={verbose}
+			/>
+		)
+	}
+
+	if (mode === 'count') {
+		return (
+			<SearchResultSummary
+				count={numMatches ?? 0}
+				countLabel="matches"
+				secondaryCount={numFiles}
+				secondaryLabel="files"
+				content={content}
+				verbose={verbose}
+			/>
+		)
+	}
+
+	return (
+		<SearchResultSummary
+			count={numFiles}
+			countLabel="files"
+			content={filenames.map(filename => filename).join('\n')}
+			verbose={verbose}
+		/>
+	)
+}
+
+function SearchResultSummary({
+	count,
+	countLabel,
+	secondaryCount,
+	secondaryLabel,
+	content,
+	verbose,
+}: {
+	count: number
+	countLabel: string
+	secondaryCount?: number
+	secondaryLabel?: string
+	content?: string
+	verbose: boolean
+}): React.ReactNode {
+	const primaryText = (
+		<Text>
+			Found <Text bold>{count} </Text>
+			{count === 0 || count > 1 ? countLabel : countLabel.slice(0, -1)}
+		</Text>
+	)
+
+	const secondaryText =
+		secondaryCount !== undefined && secondaryLabel ? (
+			<Text>
+				{' '}
+				across <Text bold>{secondaryCount} </Text>
+				{secondaryCount === 0 || secondaryCount > 1
+					? secondaryLabel
+					: secondaryLabel.slice(0, -1)}
+			</Text>
+		) : null
+
+	if (verbose) {
+		return (
+			<Box flexDirection="column">
+				<Box flexDirection="row">
+					<Text>
+						<Text dimColor>&nbsp;&nbsp;⎿ &nbsp;</Text>
+						{primaryText}
+						{secondaryText}
+					</Text>
+				</Box>
+				<Box marginLeft={5}>
+					<Text>{content}</Text>
+				</Box>
+			</Box>
+		)
+	}
+
+	return (
+		<MessageResponse height={1}>
+			<Text>
+				{primaryText}
+				{secondaryText} {count > 0 ? <Text dimColor>(ctrl+o to expand)</Text> : null}
+			</Text>
+		</MessageResponse>
+	)
+}
+
+function getSearchDisplayPath(path: string): string {
+	const cwd = process.cwd()
+	if (isAbsolute(path)) {
+		const relativePath = relative(cwd, path)
+		if (relativePath && !relativePath.startsWith('..')) {
+			return relativePath
+		}
+		const homeDir = homedir()
+		if (path.startsWith(homeDir + sep)) {
+			return '~' + path.slice(homeDir.length)
+		}
+	}
+	return path
+}
+
+function extractTag(html: string, tagName: string): string | null {
+	if (!html.trim() || !tagName.trim()) return null
+	const escapedTag = tagName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+	const pattern = new RegExp(
+		`<${escapedTag}(?:\\s+[^>]*)?>([\\s\\S]*?)<\\/${escapedTag}>`,
+		'i',
+	)
+	return pattern.exec(html)?.[1] ?? null
+}
+
+function renderSearchFallbackError(
+	result: unknown,
+	verbose: boolean,
+): React.ReactNode {
+	if (typeof result !== 'string') {
+		return (
+			<MessageResponse>
+				<Text color="error">Tool execution failed</Text>
+			</MessageResponse>
+		)
+	}
+	const error = extractTag(result, 'tool_use_error') ?? result
+	const cleaned = error.replace(/<\/?error>/g, '').trim()
+	const lines = verbose ? cleaned : cleaned.split('\n').slice(0, 10).join('\n')
+	return (
+		<MessageResponse>
+			<Text color="error">{lines.startsWith('Error:') ? lines : `Error: ${lines}`}</Text>
+		</MessageResponse>
+	)
 }
 
 const configOverrides: ProductToolUiOverrides = {

@@ -22,13 +22,9 @@ import {ripGrep} from 'src/utils/ripgrep.js'
 import {semanticBoolean} from '../../utils/semanticBoolean.js'
 import {semanticNumber} from '../../utils/semanticNumber.js'
 import {plural} from '../../utils/string.js'
+import {TOOL_SUMMARY_MAX_LENGTH} from '../../constants/toolLimits.js'
+import {truncate} from '../../utils/truncate.js'
 import {GREP_TOOL_NAME, getDescription} from './prompt.js'
-import {
-	getToolUseSummary,
-	renderToolResultMessage,
-	renderToolUseErrorMessage,
-	renderToolUseMessage,
-} from './UI.js'
 
 const inputSchema = lazySchema(() =>
 	z.strictObject({
@@ -157,6 +153,24 @@ type OutputSchema = ReturnType<typeof outputSchema>
 
 type Output = z.infer<OutputSchema>
 
+function getToolUseSummary(
+	input:
+		| Partial<{
+				pattern: string
+				path?: string
+				glob?: string
+				type?: string
+				output_mode?: 'content' | 'files_with_matches' | 'count'
+				head_limit?: number
+		  }>
+		| undefined,
+): string | null {
+	if (!input?.pattern) {
+		return null
+	}
+	return truncate(input.pattern, TOOL_SUMMARY_MAX_LENGTH)
+}
+
 export const GrepTool = buildTool({
 	name: GREP_TOOL_NAME,
 	searchHint: 'search file contents with regex (ripgrep)',
@@ -241,9 +255,6 @@ export const GrepTool = buildTool({
 	async prompt() {
 		return getDescription()
 	},
-	renderToolUseMessage,
-	renderToolUseErrorMessage,
-	renderToolResultMessage,
 	// SearchResultSummary shows content (mode=content) or filenames.join.
 	// numFiles/numLines/numMatches are chrome ("Found 3 files") — fine to
 	// skip (under-count, not phantom). Glob reuses this via UI.tsx:65.

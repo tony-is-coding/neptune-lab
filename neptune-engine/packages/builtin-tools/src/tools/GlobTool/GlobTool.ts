@@ -14,14 +14,9 @@ import {expandPath, toRelativePath} from 'src/utils/path.js'
 import {checkReadPermissionForTool} from 'src/utils/permissions/filesystem.js'
 import type {PermissionDecision} from 'src/utils/permissions/PermissionResult.js'
 import {matchWildcardPattern} from 'src/utils/permissions/shellRuleMatching.js'
+import {TOOL_SUMMARY_MAX_LENGTH} from '../../constants/toolLimits.js'
+import {truncate} from '../../utils/truncate.js'
 import {DESCRIPTION, GLOB_TOOL_NAME} from './prompt.js'
-import {
-	getToolUseSummary,
-	renderToolResultMessage,
-	renderToolUseErrorMessage,
-	renderToolUseMessage,
-	userFacingName,
-} from './UI.js'
 
 const inputSchema = lazySchema(() =>
 	z.strictObject({
@@ -53,6 +48,19 @@ const outputSchema = lazySchema(() =>
 type OutputSchema = ReturnType<typeof outputSchema>
 
 export type Output = z.infer<OutputSchema>
+
+function userFacingName(): string {
+	return 'Search'
+}
+
+function getToolUseSummary(
+	input: Partial<{pattern: string; path: string}> | undefined,
+): string | null {
+	if (!input?.pattern) {
+		return null
+	}
+	return truncate(input.pattern, TOOL_SUMMARY_MAX_LENGTH)
+}
 
 export const GlobTool = buildTool({
 	name: GLOB_TOOL_NAME,
@@ -143,9 +151,6 @@ export const GlobTool = buildTool({
 	async prompt() {
 		return DESCRIPTION
 	},
-	renderToolUseMessage,
-	renderToolUseErrorMessage,
-	renderToolResultMessage,
 	// Reuses Grep's render (UI.tsx:65) — shows filenames.join. durationMs/
 	// numFiles are "Found 3 files in 12ms" chrome (under-count, fine).
 	extractSearchText({filenames}) {
