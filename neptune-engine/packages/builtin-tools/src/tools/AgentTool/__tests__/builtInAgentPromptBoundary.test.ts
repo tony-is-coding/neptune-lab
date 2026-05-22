@@ -7,6 +7,7 @@ const files = [
 	'../built-in/exploreAgent.ts',
 	'../built-in/planAgent.ts',
 	'../built-in/verificationAgent.ts',
+	'../builtInAgents.ts',
 	'../loadAgentsDir.ts',
 ]
 
@@ -15,6 +16,13 @@ function readSource(path: string): string {
 }
 
 describe('built-in Agent prompts runtime boundary', () => {
+	test('does not register product-owned Claude Code agents in engine defaults', () => {
+		const builtInAgentsSource = readSource('../builtInAgents.ts')
+
+		expect(builtInAgentsSource).not.toContain('CLAUDE_CODE_GUIDE_AGENT')
+		expect(builtInAgentsSource).not.toContain('STATUSLINE_SETUP_AGENT')
+	})
+
 	test('keeps general-purpose, Explore, Plan, and Verification prompts free of product delivery language', () => {
 		const source = files.map(readSource).join('\n')
 

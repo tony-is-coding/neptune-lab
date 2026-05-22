@@ -24,6 +24,7 @@ import type {AppState} from '../../state/AppState.js'
 import type {AgentDefinitionsResult} from '@neptune/builtin-tools/tools/AgentTool/loadAgentsDir.js'
 import {getAgentDefinitionsWithOverrides} from '@neptune/builtin-tools/tools/AgentTool/loadAgentsDir.js'
 import type {PluginError} from '../../types/plugin.js'
+import {applyProductBuiltInAgents} from '../../product-agents/productBuiltInAgents.js'
 import {logForDebugging} from '../debug.js'
 import {errorMessage} from '../errors.js'
 import {logError} from '../log.js'
@@ -88,7 +89,9 @@ export async function refreshActivePlugins(
 	const pluginResult = await loadAllPlugins()
 	const [pluginCommands, agentDefinitions] = await Promise.all([
 		getPluginCommands(),
-		getAgentDefinitionsWithOverrides(getOriginalCwd()),
+		getAgentDefinitionsWithOverrides(getOriginalCwd()).then(
+			applyProductBuiltInAgents,
+		),
 	])
 
 	const {enabled, disabled, errors} = pluginResult

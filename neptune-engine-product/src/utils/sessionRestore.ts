@@ -11,6 +11,7 @@ import {
 } from '../bootstrap/state.js'
 import {clearSystemPromptSections} from '../constants/systemPromptSections.js'
 import {restoreCostStateForSession} from '../cost-tracker.js'
+import {applyProductBuiltInAgents} from '../product-agents/productBuiltInAgents.js'
 import type {AppState} from '../state/AppState.js'
 import type {AgentColorName} from '@neptune/builtin-tools/tools/AgentTool/agentColorManager.js'
 import {
@@ -261,7 +262,9 @@ export async function refreshAgentDefinitionsForModeSwitch(
 	// Re-derive agent definitions after mode switch so built-in agents
 	// reflect the new coordinator/normal mode
 	getAgentDefinitionsWithOverrides.cache.clear?.()
-	const freshAgentDefs = await getAgentDefinitionsWithOverrides(currentCwd)
+	const freshAgentDefs = applyProductBuiltInAgents(
+		await getAgentDefinitionsWithOverrides(currentCwd),
+	)
 	const freshAllAgents = [...freshAgentDefs.allAgents, ...cliAgents]
 	return {
 		...freshAgentDefs,
