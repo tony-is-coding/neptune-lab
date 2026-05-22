@@ -11,7 +11,7 @@ import {
 	getClaudeAIOAuthTokens,
 } from 'src/utils/auth.js'
 import {lazySchema} from '../../utils/lazySchema.js'
-import {jsonStringify} from 'src/utils/slowOperations.js'
+import {jsonStringify} from '../../utils/json.js'
 import {DESCRIPTION, PROMPT, REMOTE_TRIGGER_TOOL_NAME} from './prompt.js'
 import {renderToolResultMessage, renderToolUseMessage} from './UI.js'
 

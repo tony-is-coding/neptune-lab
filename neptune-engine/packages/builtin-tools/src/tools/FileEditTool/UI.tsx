@@ -6,7 +6,7 @@ import {
 	FileEditToolUseRejectedMessage
 } from '../../../../../src/ui/components/FileEditToolUseRejectedMessage'
 import {MessageResponse} from '../../../../../src/ui/components/MessageResponse'
-import {extractTag} from 'src/utils/messages.js'
+import {extractTag} from '../../utils/messages.js'
 import {FallbackToolUseErrorMessage} from '../../../../../src/ui/components/FallbackToolUseErrorMessage'
 import {FileEditToolUpdatedMessage} from '../../../../../src/ui/components/FileEditToolUpdatedMessage'
 

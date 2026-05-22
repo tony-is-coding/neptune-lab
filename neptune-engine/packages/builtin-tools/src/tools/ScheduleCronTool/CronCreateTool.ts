@@ -7,7 +7,7 @@ import {
 	listAllCronTasks,
 	nextCronRunMs,
 } from 'src/utils/cronTasks.js'
-import {semanticBoolean} from 'src/utils/semanticBoolean.js'
+import {semanticBoolean} from '../../utils/semanticBoolean.js'
 import {getTeammateContext} from 'src/utils/teammateContext.js'
 import type {ValidationResult} from '../../tool.js'
 import {buildTool, type ToolDef} from '../../tool.js'

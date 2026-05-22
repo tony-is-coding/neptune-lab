@@ -1,6 +1,6 @@
 import type {PermissionResult} from 'src/utils/permissions/PermissionResult.js'
 import {z} from 'zod/v4'
-import {jsonStringify} from 'src/utils/slowOperations.js'
+import {jsonStringify} from '../../utils/json.js'
 import {buildTool, type ToolDef, type ToolUseContext} from '../../tool.js'
 import {lazySchema} from '../../utils/lazySchema.js'
 import {createAdapter} from './adapters/index.js'

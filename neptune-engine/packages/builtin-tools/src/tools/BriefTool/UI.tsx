@@ -1,7 +1,7 @@
 import figures from 'figures'
 import React from 'react'
 import {Markdown} from '../../../../../src/ui/components/Markdown'
-import {BLACK_CIRCLE} from 'src/constants/figures.js'
+import {BLACK_CIRCLE} from '../../constants/figures.js'
 import {Box, Text} from '@anthropic/ink'
 import type {ProgressMessage} from 'src/types/message.js'
 import {getDisplayPath} from 'src/utils/file.js'

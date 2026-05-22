@@ -1,5 +1,5 @@
 import {z} from 'zod/v4'
-import {TOOL_SUMMARY_MAX_LENGTH} from 'src/constants/toolLimits.js'
+import {TOOL_SUMMARY_MAX_LENGTH} from '../../constants/toolLimits.js'
 import type {ToolResultBlockParam, ToolUseContext, ValidationResult} from '../../tool.js'
 import {buildTool} from '../../tool.js'
 import {spawnShellTask} from 'src/tasks/LocalShellTask/LocalShellTask.js'

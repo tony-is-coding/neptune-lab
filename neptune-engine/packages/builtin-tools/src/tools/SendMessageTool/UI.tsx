@@ -1,7 +1,7 @@
 import React from 'react'
 import {MessageResponse} from '../../../../../src/ui/components/MessageResponse'
 import {Text} from '@anthropic/ink'
-import {jsonParse} from '../../../../../src/utils/slowOperations.js'
+import {jsonParse} from '../../utils/json.js'
 import type {Input, SendMessageToolOutput} from './SendMessageTool.js'
 
 export function renderToolUseMessage(input: Partial<Input>): React.ReactNode {

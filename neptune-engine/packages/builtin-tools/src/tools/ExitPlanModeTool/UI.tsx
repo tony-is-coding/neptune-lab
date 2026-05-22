@@ -4,7 +4,7 @@ import {MessageResponse} from '../../../../../src/ui/components/MessageResponse'
 import {
 	RejectedPlanMessage
 } from '../../../../../src/ui/components/messages/UserToolResultMessage/RejectedPlanMessage'
-import {BLACK_CIRCLE} from 'src/constants/figures.js'
+import {BLACK_CIRCLE} from '../../constants/figures.js'
 import {getModeColor} from 'src/utils/permissions/PermissionMode.js'
 import {Box, Text} from '@anthropic/ink'
 import type {ToolProgressData} from '../../tool.js'

@@ -5,7 +5,7 @@ import type {Tool} from '../../tool.js'
 import {buildTool, type ToolDef} from '../../tool.js'
 import {isAgentSwarmsEnabled} from 'src/utils/agentSwarmsEnabled.js'
 import {lazySchema} from '../../utils/lazySchema.js'
-import {jsonStringify} from 'src/utils/slowOperations.js'
+import {jsonStringify} from '../../utils/json.js'
 import {TEAM_LEAD_NAME} from 'src/utils/swarm/constants.js'
 import {
 	cleanupTeamDirectories,

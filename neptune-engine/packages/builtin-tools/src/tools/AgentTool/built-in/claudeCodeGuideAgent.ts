@@ -8,7 +8,7 @@ import {WEB_SEARCH_TOOL_NAME} from '@neptune/builtin-tools/tools/WebSearchTool/p
 import {isUsing3PServices} from 'src/utils/auth.js'
 import {hasEmbeddedSearchTools} from 'src/utils/embeddedTools.js'
 import {getSettings_DEPRECATED} from 'src/utils/settings/settings.js'
-import {jsonStringify} from 'src/utils/slowOperations.js'
+import {jsonStringify} from '../../../utils/json.js'
 import type {
 	AgentDefinition,
 	BuiltInAgentDefinition,

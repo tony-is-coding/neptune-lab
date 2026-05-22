@@ -8,13 +8,13 @@ import type {RemoteAgentTaskState} from 'src/tasks/RemoteAgentTask/RemoteAgentTa
 import type {TaskState} from 'src/tasks/types.js'
 import {AbortError} from 'src/utils/errors.js'
 import {lazySchema} from '../../utils/lazySchema.js'
-import {semanticBoolean} from 'src/utils/semanticBoolean.js'
+import {semanticBoolean} from '../../utils/semanticBoolean.js'
 import {sleep} from 'src/utils/sleep.js'
 import {countCharInString} from '../../utils/string.js'
 import {getTaskOutput} from 'src/utils/task/diskOutput.js'
 import {updateTaskState} from 'src/utils/task/framework.js'
 import {formatTaskOutput} from 'src/utils/task/outputFormatting.js'
-import {extractTextContent} from 'src/utils/messages.js'
+import {extractTextContent} from '../../utils/messages.js'
 import {TASK_OUTPUT_TOOL_NAME} from './constants.js'
 import {
 	renderToolUseMessage,

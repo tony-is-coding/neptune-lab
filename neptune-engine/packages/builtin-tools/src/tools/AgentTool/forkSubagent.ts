@@ -5,7 +5,7 @@ import {getIsNonInteractiveSession} from 'src/bootstrap/state.js'
 import {
 	FORK_BOILERPLATE_TAG,
 	FORK_DIRECTIVE_PREFIX,
-} from 'src/constants/xml.js'
+} from '../../constants/xml.js'
 import {isCoordinatorMode} from 'src/coordinator/coordinatorMode.js'
 import type {
 	AssistantMessage,

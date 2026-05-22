@@ -30,7 +30,7 @@ import {
 	getPlanFilePath,
 	persistFileSnapshotIfRemote,
 } from 'src/utils/plans.js'
-import {jsonStringify} from 'src/utils/slowOperations.js'
+import {jsonStringify} from '../../utils/json.js'
 import {
 	getAgentName,
 	getTeamName,

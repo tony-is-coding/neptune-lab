@@ -14,7 +14,7 @@ import {
 import {Box, Text} from '@anthropic/ink'
 import {useShortcutDisplay} from '../../../../../src/ui/keybindings/useShortcutDisplay'
 import type {TaskType} from 'src/Task.js'
-import {jsonParse} from 'src/utils/slowOperations.js'
+import {jsonParse} from '../../utils/json.js'
 import type {ThemeName} from 'src/utils/theme.js'
 import {AgentPromptDisplay, AgentResponseDisplay} from '../AgentTool/UI.js'
 import BashToolResultMessage from '../BashTool/BashToolResultMessage.js'

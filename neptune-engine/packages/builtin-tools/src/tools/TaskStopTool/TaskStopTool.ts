@@ -3,7 +3,7 @@ import type {TaskStateBase} from 'src/Task.js'
 import {buildTool, type ToolDef} from '../../tool.js'
 import {stopTask} from 'src/tasks/stopTask.js'
 import {lazySchema} from '../../utils/lazySchema.js'
-import {jsonStringify} from 'src/utils/slowOperations.js'
+import {jsonStringify} from '../../utils/json.js'
 import {DESCRIPTION, TASK_STOP_TOOL_NAME} from './prompt.js'
 import {renderToolResultMessage, renderToolUseMessage} from './UI.js'
 

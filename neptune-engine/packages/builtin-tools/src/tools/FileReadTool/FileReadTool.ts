@@ -71,8 +71,8 @@ import {
 import type {PermissionDecision} from 'src/utils/permissions/PermissionResult.js'
 import {matchWildcardPattern} from 'src/utils/permissions/shellRuleMatching.js'
 import {readFileInRange} from 'src/utils/readFileInRange.js'
-import {semanticNumber} from 'src/utils/semanticNumber.js'
-import {jsonStringify} from 'src/utils/slowOperations.js'
+import {semanticNumber} from '../../utils/semanticNumber.js'
+import {jsonStringify} from '../../utils/json.js'
 import {BASH_TOOL_NAME} from '../BashTool/toolName.js'
 import {getDefaultFileReadingLimits} from './limits.js'
 import {
