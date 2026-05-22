@@ -41,7 +41,6 @@ import {
 import {resumeAgentBackground} from '../AgentTool/resumeAgent.js'
 import {SEND_MESSAGE_TOOL_NAME} from './constants.js'
 import {DESCRIPTION, getPrompt} from './prompt.js'
-import {renderToolResultMessage, renderToolUseMessage} from './UI.js'
 
 const StructuredMessage = lazySchema(() =>
 	z.discriminatedUnion('type', [
@@ -965,6 +964,4 @@ export const SendMessageTool: Tool<InputSchema, SendMessageToolOutput> =
 			}
 		},
 
-		renderToolUseMessage,
-		renderToolResultMessage,
 	} satisfies ToolDef<InputSchema, SendMessageToolOutput>)

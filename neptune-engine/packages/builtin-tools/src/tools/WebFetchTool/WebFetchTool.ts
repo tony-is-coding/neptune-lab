@@ -7,12 +7,8 @@ import type {PermissionDecision} from 'src/utils/permissions/PermissionResult.js
 import {getRuleByContentsForTool} from 'src/utils/permissions/permissions.js'
 import {isPreapprovedHost} from './preapproved.js'
 import {DESCRIPTION, WEB_FETCH_TOOL_NAME} from './prompt.js'
-import {
-	getToolUseSummary,
-	renderToolResultMessage,
-	renderToolUseMessage,
-	renderToolUseProgressMessage,
-} from './UI.js'
+import {TOOL_SUMMARY_MAX_LENGTH} from '../../constants/toolLimits.js'
+import {truncate} from '../../utils/truncate.js'
 import {
 	applyPromptToMarkdown,
 	type FetchedContent,
@@ -46,6 +42,15 @@ const outputSchema = lazySchema(() =>
 type OutputSchema = ReturnType<typeof outputSchema>
 
 export type Output = z.infer<OutputSchema>
+
+function getToolUseSummary(
+	input: Partial<{url: string; prompt: string}> | undefined,
+): string | null {
+	if (!input?.url) {
+		return null
+	}
+	return truncate(input.url, TOOL_SUMMARY_MAX_LENGTH)
+}
 
 function webFetchToolInputToPermissionRuleContent(input: {
 	[k: string]: unknown
@@ -202,9 +207,6 @@ ${DESCRIPTION}`
 		}
 		return {result: true}
 	},
-	renderToolUseMessage,
-	renderToolUseProgressMessage,
-	renderToolResultMessage,
 	async call(
 		{url, prompt},
 		{abortController, options: {isNonInteractiveSession}},

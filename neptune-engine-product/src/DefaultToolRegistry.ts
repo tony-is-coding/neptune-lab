@@ -97,23 +97,23 @@ export class DefaultToolRegistry implements ToolRegistry {
 	 */
 	private getCoreTools(): Tool[] {
 		return [
-			AgentTool,
-			BashTool,
-			FileEditTool,
-			FileReadTool,
-			FileWriteTool,
-			GlobTool,
-			GrepTool,
-			NotebookEditTool,
-			WebFetchTool,
-			WebSearchTool,
-			TaskCreateTool,
-			TaskGetTool,
-			TaskUpdateTool,
-			TaskListTool,
-			TaskStopTool,
-			TaskOutputTool,
-			ExitPlanModeV2Tool,
+			applyProductToolUiOverrides(AgentTool),
+			applyProductToolUiOverrides(BashTool),
+			applyProductToolUiOverrides(FileEditTool),
+			applyProductToolUiOverrides(FileReadTool),
+			applyProductToolUiOverrides(FileWriteTool),
+			applyProductToolUiOverrides(GlobTool),
+			applyProductToolUiOverrides(GrepTool),
+			applyProductToolUiOverrides(NotebookEditTool),
+			applyProductToolUiOverrides(WebFetchTool),
+			applyProductToolUiOverrides(WebSearchTool),
+			applyProductToolUiOverrides(TaskCreateTool),
+			applyProductToolUiOverrides(TaskGetTool),
+			applyProductToolUiOverrides(TaskUpdateTool),
+			applyProductToolUiOverrides(TaskListTool),
+			applyProductToolUiOverrides(TaskStopTool),
+			applyProductToolUiOverrides(TaskOutputTool),
+			applyProductToolUiOverrides(ExitPlanModeV2Tool),
 		]
 	}
 
@@ -178,7 +178,10 @@ export class DefaultToolRegistry implements ToolRegistry {
 			const {EnterWorktreeTool} = require('@neptune/builtin-tools/tools/EnterWorktreeTool/EnterWorktreeTool.js')
 			const {ExitWorktreeTool} = require('@neptune/builtin-tools/tools/ExitWorktreeTool/ExitWorktreeTool.js')
 			if (isWorktreeModeEnabled()) {
-				tools.push(EnterWorktreeTool, ExitWorktreeTool)
+				tools.push(
+					applyProductToolUiOverrides(EnterWorktreeTool),
+					applyProductToolUiOverrides(ExitWorktreeTool),
+				)
 			}
 		} catch {
 		}
@@ -186,14 +189,14 @@ export class DefaultToolRegistry implements ToolRegistry {
 		// Plan 模式工具
 		try {
 			const {EnterPlanModeTool} = require('@neptune/builtin-tools/tools/EnterPlanModeTool/EnterPlanModeTool.js')
-			tools.push(EnterPlanModeTool)
+			tools.push(applyProductToolUiOverrides(EnterPlanModeTool))
 		} catch {
 		}
 
 		// Config 工具
 		try {
 			const {ConfigTool} = require('@neptune/builtin-tools/tools/ConfigTool/ConfigTool.js')
-			tools.push(ConfigTool)
+			tools.push(applyProductToolUiOverrides(ConfigTool))
 		} catch {
 		}
 

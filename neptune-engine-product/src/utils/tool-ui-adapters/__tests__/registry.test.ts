@@ -66,6 +66,22 @@ mock.module('../mcpResourceToolRendering.js', () => ({
 	},
 }))
 
+mock.module('../builtinToolRendering.js', () => ({
+	getBuiltinToolUiOverrides(toolName: string) {
+		if (toolName === 'WebSearch') {
+			return {
+				userFacingName() {
+					return 'Web Search'
+				},
+				renderToolUseMessage(input: Record<string, unknown>) {
+					return typeof input.query === 'string' ? `"${input.query}"` : null
+				},
+			}
+		}
+		return {}
+	},
+}))
+
 const {applyProductToolUiOverrides, getProductToolUiOverrides} = await import(
 	'../registry.js'
 )
@@ -148,5 +164,38 @@ describe('product tool UI adapter registry', () => {
 			'default-use',
 		)
 		expect(chromeRendererLoaded).toBe(true)
+	})
+
+	test('returns product UI overrides for built-in tools without MCP defaults', () => {
+		defaultRendererLoaded = false
+		const overrides = getProductToolUiOverrides({
+			toolName: 'WebSearch',
+		})
+
+		expect(overrides.userFacingName?.()).toBe('Web Search')
+		expect(
+			overrides.renderToolUseMessage?.({query: 'neptune engine'}, {verbose: false}),
+		).toBe('"neptune engine"')
+		expect(overrides.renderToolResultMessage).toBeUndefined()
+		expect(defaultRendererLoaded).toBe(false)
+	})
+
+	test('does not attach MCP default UI to unrelated built-in tools', () => {
+		defaultRendererLoaded = false
+		const overrides = getProductToolUiOverrides({
+			toolName: 'Bash',
+		})
+
+		expect(overrides).toEqual({})
+		expect(defaultRendererLoaded).toBe(false)
+	})
+
+	test('keeps tool identity when there are no product UI overrides', () => {
+		const tool = {
+			name: 'Bash',
+			call: () => 'runtime behavior',
+		}
+
+		expect(applyProductToolUiOverrides(tool)).toBe(tool)
 	})
 })

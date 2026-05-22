@@ -1,7 +1,6 @@
 import {z} from 'zod/v4'
 import {buildTool, type ToolDef} from '../../tool.js'
 import {lazySchema} from '../../utils/lazySchema.js'
-import {renderToolUseMessage, renderToolResultMessage} from './UI.js'
 
 const REVIEW_ARTIFACT_TOOL_NAME = 'ReviewArtifact'
 
@@ -93,8 +92,6 @@ export const ReviewArtifactTool = buildTool({
 			content: `Review delivered with ${output.annotationCount} annotation(s).${output.summary ? ` Summary: ${output.summary}` : ''}`,
 		}
 	},
-	renderToolUseMessage,
-	renderToolResultMessage,
 	async call({artifact, title, annotations, summary}, _context) {
 		const output: Output = {
 			artifact,

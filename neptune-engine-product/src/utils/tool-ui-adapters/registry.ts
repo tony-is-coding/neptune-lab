@@ -20,6 +20,14 @@ export type ProductToolUiOverrides = Partial<{
 		progressMessagesForMessage: unknown[],
 		options: {verbose: boolean},
 	): React.ReactNode
+	renderToolUseRejectedMessage(
+		input: Record<string, unknown>,
+		options: {verbose: boolean},
+	): React.ReactNode
+	renderToolUseErrorMessage(
+		result: unknown,
+		options: {verbose: boolean},
+	): React.ReactNode
 	renderToolResultMessage(
 		output: unknown,
 		progressMessages: unknown[],
@@ -90,21 +98,35 @@ const adapters: ProductToolUiAdapter[] = [
 export function getProductToolUiOverrides(
 	context: ProductToolUiAdapterContext,
 ): ProductToolUiOverrides {
-	const defaultOverrides = getDefaultMcpToolUiOverrides()
+	const {getBuiltinToolUiOverrides} =
+		require('./builtinToolRendering.js') as typeof import('./builtinToolRendering.js')
+	const builtinOverrides = getBuiltinToolUiOverrides(context.toolName)
+	if (Object.keys(builtinOverrides).length > 0) {
+		return builtinOverrides
+	}
+
 	for (const adapter of adapters) {
 		if (adapter.match(context)) {
+			const defaultOverrides = getDefaultMcpToolUiOverrides()
 			return {...defaultOverrides, ...adapter.getOverrides(context)}
 		}
 	}
-	return defaultOverrides
+	if (context.serverName !== undefined || context.configType !== undefined) {
+		return getDefaultMcpToolUiOverrides()
+	}
+	return {}
 }
 
 export function applyProductToolUiOverrides<T extends {name: string}>(
 	tool: T,
 	context: Omit<ProductToolUiAdapterContext, 'toolName'> = {},
 ): T & ProductToolUiOverrides {
+	const overrides = getProductToolUiOverrides({...context, toolName: tool.name})
+	if (Object.keys(overrides).length === 0) {
+		return tool
+	}
 	return {
 		...tool,
-		...getProductToolUiOverrides({...context, toolName: tool.name}),
+		...overrides,
 	}
 }

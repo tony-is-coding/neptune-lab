@@ -27,11 +27,6 @@ import {
 	getPath,
 	isSupported,
 } from './supportedSettings.js'
-import {
-	renderToolResultMessage,
-	renderToolUseMessage,
-	renderToolUseRejectedMessage,
-} from './UI.js'
 
 const inputSchema = lazySchema(() =>
 	z.strictObject({
@@ -105,9 +100,6 @@ export const ConfigTool = buildTool({
 			message: `Set ${input.setting} to ${jsonStringify(input.value)}`,
 		}
 	},
-	renderToolUseMessage,
-	renderToolResultMessage,
-	renderToolUseRejectedMessage,
 	async call({setting, value}: Input, context): Promise<{ data: Output }> {
 		// 1. Check if setting is supported
 		// Voice settings are registered at build-time (feature('VOICE_MODE')), but

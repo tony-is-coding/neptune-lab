@@ -69,8 +69,10 @@ const getTeamDeleteTool = () =>
 	require('@neptune/builtin-tools/tools/TeamDeleteTool/TeamDeleteTool.js')
 		.TeamDeleteTool as typeof import('@neptune/builtin-tools/tools/TeamDeleteTool/TeamDeleteTool.js').TeamDeleteTool
 const getSendMessageTool = () =>
-	require('@neptune/builtin-tools/tools/SendMessageTool/SendMessageTool.js')
-		.SendMessageTool as typeof import('@neptune/builtin-tools/tools/SendMessageTool/SendMessageTool.js').SendMessageTool
+	applyProductToolUiOverrides(
+		require('@neptune/builtin-tools/tools/SendMessageTool/SendMessageTool.js')
+			.SendMessageTool as typeof import('@neptune/builtin-tools/tools/SendMessageTool/SendMessageTool.js').SendMessageTool,
+	)
 /* eslint-enable @typescript-eslint/no-require-imports */
 import {AskUserQuestionTool} from '@neptune/builtin-tools/tools/AskUserQuestionTool/AskUserQuestionTool.js'
 import {LSPTool} from '@neptune/builtin-tools/tools/LSPTool/LSPTool.js'
@@ -202,26 +204,28 @@ export function getToolsForDefaultPreset(): string[] {
  */
 export function getAllBaseTools(): Tools {
 	return [
-		AgentTool,
-		TaskOutputTool,
-		BashTool,
+		applyProductToolUiOverrides(AgentTool),
+		applyProductToolUiOverrides(TaskOutputTool),
+		applyProductToolUiOverrides(BashTool),
 		// Ant-native builds have bfs/ugrep embedded in the bun binary (same ARGV0
 		// trick as ripgrep). When available, find/grep in Claude's shell are aliased
 		// to these fast tools, so the dedicated Glob/Grep tools are unnecessary.
-		...(hasEmbeddedSearchTools() ? [] : [GlobTool, GrepTool]),
-		ExitPlanModeV2Tool,
-		FileReadTool,
-		FileEditTool,
-		FileWriteTool,
-		NotebookEditTool,
-		WebFetchTool,
-		TodoWriteTool,
-		WebSearchTool,
-		TaskStopTool,
-		AskUserQuestionTool,
-		SkillTool,
-		EnterPlanModeTool,
-		...(process.env.USER_TYPE === 'ant' ? [ConfigTool] : []),
+		...(hasEmbeddedSearchTools()
+			? []
+			: [applyProductToolUiOverrides(GlobTool), applyProductToolUiOverrides(GrepTool)]),
+		applyProductToolUiOverrides(ExitPlanModeV2Tool),
+		applyProductToolUiOverrides(FileReadTool),
+		applyProductToolUiOverrides(FileEditTool),
+		applyProductToolUiOverrides(FileWriteTool),
+		applyProductToolUiOverrides(NotebookEditTool),
+		applyProductToolUiOverrides(WebFetchTool),
+		applyProductToolUiOverrides(TodoWriteTool),
+		applyProductToolUiOverrides(WebSearchTool),
+		applyProductToolUiOverrides(TaskStopTool),
+		applyProductToolUiOverrides(AskUserQuestionTool),
+		applyProductToolUiOverrides(SkillTool),
+		applyProductToolUiOverrides(EnterPlanModeTool),
+		...(process.env.USER_TYPE === 'ant' ? [applyProductToolUiOverrides(ConfigTool)] : []),
 		...(process.env.USER_TYPE === 'ant' ? [TungstenTool] : []),
 		...(SuggestBackgroundPRTool ? [SuggestBackgroundPRTool] : []),
 		...(WebBrowserTool ? [WebBrowserTool] : []),
@@ -243,13 +247,13 @@ export function getAllBaseTools(): Tools {
 		...(WorkflowTool ? [WorkflowTool] : []),
 		...(SleepTool ? [SleepTool] : []),
 		...cronTools,
-		...(RemoteTriggerTool ? [RemoteTriggerTool] : []),
+		...(RemoteTriggerTool ? [applyProductToolUiOverrides(RemoteTriggerTool)] : []),
 		...(MonitorTool ? [MonitorTool] : []),
 		BriefTool,
 		...(SendUserFileTool ? [SendUserFileTool] : []),
 		...(PushNotificationTool ? [PushNotificationTool] : []),
 		...(SubscribePRTool ? [SubscribePRTool] : []),
-		...(ReviewArtifactTool ? [ReviewArtifactTool] : []),
+		...(ReviewArtifactTool ? [applyProductToolUiOverrides(ReviewArtifactTool)] : []),
 		...(getPowerShellTool() ? [getPowerShellTool()] : []),
 		...(SnipTool ? [SnipTool] : []),
 		...(process.env.NODE_ENV === 'test' ? [TestingPermissionTool] : []),
