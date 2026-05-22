@@ -7,6 +7,7 @@
 
 ## 必读上下文
 
+- 涉及产品定位、平台分层、客户边界、部署升级、质量责任或财务 Solution Pack 的工作，先读取 `../docs/strategy/neptune-agentops-platform-strategy.md`。
 - 大范围产品改动前读取 `CONTEXT.md`。
 - UI 工作前读取 `DESIGN.md`。
 - 服务端工作按需读取 `server/CONTEXT.md`。

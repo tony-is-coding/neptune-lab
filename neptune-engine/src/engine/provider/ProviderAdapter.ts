@@ -11,7 +11,7 @@
  * - 未来可支持直接调用 Anthropic API / Bedrock / Vertex 等
  */
 
-import type {Message} from '@neptune/engine-product/types/message.js'
+import type {Message} from '../types/message.js'
 import type {Tools} from '@neptune/engine-product/Tool.js'
 
 // ============================================================

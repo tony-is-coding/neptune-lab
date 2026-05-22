@@ -1,6 +1,6 @@
 import {randomUUID} from 'crypto'
 import type {QueryEngineConfig, QueryEngineWrapper} from './CCRuntime.js'
-import type {Message} from '@neptune/engine-product/types/message.js'
+import type {Message} from '../types/message.js'
 import type {ProviderConfig} from '../AgentEngine.js'
 import {LogUtil} from '../log'
 

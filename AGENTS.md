@@ -37,6 +37,7 @@
 
 ## 项目结构
 
+- `docs/strategy/neptune-agentops-platform-strategy.md`：Neptune 长期产品分层、客户边界、部署形态、质量责任和第一 Solution Pack 的战略源文档。涉及产品架构、平台边界、部署升级、质量责任或财务 Solution Pack 的工作，必须先读取并对齐该文档。
 - `neptune-ai/`：企业 AI 平台产品。封装 `neptune-engine` 面向业务用户，负责产品 UI、服务端编排、用户/权限、MCP 注册、用量和计费。
 - `neptune-ai/server/`：后端编排层。
 - `neptune-ai/web/`：React/Vite/Tailwind 前端。

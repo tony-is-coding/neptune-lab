@@ -29,6 +29,7 @@
   ],
   "exclude": [
     "node_modules",
+    "../neptune-engine-product",
     "**/__tests__/**",
     "**/*.test.ts",
     "**/*.test.tsx"

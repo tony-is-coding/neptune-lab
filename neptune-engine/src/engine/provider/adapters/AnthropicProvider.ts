@@ -14,7 +14,7 @@
  */
 
 import type {ProviderQueryParams, ProviderMessage} from '../ProviderAdapter.js'
-import type {Message} from '@neptune/engine-product/types/message.js'
+import type {Message} from '../../types/message.js'
 import {asSystemPrompt} from '@neptune/engine-product/utils/systemPromptType.js'
 import type {SystemPrompt} from '@neptune/engine-product/utils/systemPromptType.js'
 import {BaseProvider, type BaseProviderConfig} from './BaseProvider.js'

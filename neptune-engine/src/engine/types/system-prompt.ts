@@ -1,13 +1,14 @@
 /**
- * engine/types/system-prompt.ts
+ * engine/types/system-prompt.ts — engine 自有定义
  *
- * SystemPrompt 类型屏障文件
- *
- * 重新导出 src/utils/systemPromptType.ts 的核心类型，避免 engine/ 向外穿透到 src/。
- *
- * @module
+ * 从 product 迁入。意图上无任何依赖，可从任何地方 import。
  */
 
-// 重新导出 SystemPrompt 相关类型
-export type {SystemPrompt} from '@neptune/engine-product/utils/systemPromptType.js'
-export {asSystemPrompt} from '@neptune/engine-product/utils/systemPromptType.js'
+/** 系统提示词的 branded 类型 */
+export type SystemPrompt = readonly string[] & {
+	readonly __brand: 'SystemPrompt'
+}
+
+export function asSystemPrompt(value: readonly string[]): SystemPrompt {
+	return value as SystemPrompt
+}
