@@ -155,6 +155,7 @@ import {isPowerShellToolEnabled} from './utils/shell/shellToolUtils.js'
 import {isAgentSwarmsEnabled} from './utils/agentSwarmsEnabled.js'
 import {isWorktreeModeEnabled} from './utils/worktreeModeEnabled.js'
 import {applyProductToolUiOverrides} from './utils/tool-ui-adapters/registry.js'
+import {applyAgentDeliveryPolicy} from './product-tools/agent-delivery/prompt.js'
 import {applyBashDeliveryPolicy} from './product-tools/bash-delivery/prompt.js'
 import {
 	REPL_TOOL_NAME,
@@ -163,6 +164,7 @@ import {
 } from '@neptune/builtin-tools/tools/REPLTool/constants.js'
 
 export {REPL_ONLY_TOOLS}
+const ProductAgentTool: Tool = applyAgentDeliveryPolicy(AgentTool as Tool)
 const ProductBashTool: Tool = applyBashDeliveryPolicy(BashTool as Tool)
 /* eslint-disable @typescript-eslint/no-require-imports */
 const getPowerShellTool = () => {
@@ -210,7 +212,7 @@ export function getToolsForDefaultPreset(): string[] {
  */
 export function getAllBaseTools(): Tools {
 	return [
-		applyProductToolUiOverrides(AgentTool),
+		applyProductToolUiOverrides(ProductAgentTool),
 		applyProductToolUiOverrides(TaskOutputTool),
 		applyProductToolUiOverrides(ProductBashTool),
 		// Ant-native builds have bfs/ugrep embedded in the bun binary (same ARGV0
@@ -313,7 +315,7 @@ export const getTools = (permissionContext: ToolPermissionContext): Tools => {
 			feature('COORDINATOR_MODE') &&
 			coordinatorModeModule?.isCoordinatorMode()
 		) {
-			simpleTools.push(AgentTool, TaskStopTool, getSendMessageTool())
+			simpleTools.push(ProductAgentTool, TaskStopTool, getSendMessageTool())
 		}
 		return filterToolsByDenyRules(simpleTools, permissionContext)
 	}

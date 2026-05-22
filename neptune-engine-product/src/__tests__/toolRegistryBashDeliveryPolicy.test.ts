@@ -21,6 +21,16 @@ mock.module('@neptune/builtin-tools/tools/AgentTool/constants.js', () => ({
 	AGENT_TOOL_NAME: 'Agent',
 }))
 
+mock.module('@neptune/builtin-tools/tools/AgentTool/forkSubagent.js', () => ({
+	isForkSubagentEnabled() {
+		return true
+	},
+}))
+
+mock.module('@neptune/builtin-tools/tools/SendMessageTool/constants.js', () => ({
+	SEND_MESSAGE_TOOL_NAME: 'SendMessage',
+}))
+
 mock.module(
 	'@neptune/builtin-tools/tools/BashTool/BashTool.js',
 	() => ({BashTool: makeTool('Bash')}),
@@ -133,6 +143,12 @@ mock.module('src/utils/envUtils.js', () => ({
 	},
 }))
 
+mock.module('src/utils/auth.js', () => ({
+	getSubscriptionType() {
+		return 'max'
+	},
+}))
+
 mock.module('src/utils/gitSettings.js', () => ({
 	shouldIncludeGitInstructions() {
 		return true
@@ -153,6 +169,18 @@ mock.module('src/utils/undercover.js', () => ({
 		return ''
 	},
 	isUndercover() {
+		return false
+	},
+}))
+
+mock.module('src/utils/teammate.js', () => ({
+	isTeammate() {
+		return false
+	},
+}))
+
+mock.module('src/utils/teammateContext.js', () => ({
+	isInProcessTeammate() {
 		return false
 	},
 }))
@@ -179,5 +207,23 @@ describe('product tool registries Bash delivery policy', () => {
 		expect(prompt).toContain('# Committing changes with git')
 		expect(prompt).toContain('# Creating pull requests')
 		expect(prompt).toContain('gh pr create')
+	})
+})
+
+describe('product tool registries Agent delivery policy', () => {
+	test.each([
+		['sdk', () => new DefaultToolRegistry({mode: 'sdk'})],
+		['cli', () => new DefaultToolRegistry({mode: 'cli'})],
+	])('%s registry wraps Agent with product delivery policy', async (_, create) => {
+		const registry = create()
+		const agent = registry.getToolByName('Agent')
+
+		expect(agent).toBeDefined()
+		const prompt = await agent!.prompt({} as never)
+
+		expect(prompt).toContain('# Agent delivery policy')
+		expect(prompt).toContain('SendMessage')
+		expect(prompt).toContain('isolation: "worktree"')
+		expect(prompt).toContain('## When to fork')
 	})
 })

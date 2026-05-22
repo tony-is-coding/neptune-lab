@@ -10,6 +10,7 @@ import {feature} from 'bun:bundle'
 import type {ToolPermissionContext} from './Tool.js'
 import type {Tool, Tools} from './Tool.js'
 import type {ToolRegistry, ToolSet} from './ToolRegistry.js'
+import {applyAgentDeliveryPolicy} from './product-tools/agent-delivery/prompt.js'
 import {applyBashDeliveryPolicy} from './product-tools/bash-delivery/prompt.js'
 import {applyProductToolUiOverrides} from './utils/tool-ui-adapters/registry.js'
 import {isAgentSwarmsEnabled} from './utils/agentSwarmsEnabled.js'
@@ -35,6 +36,7 @@ import {TaskOutputTool} from '@neptune/builtin-tools/tools/TaskOutputTool/TaskOu
 import {ExitPlanModeV2Tool} from '@neptune/builtin-tools/tools/ExitPlanModeTool/ExitPlanModeV2Tool.js'
 
 const ProductBashTool: Tool = applyBashDeliveryPolicy(BashTool as Tool)
+const ProductAgentTool: Tool = applyAgentDeliveryPolicy(AgentTool as Tool)
 
 /**
  * DefaultToolRegistry 实现
@@ -102,7 +104,7 @@ export class DefaultToolRegistry implements ToolRegistry {
 	 */
 	private getCoreTools(): Tool[] {
 		return [
-			applyProductToolUiOverrides(AgentTool),
+			applyProductToolUiOverrides(ProductAgentTool),
 			applyProductToolUiOverrides(ProductBashTool),
 			applyProductToolUiOverrides(FileEditTool),
 			applyProductToolUiOverrides(FileReadTool),
