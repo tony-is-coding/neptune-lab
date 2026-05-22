@@ -42,7 +42,7 @@ const VERIFY_PLAN_EXECUTION_TOOL_NAME =
 		: null
 const WORKFLOW_TOOL_NAME = feature('WORKFLOW_SCRIPTS')
 	? (
-		require('@neptune/builtin-tools/tools/WorkflowTool/constants.js') as typeof import('@neptune/builtin-tools/tools/WorkflowTool/constants.js')
+		require('../../product-tools/workflow/constants.js') as typeof import('../../product-tools/workflow/constants.js')
 	).WORKFLOW_TOOL_NAME
 	: null
 /* eslint-enable @typescript-eslint/no-require-imports */

@@ -4,15 +4,15 @@ import {getTheme} from 'src/utils/theme.js'
 import {env} from 'src/utils/env.js'
 import {shouldShowAlwaysAllowOptions} from 'src/utils/permissions/permissionsLoader.js'
 import {logUnaryEvent} from 'src/utils/unaryLogging.js'
-import {PermissionDialog} from '../../../../../src/ui/components/permissions/PermissionDialog'
+import {PermissionDialog} from '../../ui/components/permissions/PermissionDialog.js'
 import {
 	PermissionPrompt,
 	type PermissionPromptOption,
-} from '../../../../../src/ui/components/permissions/PermissionPrompt'
-import type {PermissionRequestProps} from '../../../../../src/ui/components/permissions/PermissionRequest'
+} from '../../ui/components/permissions/PermissionPrompt.js'
+import type {PermissionRequestProps} from '../../ui/components/permissions/PermissionRequest.js'
 import {
-	PermissionRuleExplanation
-} from '../../../../../src/ui/components/permissions/PermissionRuleExplanation'
+	PermissionRuleExplanation,
+} from '../../ui/components/permissions/PermissionRuleExplanation.js'
 
 type OptionValue = 'yes' | 'yes-dont-ask-again' | 'no'
 
@@ -22,11 +22,11 @@ type OptionValue = 'yes' | 'yes-dont-ask-again' | 'no'
  * Follows the MonitorPermissionRequest / FallbackPermissionRequest pattern.
  */
 export function WorkflowPermissionRequest({
-											  toolUseConfirm,
-											  onDone,
-											  onReject,
-											  workerBadge,
-										  }: PermissionRequestProps): React.ReactNode {
+	toolUseConfirm,
+	onDone,
+	onReject,
+	workerBadge,
+}: PermissionRequestProps): React.ReactNode {
 	const [themeName] = useTheme()
 	const theme = getTheme(themeName)
 
@@ -138,10 +138,7 @@ export function WorkflowPermissionRequest({
 	}, [toolUseConfirm, onDone, onReject])
 
 	return (
-		<PermissionDialog
-			title="Workflow"
-			workerBadge={workerBadge}
-		>
+		<PermissionDialog title="Workflow" workerBadge={workerBadge}>
 			<Box flexDirection="column" gap={1}>
 				<Box flexDirection="column">
 					<Text bold color={theme.permission as any}>

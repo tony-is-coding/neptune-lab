@@ -1,6 +1,6 @@
 import {z} from 'zod/v4'
-import type {ToolResultBlockParam} from '../../tool.js'
-import {buildTool} from '../../tool.js'
+import type {ToolResultBlockParam} from '../../Tool.js'
+import {buildTool} from '../../Tool.js'
 import {truncate} from '../../utils/truncate.js'
 import {WORKFLOW_TOOL_NAME} from './constants.js'
 

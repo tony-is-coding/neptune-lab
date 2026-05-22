@@ -52,9 +52,6 @@ export {TeamDeleteTool} from './tools/TeamDeleteTool/TeamDeleteTool.js'
 export {TerminalCaptureTool} from './tools/TerminalCaptureTool/TerminalCaptureTool.js'
 export {VerifyPlanExecutionTool} from './tools/VerifyPlanExecutionTool/VerifyPlanExecutionTool.js'
 export {WebBrowserTool} from './tools/WebBrowserTool/WebBrowserTool.js'
-export {WorkflowTool} from './tools/WorkflowTool/WorkflowTool.js'
-export {initBundledWorkflows} from './tools/WorkflowTool/bundled/index.js'
-export {getWorkflowCommands} from './tools/WorkflowTool/createWorkflowCommand.js'
 
 // Constants
 export {SYNTHETIC_OUTPUT_TOOL_NAME, createSyntheticOutputTool} from './tools/SyntheticOutputTool/SyntheticOutputTool.js'

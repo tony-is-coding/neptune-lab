@@ -1,6 +1,6 @@
 import {readdir} from 'fs/promises'
 import {join, parse} from 'path'
-import type {Command} from 'src/types/command.js'
+import type {Command} from '../../types/command.js'
 import {WORKFLOW_DIR_NAME, WORKFLOW_FILE_EXTENSIONS} from './constants.js'
 
 /**
@@ -16,7 +16,7 @@ export async function getWorkflowCommands(cwd: string): Promise<Command[]> {
 		return []
 	}
 
-	const workflowFiles = files.filter((f) => {
+	const workflowFiles = files.filter(f => {
 		const ext = parse(f).ext.toLowerCase()
 		return WORKFLOW_FILE_EXTENSIONS.includes(ext)
 	})
@@ -34,10 +34,12 @@ export async function getWorkflowCommands(cwd: string): Promise<Command[]> {
 			async getPromptForCommand(args, _context) {
 				const {readFile} = await import('fs/promises')
 				const content = await readFile(join(workflowDir, file), 'utf-8')
-				return [{
-					type: 'text' as const,
-					text: `Execute this workflow:\n\n${content}${args ? `\n\nArguments: ${args}` : ''}`
-				}]
+				return [
+					{
+						type: 'text' as const,
+						text: `Execute this workflow:\n\n${content}${args ? `\n\nArguments: ${args}` : ''}`,
+					},
+				]
 			},
 		} satisfies Command
 	})

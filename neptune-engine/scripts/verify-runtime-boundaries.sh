@@ -59,7 +59,7 @@ check_empty \
 check_max_count \
   "builtin-tools host/product reverse dependencies must not increase" \
   "(@neptune/engine-product|from ['\"]src/|\\b(require|import)\\(['\"]src/|from ['\"]\\.\\./\\.\\./\\.\\./\\.\\./\\.\\./src/)" \
-  750 \
+  741 \
   packages/builtin-tools/src \
   packages/builtin-tools/package.json
 
@@ -71,7 +71,7 @@ check_empty \
 check_max_count \
   "builtin-tools React/Ink/product UI imports must not increase" \
   "(@anthropic/ink|from ['\"]react['\"]|import React|import \\* as React|src/ui/components|src/types/message|src/utils/theme)" \
-  122 \
+  115 \
   packages/builtin-tools/src
 
 if [[ $status -ne 0 ]]; then

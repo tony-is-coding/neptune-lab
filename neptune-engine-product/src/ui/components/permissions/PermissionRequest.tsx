@@ -46,13 +46,13 @@ const ReviewArtifactPermissionRequest = feature('REVIEW_ARTIFACT')
 
 const WorkflowTool = feature('WORKFLOW_SCRIPTS')
   ? (
-      require('@neptune/builtin-tools/tools/WorkflowTool/WorkflowTool.js') as typeof import('@neptune/builtin-tools/tools/WorkflowTool/WorkflowTool.js')
+      require('../../../product-tools/workflow/WorkflowTool.js') as typeof import('../../../product-tools/workflow/WorkflowTool.js')
     ).WorkflowTool
   : null
 
 const WorkflowPermissionRequest = feature('WORKFLOW_SCRIPTS')
   ? (
-      require('@neptune/builtin-tools/tools/WorkflowTool/WorkflowPermissionRequest.js') as typeof import('@neptune/builtin-tools/tools/WorkflowTool/WorkflowPermissionRequest.js')
+      require('../../../product-tools/workflow/WorkflowPermissionRequest.js') as typeof import('../../../product-tools/workflow/WorkflowPermissionRequest.js')
     ).WorkflowPermissionRequest
   : null
 

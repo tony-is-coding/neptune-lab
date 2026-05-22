@@ -139,8 +139,8 @@ const ListPeersTool = feature('UDS_INBOX')
 	: null
 const WorkflowTool = feature('WORKFLOW_SCRIPTS')
 	? (() => {
-		require('@neptune/builtin-tools/tools/WorkflowTool/bundled/index.js').initBundledWorkflows()
-		return require('@neptune/builtin-tools/tools/WorkflowTool/WorkflowTool.js').WorkflowTool
+		require('./product-tools/workflow/bundled/index.js').initBundledWorkflows()
+		return require('./product-tools/workflow/WorkflowTool.js').WorkflowTool
 	})()
 	: null
 /* eslint-enable custom-rules/no-process-env-top-level, @typescript-eslint/no-require-imports */

@@ -30,7 +30,7 @@ import {
 	ENTER_WORKTREE_TOOL_NAME,
 	EXIT_WORKTREE_TOOL_NAME,
 } from '../product-tools/worktree/constants.js'
-import {WORKFLOW_TOOL_NAME} from '@neptune/builtin-tools/tools/WorkflowTool/constants.js'
+import {WORKFLOW_TOOL_NAME} from '../product-tools/workflow/constants.js'
 import {
 	CRON_CREATE_TOOL_NAME,
 	CRON_DELETE_TOOL_NAME,
