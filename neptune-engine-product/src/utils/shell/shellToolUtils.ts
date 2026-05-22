@@ -1,5 +1,5 @@
 import {BASH_TOOL_NAME} from '@neptune/builtin-tools/tools/BashTool/toolName.js'
-import {POWERSHELL_TOOL_NAME} from '@neptune/builtin-tools/tools/PowerShellTool/toolName.js'
+import {POWERSHELL_TOOL_NAME} from '../../product-tools/powershell/toolName.js'
 import {isEnvDefinedFalsy, isEnvTruthy} from '../envUtils.js'
 import {getPlatform} from '../platform.js'
 

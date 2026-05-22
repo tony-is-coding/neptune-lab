@@ -162,7 +162,7 @@ export {REPL_ONLY_TOOLS}
 const getPowerShellTool = () => {
 	if (!isPowerShellToolEnabled()) return null
 	return (
-		require('@neptune/builtin-tools/tools/PowerShellTool/PowerShellTool.js') as typeof import('@neptune/builtin-tools/tools/PowerShellTool/PowerShellTool.js')
+		require('./product-tools/powershell/PowerShellTool.js') as typeof import('./product-tools/powershell/PowerShellTool.js')
 	).PowerShellTool
 }
 /* eslint-enable @typescript-eslint/no-require-imports */

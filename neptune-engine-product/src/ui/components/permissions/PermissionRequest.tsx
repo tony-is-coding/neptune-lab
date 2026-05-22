@@ -13,7 +13,7 @@ import { FileWriteTool } from '@neptune/builtin-tools/tools/FileWriteTool/FileWr
 import { GlobTool } from '@neptune/builtin-tools/tools/GlobTool/GlobTool.js'
 import { GrepTool } from '@neptune/builtin-tools/tools/GrepTool/GrepTool.js'
 import { NotebookEditTool } from '@neptune/builtin-tools/tools/NotebookEditTool/NotebookEditTool.js'
-import { PowerShellTool } from '@neptune/builtin-tools/tools/PowerShellTool/PowerShellTool.js'
+import { PowerShellTool } from '../../../product-tools/powershell/PowerShellTool.js'
 import { SkillTool } from '@neptune/builtin-tools/tools/SkillTool/SkillTool.js'
 import { WebFetchTool } from '@neptune/builtin-tools/tools/WebFetchTool/WebFetchTool.js'
 import type { AssistantMessage } from '@neptune/engine-product/types/message.js'

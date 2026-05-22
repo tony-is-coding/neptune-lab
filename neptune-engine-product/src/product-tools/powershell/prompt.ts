@@ -8,11 +8,11 @@ import {
 	getDefaultBashTimeoutMs,
 	getMaxBashTimeoutMs,
 } from 'src/utils/timeouts.js'
-import {FILE_EDIT_TOOL_NAME} from '../FileEditTool/constants.js'
-import {FILE_READ_TOOL_NAME} from '../FileReadTool/prompt.js'
-import {FILE_WRITE_TOOL_NAME} from '../FileWriteTool/prompt.js'
-import {GLOB_TOOL_NAME} from '../GlobTool/prompt.js'
-import {GREP_TOOL_NAME} from '../GrepTool/prompt.js'
+import {FILE_EDIT_TOOL_NAME} from '@neptune/builtin-tools/tools/FileEditTool/constants.js'
+import {FILE_READ_TOOL_NAME} from '@neptune/builtin-tools/tools/FileReadTool/prompt.js'
+import {FILE_WRITE_TOOL_NAME} from '@neptune/builtin-tools/tools/FileWriteTool/prompt.js'
+import {GLOB_TOOL_NAME} from '@neptune/builtin-tools/tools/GlobTool/prompt.js'
+import {GREP_TOOL_NAME} from '@neptune/builtin-tools/tools/GrepTool/prompt.js'
 import {POWERSHELL_TOOL_NAME} from './toolName.js'
 
 export function getDefaultTimeoutMs(): number {

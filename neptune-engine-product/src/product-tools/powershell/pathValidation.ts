@@ -8,7 +8,7 @@
 
 import {homedir} from 'os'
 import {isAbsolute, resolve} from 'path'
-import type {ToolPermissionContext} from '../../tool.js'
+import type {ToolPermissionContext} from '../../Tool.js'
 import type {PermissionRule} from 'src/types/permissions.js'
 import {getCwd} from 'src/utils/cwd.js'
 import {

@@ -51,7 +51,7 @@ import {
 import {AGENT_TOOL_NAME} from '@neptune/builtin-tools/tools/AgentTool/constants.js'
 import {BASH_TOOL_NAME} from '@neptune/builtin-tools/tools/BashTool/toolName.js'
 /* eslint-enable @typescript-eslint/no-require-imports */
-import {POWERSHELL_TOOL_NAME} from '@neptune/builtin-tools/tools/PowerShellTool/toolName.js'
+import {POWERSHELL_TOOL_NAME} from '../../product-tools/powershell/toolName.js'
 import {getToolsForDefaultPreset, parseToolPreset} from '../../tools.js'
 import {
 	getFsImplementation,

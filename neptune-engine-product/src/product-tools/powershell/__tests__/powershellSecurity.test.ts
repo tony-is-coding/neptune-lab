@@ -1,5 +1,9 @@
 import {mock, describe, expect, test} from "bun:test";
-import type {ParsedCommandElement, ParsedPowerShellCommand} from "../../../../../../src/utils/powershell/parser.js";
+import type {ParsedCommandElement, ParsedPowerShellCommand} from "../../../utils/powershell/parser.js";
+
+mock.module("@neptune/engine/session/SessionContext.js", () => ({
+	getSessionId: () => "test-session",
+}));
 
 // Mock clmTypes to avoid heavy dependency chain
 mock.module("src/utils/powershell/dangerousCmdlets.js", () => ({

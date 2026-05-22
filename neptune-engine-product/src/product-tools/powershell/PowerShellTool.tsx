@@ -2,12 +2,12 @@ import {feature} from 'bun:bundle'
 import type {ToolResultBlockParam} from '@anthropic-ai/sdk/resources/index.mjs'
 import {
 	copyFile,
+	link,
 	stat as fsStat,
 	truncate as fsTruncate,
-	link,
 } from 'fs/promises'
 import * as React from 'react'
-import type {CanUseToolFn} from '../../../../../src/ui/hooks/useCanUseTool'
+import type {CanUseToolFn} from '../../ui/hooks/useCanUseTool.js'
 import type {AppState} from 'src/state/AppState.js'
 import {z} from 'zod/v4'
 import {getKairosActive} from 'src/bootstrap/state.js'
@@ -21,8 +21,8 @@ import type {
 	Tool,
 	ToolCallProgress,
 	ValidationResult,
-} from '../../tool.js'
-import {buildTool, type ToolDef} from '../../tool.js'
+} from '../../Tool.js'
+import {buildTool, type ToolDef} from '../../Tool.js'
 import {
 	backgroundExistingForegroundTask,
 	markTaskNotified,
@@ -53,7 +53,7 @@ import {getCachedPowerShellPath} from 'src/utils/shell/powershellDetection.js'
 import {EndTruncatingAccumulator} from 'src/utils/stringUtils.js'
 import {getTaskOutputPath} from 'src/utils/task/diskOutput.js'
 import {TaskOutput} from 'src/utils/task/TaskOutput.js'
-import {isOutputLineTruncated} from '../../../../../src/ui/terminal.js'
+import {isOutputLineTruncated} from '../../ui/terminal.js'
 import {
 	buildLargeToolResultMessage,
 	ensureToolResultsDir,
@@ -61,8 +61,8 @@ import {
 	getToolResultPath,
 	PREVIEW_SIZE_BYTES,
 } from 'src/utils/toolResultStorage.js'
-import {shouldUseSandbox} from '../BashTool/shouldUseSandbox.js'
-import {BackgroundHint} from '../BashTool/UI.js'
+import {shouldUseSandbox} from '@neptune/builtin-tools/tools/BashTool/shouldUseSandbox.js'
+import {BackgroundHint} from '@neptune/builtin-tools/tools/BashTool/UI.js'
 import {
 	buildImageToolResult,
 	isImageOutput,
@@ -70,8 +70,8 @@ import {
 	resizeShellImageOutput,
 	stdErrAppendShellResetMessage,
 	stripEmptyLines,
-} from '../BashTool/utils.js'
-import {trackGitOperations} from '../shared/gitOperationTracking.js'
+} from '@neptune/builtin-tools/tools/BashTool/utils.js'
+import {trackGitOperations} from '@neptune/builtin-tools/tools/shared/gitOperationTracking.js'
 import {interpretCommandResult} from './commandSemantics.js'
 import {powershellToolHasPermission} from './powershellPermissions.js'
 import {getDefaultTimeoutMs, getMaxTimeoutMs, getPrompt} from './prompt.js'

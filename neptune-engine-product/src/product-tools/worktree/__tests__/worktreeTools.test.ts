@@ -5,6 +5,16 @@ import {
 } from '../constants.js'
 
 mock.module('../../../bootstrap/state.js', () => ({
+	addToToolDuration() {},
+	getCodeEditToolDecisionCounter() {
+		return null
+	},
+	getCwdState() {
+		return '/repo'
+	},
+	getKairosActive() {
+		return false
+	},
 	getOriginalCwd() {
 		return '/repo'
 	},
@@ -14,8 +24,17 @@ mock.module('../../../bootstrap/state.js', () => ({
 	getSessionId() {
 		return 'test-session'
 	},
+	getStatsStore() {
+		return null
+	},
+	handleAutoModeTransition() {},
+	handlePlanModeTransition() {},
 	setOriginalCwd() {},
 	setProjectRoot() {},
+	setHasExitedPlanMode() {},
+	setLastAPIRequest() {},
+	setLastAPIRequestMessages() {},
+	setNeedsAutoModeExitAttachment() {},
 }))
 
 mock.module('../../../constants/systemPromptSections.js', () => ({

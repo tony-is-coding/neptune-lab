@@ -38,7 +38,6 @@ export {OVERFLOW_TEST_TOOL_NAME} from './tools/OverflowTestTool/OverflowTestTool
 export {CtxInspectTool} from './tools/CtxInspectTool/CtxInspectTool.js'
 export {ListPeersTool} from './tools/ListPeersTool/ListPeersTool.js'
 export {MonitorTool} from './tools/MonitorTool/MonitorTool.js'
-export {PowerShellTool} from './tools/PowerShellTool/PowerShellTool.js'
 export {PushNotificationTool} from './tools/PushNotificationTool/PushNotificationTool.js'
 export {REPLTool} from './tools/REPLTool/REPLTool.js'
 export {RemoteTriggerTool} from './tools/RemoteTriggerTool/RemoteTriggerTool.js'

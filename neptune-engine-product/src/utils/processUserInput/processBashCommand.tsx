@@ -106,12 +106,12 @@ export async function processBashCommand(
 		// native, shouldUseSandbox() returns false regardless (unsupported platform).
 		// Lazy-require PowerShellTool so its ~300KB chunk only loads when the
 		// user has actually selected the powershell default shell.
-		type PSMod = typeof import('@neptune/builtin-tools/tools/PowerShellTool/PowerShellTool.js')
+		type PSMod = typeof import('../../product-tools/powershell/PowerShellTool.js')
 		let PowerShellTool: PSMod['PowerShellTool'] | null = null
 		if (usePowerShell) {
 			/* eslint-disable @typescript-eslint/no-require-imports */
 			PowerShellTool = (
-				require('@neptune/builtin-tools/tools/PowerShellTool/PowerShellTool.js') as PSMod
+				require('../../product-tools/powershell/PowerShellTool.js') as PSMod
 			).PowerShellTool
 			/* eslint-enable @typescript-eslint/no-require-imports */
 		}

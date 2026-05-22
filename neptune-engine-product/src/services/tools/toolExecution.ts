@@ -42,7 +42,7 @@ import {FILE_EDIT_TOOL_NAME} from '@neptune/builtin-tools/tools/FileEditTool/con
 import {FILE_READ_TOOL_NAME} from '@neptune/builtin-tools/tools/FileReadTool/prompt.js'
 import {FILE_WRITE_TOOL_NAME} from '@neptune/builtin-tools/tools/FileWriteTool/prompt.js'
 import {NOTEBOOK_EDIT_TOOL_NAME} from '@neptune/builtin-tools/tools/NotebookEditTool/constants.js'
-import {POWERSHELL_TOOL_NAME} from '@neptune/builtin-tools/tools/PowerShellTool/toolName.js'
+import {POWERSHELL_TOOL_NAME} from '../../product-tools/powershell/toolName.js'
 import {parseGitCommitId} from '@neptune/builtin-tools/tools/shared/gitOperationTracking.js'
 import {
 	isDeferredTool,

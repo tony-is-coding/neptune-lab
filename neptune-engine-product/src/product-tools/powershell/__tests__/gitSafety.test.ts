@@ -3,6 +3,10 @@ import {mock, describe, expect, test} from "bun:test";
 // Mock dependencies before import
 const mockCwd = "/Users/test/project";
 
+mock.module("@neptune/engine/session/SessionContext.js", () => ({
+	getSessionId: () => "test-session",
+}));
+
 mock.module("src/utils/cwd.js", () => ({
 	getCwd: () => mockCwd,
 }));
