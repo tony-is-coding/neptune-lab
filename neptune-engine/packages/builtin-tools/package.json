@@ -12,6 +12,7 @@
     "./utils": "./src/utils.ts"
   },
   "dependencies": {
-    "@neptune/engine-tools": "workspace:*"
+    "@neptune/engine-tools": "workspace:*",
+    "axios": "^1.14.0"
   }
 }

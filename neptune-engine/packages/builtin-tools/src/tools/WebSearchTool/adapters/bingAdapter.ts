@@ -4,7 +4,6 @@
  */
 
 import axios from 'axios'
-import he from 'he'
 import {AbortError} from '../../../utils/errors.js'
 import type {SearchResult, SearchOptions, WebSearchAdapter} from './types.js'
 
@@ -167,7 +166,28 @@ function extractSnippet(block: string): string | undefined {
 	return undefined
 }
 
-export const decodeHtmlEntities = he.decode
+const NAMED_HTML_ENTITIES: Record<string, string> = {
+	amp: '&',
+	apos: "'",
+	gt: '>',
+	lt: '<',
+	nbsp: '\u00a0',
+	quot: '"',
+}
+
+export function decodeHtmlEntities(value: string): string {
+	return value.replace(/&(#x[0-9a-fA-F]+|#\d+|[a-zA-Z][a-zA-Z0-9]+);/g, (match, entity) => {
+		if (entity.startsWith('#x') || entity.startsWith('#X')) {
+			const codePoint = Number.parseInt(entity.slice(2), 16)
+			return Number.isFinite(codePoint) ? String.fromCodePoint(codePoint) : match
+		}
+		if (entity.startsWith('#')) {
+			const codePoint = Number.parseInt(entity.slice(1), 10)
+			return Number.isFinite(codePoint) ? String.fromCodePoint(codePoint) : match
+		}
+		return NAMED_HTML_ENTITIES[entity] ?? match
+	})
+}
 
 /**
  * Resolve a Bing redirect URL to the actual target URL.
