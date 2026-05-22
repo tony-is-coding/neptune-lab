@@ -4,14 +4,14 @@ import {getOauthConfig} from 'src/constants/oauth.js'
 import {getFeatureValue_CACHED_MAY_BE_STALE} from 'src/services/analytics/growthbook.js'
 import {getOrganizationUUID} from 'src/services/oauth/client.js'
 import {isPolicyAllowed} from 'src/services/policyLimits/index.js'
-import type {ToolUseContext} from '../../tool.js'
-import {buildTool, type ToolDef} from '../../tool.js'
+import type {ToolUseContext} from '../../../Tool.js'
+import {buildTool, type ToolDef} from '../../../Tool.js'
 import {
 	checkAndRefreshOAuthTokenIfNeeded,
 	getClaudeAIOAuthTokens,
 } from 'src/utils/auth.js'
-import {lazySchema} from '../../utils/lazySchema.js'
-import {jsonStringify} from '../../utils/json.js'
+import {lazySchema} from '../../../utils/lazySchema.js'
+import {jsonStringify} from '../../../utils/slowOperations.js'
 import {DESCRIPTION, PROMPT, REMOTE_TRIGGER_TOOL_NAME} from './prompt.js'
 
 const inputSchema = lazySchema(() =>
@@ -67,6 +67,10 @@ export const RemoteTriggerTool = buildTool({
 	},
 	toAutoClassifierInput(input: Input) {
 		return `RemoteTrigger ${input.action}${input.trigger_id ? ` ${input.trigger_id}` : ''}`
+	},
+	renderToolUseMessage(input: Partial<Input>) {
+		const action = input.action ?? '...'
+		return input.trigger_id ? `RemoteTrigger: ${action} ${input.trigger_id}` : `RemoteTrigger: ${action}`
 	},
 	async description() {
 		return DESCRIPTION

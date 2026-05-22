@@ -23,7 +23,7 @@ const REPLTool =
 		: null
 const SuggestBackgroundPRTool =
 	process.env.USER_TYPE === 'ant'
-		? require('@neptune/builtin-tools/tools/SuggestBackgroundPRTool/SuggestBackgroundPRTool.js')
+		? require('./product-tools/agentops/suggest-background-pr/SuggestBackgroundPRTool.js')
 			.SuggestBackgroundPRTool
 		: null
 const SleepTool =
@@ -36,7 +36,7 @@ const cronTools = [
 	require('@neptune/builtin-tools/tools/ScheduleCronTool/CronListTool.js').CronListTool,
 ]
 const RemoteTriggerTool = feature('AGENT_TRIGGERS_REMOTE')
-	? require('@neptune/builtin-tools/tools/RemoteTriggerTool/RemoteTriggerTool.js').RemoteTriggerTool
+	? require('./product-tools/agentops/remote-trigger/RemoteTriggerTool.js').RemoteTriggerTool
 	: null
 const MonitorTool = feature('MONITOR_TOOL')
 	? require('@neptune/builtin-tools/tools/MonitorTool/MonitorTool.js').MonitorTool
@@ -50,7 +50,7 @@ const PushNotificationTool =
 			.PushNotificationTool
 		: null
 const SubscribePRTool = feature('KAIROS_GITHUB_WEBHOOKS')
-	? require('@neptune/builtin-tools/tools/SubscribePRTool/SubscribePRTool.js').SubscribePRTool
+	? require('./product-tools/agentops/subscribe-pr/SubscribePRTool.js').SubscribePRTool
 	: null
 /* eslint-enable custom-rules/no-process-env-top-level, @typescript-eslint/no-require-imports */
 import {TaskOutputTool} from '@neptune/builtin-tools/tools/TaskOutputTool/TaskOutputTool.js'
@@ -131,7 +131,7 @@ const SnipTool = feature('HISTORY_SNIP')
 	? require('@neptune/builtin-tools/tools/SnipTool/SnipTool.js').SnipTool
 	: null
 const ReviewArtifactTool = feature('REVIEW_ARTIFACT')
-	? require('@neptune/builtin-tools/tools/ReviewArtifactTool/ReviewArtifactTool.js')
+	? require('./product-tools/agentops/review-artifact/ReviewArtifactTool.js')
 		.ReviewArtifactTool
 	: null
 const ListPeersTool = feature('UDS_INBOX')

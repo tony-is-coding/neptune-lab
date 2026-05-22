@@ -1,7 +1,7 @@
 import {z} from 'zod/v4'
-import type {ToolResultBlockParam} from '../../tool.js'
-import {buildTool} from '../../tool.js'
-import {lazySchema} from '../../utils/lazySchema.js'
+import type {ToolResultBlockParam} from '../../../Tool.js'
+import {buildTool} from '../../../Tool.js'
+import {lazySchema} from '../../../utils/lazySchema.js'
 
 const SUGGEST_BACKGROUND_PR_TOOL_NAME = 'SuggestBackgroundPR'
 

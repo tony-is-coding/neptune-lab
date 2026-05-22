@@ -1,6 +1,6 @@
 import {z} from 'zod/v4'
-import {buildTool, type ToolDef} from '../../tool.js'
-import {lazySchema} from '../../utils/lazySchema.js'
+import {buildTool, type ToolDef} from '../../../Tool.js'
+import {lazySchema} from '../../../utils/lazySchema.js'
 
 const REVIEW_ARTIFACT_TOOL_NAME = 'ReviewArtifact'
 
@@ -66,6 +66,11 @@ export const ReviewArtifactTool = buildTool({
 	},
 	userFacingName() {
 		return 'ReviewArtifact'
+	},
+	renderToolUseMessage(input) {
+		return input.title
+			? `Review artifact: ${input.title}`
+			: 'Review artifact'
 	},
 	get inputSchema(): InputSchema {
 		return inputSchema()

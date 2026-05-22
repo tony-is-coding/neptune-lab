@@ -34,7 +34,7 @@ import { WebFetchPermissionRequest } from './WebFetchPermissionRequest/WebFetchP
 /* eslint-disable @typescript-eslint/no-require-imports */
 const ReviewArtifactTool = feature('REVIEW_ARTIFACT')
   ? (
-      require('@neptune/builtin-tools/tools/ReviewArtifactTool/ReviewArtifactTool.js') as typeof import('@neptune/builtin-tools/tools/ReviewArtifactTool/ReviewArtifactTool.js')
+      require('../../../product-tools/agentops/review-artifact/ReviewArtifactTool.js') as typeof import('../../../product-tools/agentops/review-artifact/ReviewArtifactTool.js')
     ).ReviewArtifactTool
   : null
 
