@@ -75,8 +75,6 @@ import type {
 } from './provider/types/ProviderConfigs.js'
 import type {ProviderRegistry} from './provider/ProviderRegistry.js'
 import type {CircuitBreakerConfig} from './provider/CircuitBreaker.js'
-import type {ITracingProvider} from './observability/ITracingProvider.js'
-import type {IMetricsProvider} from './observability/IMetricsProvider.js'
 
 // ============================================================
 // 类型定义
