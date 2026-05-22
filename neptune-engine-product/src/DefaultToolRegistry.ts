@@ -139,7 +139,7 @@ export class DefaultToolRegistry implements ToolRegistry {
 
 		try {
 			// BriefTool
-			const {BriefTool} = require('@neptune/builtin-tools/tools/BriefTool/BriefTool.js')
+			const {BriefTool} = require('./product-tools/brief/BriefTool.js')
 			tools.push(applyProductToolUiOverrides(BriefTool))
 		} catch {
 		}

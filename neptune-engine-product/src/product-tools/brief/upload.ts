@@ -1,17 +1,3 @@
-/**
- * Upload BriefTool attachments to private_api so web viewers can preview them.
- *
- * When the repl bridge is active, attachment paths are meaningless to a web
- * viewer (they're on Claude's machine). We upload to /api/oauth/file_upload —
- * the same store MessageComposer/SpaceMessage render from — and stash the
- * returned file_uuid alongside the path. Web resolves file_uuid → preview;
- * desktop/local try path first.
- *
- * Best-effort: any failure (no token, bridge off, network error, 4xx) logs
- * debug and returns undefined. The attachment still carries {path, size,
- * isImage}, so local-terminal and same-machine-desktop render unaffected.
- */
-
 import {feature} from 'bun:bundle'
 import axios from 'axios'
 import {randomUUID} from 'crypto'
@@ -22,24 +8,15 @@ import {z} from 'zod/v4'
 import {
 	getBridgeAccessToken,
 	getBridgeBaseUrlOverride,
-} from '../../../../../src/ui/bridge/bridgeConfig'
-import {getOauthConfig} from 'src/constants/oauth.js'
-import {logForDebugging} from 'src/utils/debug.js'
-import {lazySchema} from '../../utils/lazySchema.js'
+} from '../../ui/bridge/bridgeConfig.js'
+import {getOauthConfig} from '../../constants/oauth.js'
 import {jsonStringify} from '../../utils/json.js'
+import {lazySchema} from '../../utils/lazySchema.js'
+import {logForDebugging} from '../../utils/debug.js'
 
-// Matches the private_api backend limit
 const MAX_UPLOAD_BYTES = 30 * 1024 * 1024
-
 const UPLOAD_TIMEOUT_MS = 30_000
 
-// Backend dispatches on mime: image/* → upload_image_wrapped (writes
-// PREVIEW/THUMBNAIL, no ORIGINAL), everything else → upload_generic_file
-// (ORIGINAL only, no preview). Only whitelist raster formats the
-// transcoder reliably handles — svg/bmp/ico risk a 400, and pdf routes
-// to upload_pdf_file_wrapped which also skips ORIGINAL. Dispatch
-// viewers use /preview for images and /contents for everything else,
-// so images go image/* and the rest go octet-stream.
 const MIME_BY_EXT: Record<string, string> = {
 	'.png': 'image/png',
 	'.jpg': 'image/jpeg',
@@ -57,15 +34,6 @@ function debug(msg: string): void {
 	logForDebugging(`[brief:upload] ${msg}`)
 }
 
-/**
- * Base URL for uploads. Must match the host the token is valid for.
- *
- * Subprocess hosts (cowork) pass ANTHROPIC_BASE_URL alongside
- * CLAUDE_CODE_OAUTH_TOKEN — prefer that since getOauthConfig() only
- * returns staging when USE_STAGING_OAUTH is set, which such hosts don't
- * set. Without this a staging token hits api.anthropic.com → 401 → silent
- * skip → web viewer sees inert cards with no file_uuid.
- */
 function getBridgeBaseUrl(): string {
 	return (
 		getBridgeBaseUrlOverride() ??
@@ -74,8 +42,6 @@ function getBridgeBaseUrl(): string {
 	)
 }
 
-// /api/oauth/file_upload returns one of ChatMessage{Image,Blob,Document}FileSchema.
-// All share file_uuid; that's the only field we need.
 const uploadResponseSchema = lazySchema(() =>
 	z.object({file_uuid: z.string()}),
 )
@@ -85,17 +51,11 @@ export type BriefUploadContext = {
 	signal?: AbortSignal
 }
 
-/**
- * Upload a single attachment. Returns file_uuid on success, undefined otherwise.
- * Every early-return is intentional graceful degradation.
- */
 export async function uploadBriefAttachment(
 	fullPath: string,
 	size: number,
 	ctx: BriefUploadContext,
 ): Promise<string | undefined> {
-	// Positive pattern so bun:bundle eliminates the entire body from
-	// non-BRIDGE_MODE builds (negative `if (!feature(...)) return` does not).
 	if (feature('BRIDGE_MODE')) {
 		if (!ctx.replBridgeEnabled) return undefined
 
@@ -124,13 +84,11 @@ export async function uploadBriefAttachment(
 		const mimeType = guessMimeType(filename)
 		const boundary = `----FormBoundary${randomUUID()}`
 
-		// Manual multipart — same pattern as filesApi.ts. The oauth endpoint takes
-		// a single "file" part (no "purpose" field like the public Files API).
 		const body = Buffer.concat([
 			Buffer.from(
 				`--${boundary}\r\n` +
-				`Content-Disposition: form-data; name="file"; filename="${filename}"\r\n` +
-				`Content-Type: ${mimeType}\r\n\r\n`,
+					`Content-Disposition: form-data; name="file"; filename="${filename}"\r\n` +
+					`Content-Type: ${mimeType}\r\n\r\n`,
 			),
 			content,
 			Buffer.from(`\r\n--${boundary}--\r\n`),
@@ -163,7 +121,7 @@ export async function uploadBriefAttachment(
 				return undefined
 			}
 
-			debug(`uploaded ${fullPath} → ${parsed.data.file_uuid} (${size} bytes)`)
+			debug(`uploaded ${fullPath} -> ${parsed.data.file_uuid} (${size} bytes)`)
 			return parsed.data.file_uuid
 		} catch (e) {
 			debug(`upload threw for ${fullPath}: ${e}`)
@@ -172,3 +130,4 @@ export async function uploadBriefAttachment(
 	}
 	return undefined
 }
+

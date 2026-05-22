@@ -14,7 +14,7 @@ import {GlobTool} from '@neptune/builtin-tools/tools/GlobTool/GlobTool.js'
 import {NotebookEditTool} from '@neptune/builtin-tools/tools/NotebookEditTool/NotebookEditTool.js'
 import {WebFetchTool} from '@neptune/builtin-tools/tools/WebFetchTool/WebFetchTool.js'
 import {TaskStopTool} from '@neptune/builtin-tools/tools/TaskStopTool/TaskStopTool.js'
-import {BriefTool} from '@neptune/builtin-tools/tools/BriefTool/BriefTool.js'
+import {BriefTool} from './product-tools/brief/BriefTool.js'
 // Dead code elimination: conditional import for ant-only tools
 /* eslint-disable custom-rules/no-process-env-top-level, @typescript-eslint/no-require-imports */
 const REPLTool =

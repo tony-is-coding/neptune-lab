@@ -77,12 +77,12 @@ const proactiveModule =
 const BRIEF_PROACTIVE_SECTION: string | null =
 	feature('KAIROS') || feature('KAIROS_BRIEF')
 		? (
-			require('@neptune/builtin-tools/tools/BriefTool/prompt.js') as typeof import('@neptune/builtin-tools/tools/BriefTool/prompt.js')
+			require('../product-tools/brief/prompt.js') as typeof import('../product-tools/brief/prompt.js')
 		).BRIEF_PROACTIVE_SECTION
 		: null
 const briefToolModule =
 	feature('KAIROS') || feature('KAIROS_BRIEF')
-		? (require('@neptune/builtin-tools/tools/BriefTool/BriefTool.js') as typeof import('@neptune/builtin-tools/tools/BriefTool/BriefTool.js'))
+		? (require('../product-tools/brief/BriefTool.js') as typeof import('../product-tools/brief/BriefTool.js'))
 		: null
 const DISCOVER_SKILLS_TOOL_NAME: string | null = feature(
 	'EXPERIMENTAL_SKILL_SEARCH',

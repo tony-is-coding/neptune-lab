@@ -10,7 +10,6 @@
 export {AgentTool} from './tools/AgentTool/AgentTool.js'
 export {AskUserQuestionTool} from './tools/AskUserQuestionTool/AskUserQuestionTool.js'
 export {BashTool} from './tools/BashTool/BashTool.js'
-export {BriefTool} from './tools/BriefTool/BriefTool.js'
 export {ConfigTool} from './tools/ConfigTool/ConfigTool.js'
 export {EnterPlanModeTool} from './tools/EnterPlanModeTool/EnterPlanModeTool.js'
 export {ExitPlanModeV2Tool} from './tools/ExitPlanModeTool/ExitPlanModeV2Tool.js'

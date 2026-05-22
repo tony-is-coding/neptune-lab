@@ -10,7 +10,7 @@ import type {PermissionRuleValue} from './PermissionRule.js'
 const BRIEF_TOOL_NAME: string | null =
 	feature('KAIROS') || feature('KAIROS_BRIEF')
 		? (
-			require('@neptune/builtin-tools/tools/BriefTool/prompt.js') as typeof import('@neptune/builtin-tools/tools/BriefTool/prompt.js')
+			require('../../product-tools/brief/prompt.js') as typeof import('../../product-tools/brief/prompt.js')
 		).BRIEF_TOOL_NAME
 		: null
 /* eslint-enable @typescript-eslint/no-require-imports */

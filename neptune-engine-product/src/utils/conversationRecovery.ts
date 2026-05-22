@@ -55,13 +55,13 @@ import type {ContentReplacementRecord} from './toolResultStorage.js'
 const BRIEF_TOOL_NAME: string | null =
 	feature('KAIROS') || feature('KAIROS_BRIEF')
 		? (
-			require('@neptune/builtin-tools/tools/BriefTool/prompt.js') as typeof import('@neptune/builtin-tools/tools/BriefTool/prompt.js')
+			require('../product-tools/brief/prompt.js') as typeof import('../product-tools/brief/prompt.js')
 		).BRIEF_TOOL_NAME
 		: null
 const LEGACY_BRIEF_TOOL_NAME: string | null =
 	feature('KAIROS') || feature('KAIROS_BRIEF')
 		? (
-			require('@neptune/builtin-tools/tools/BriefTool/prompt.js') as typeof import('@neptune/builtin-tools/tools/BriefTool/prompt.js')
+			require('../product-tools/brief/prompt.js') as typeof import('../product-tools/brief/prompt.js')
 		).LEGACY_BRIEF_TOOL_NAME
 		: null
 const SEND_USER_FILE_TOOL_NAME: string | null = feature('KAIROS')
