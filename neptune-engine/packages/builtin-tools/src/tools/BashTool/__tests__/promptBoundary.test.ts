@@ -82,11 +82,12 @@ mock.module('../../TodoWriteTool/TodoWriteTool.js', () => ({
 const {getSimplePrompt} = await import('../prompt.js')
 
 describe('BashTool prompt runtime boundary', () => {
-	test('keeps shell/git safety but excludes product commit and PR delivery policy', () => {
+	test('excludes product git, commit, and PR delivery policy', () => {
 		const prompt = getSimplePrompt()
 
-		expect(prompt).toContain('For git commands:')
-		expect(prompt).toContain('Never skip hooks')
+		expect(prompt).not.toContain('For git commands:')
+		expect(prompt).not.toContain('Never skip hooks')
+		expect(prompt).not.toContain('git reset --hard')
 		expect(prompt).not.toContain('# Committing changes with git')
 		expect(prompt).not.toContain('# Creating pull requests')
 		expect(prompt).not.toContain('gh pr create')

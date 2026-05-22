@@ -41,6 +41,8 @@ describe('product Bash delivery policy', () => {
 		expect(prompt).toContain('# Committing changes with git')
 		expect(prompt).toContain('# Creating pull requests')
 		expect(prompt).toContain('gh pr create')
+		expect(prompt).toContain('NEVER skip hooks')
+		expect(prompt).toContain('NEVER run destructive git commands')
 		expect(prompt).toContain('Co-Authored-By: Test <test@example.com>')
 		expect(prompt).toContain('Generated with Test')
 	})
