@@ -75,7 +75,6 @@ import {
 	PREVIEW_SIZE_BYTES,
 } from 'src/utils/toolResultStorage.js'
 import {userFacingName as fileEditUserFacingName} from '../FileEditTool/UI.js'
-import {trackGitOperations} from '../shared/gitOperationTracking.js'
 import {
 	bashToolHasPermission,
 	commandHasAnyCd,
@@ -916,8 +915,6 @@ export const BashTool = buildTool({
 			// Get the final result from the generator's return value
 			result = generatorResult.value
 
-			trackGitOperations(input.command, result.code, result.stdout)
-
 			const isInterrupt =
 				result.interrupted && abortController.signal.reason === 'interrupt'
 
@@ -1090,6 +1087,9 @@ export const BashTool = buildTool({
 
 		return {
 			data,
+			execution: {
+				exitCode: result.code,
+			},
 		}
 	},
 	renderToolUseErrorMessage,

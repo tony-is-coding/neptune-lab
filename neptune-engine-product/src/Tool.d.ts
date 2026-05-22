@@ -225,6 +225,13 @@ export type ToolResult<T> = {
     data: T;
     newMessages?: (UserMessage | AssistantMessage | AttachmentMessage | SystemMessage)[];
     contextModifier?: (context: ToolUseContext) => ToolUseContext;
+    /**
+     * Host/runtime-only execution metadata. Product adapters may inspect it,
+     * but model-facing tool result mapping must ignore it.
+     */
+    execution?: {
+        exitCode?: number;
+    };
     /** MCP protocol metadata (structuredContent, _meta) to pass through to SDK consumers */
     mcpMeta?: {
         _meta?: Record<string, unknown>;

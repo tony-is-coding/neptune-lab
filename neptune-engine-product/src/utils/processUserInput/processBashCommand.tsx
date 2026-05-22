@@ -21,6 +21,7 @@ import {
 import {resolveDefaultShell} from '../shell/resolveDefaultShell.js'
 import {isPowerShellToolEnabled} from '../shell/shellToolUtils.js'
 import {processToolResultBlock} from '../toolResultStorage.js'
+import {trackShellGitOperationsFromToolResult} from '../gitOperationTracking.js'
 import {escapeXml} from '../xml.js'
 import type {ProcessUserInputContext} from './processUserInput.js'
 
@@ -136,6 +137,12 @@ export async function processBashCommand(
 				onProgress,
 			)
 		const data = response.data
+		trackShellGitOperationsFromToolResult({
+			toolName: shellTool.name,
+			command: inputString,
+			exitCode: response.execution?.exitCode,
+			data,
+		})
 
 		if (!data) {
 			throw new Error('No result received from shell command')

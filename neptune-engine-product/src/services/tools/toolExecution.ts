@@ -43,7 +43,10 @@ import {FILE_READ_TOOL_NAME} from '@neptune/builtin-tools/tools/FileReadTool/pro
 import {FILE_WRITE_TOOL_NAME} from '@neptune/builtin-tools/tools/FileWriteTool/prompt.js'
 import {NOTEBOOK_EDIT_TOOL_NAME} from '@neptune/builtin-tools/tools/NotebookEditTool/constants.js'
 import {POWERSHELL_TOOL_NAME} from '../../product-tools/powershell/toolName.js'
-import {parseGitCommitId} from '@neptune/builtin-tools/tools/shared/gitOperationTracking.js'
+import {
+	parseGitCommitId,
+	trackShellGitOperationsFromToolResult,
+} from '../../utils/gitOperationTracking.js'
 import {
 	isDeferredTool,
 	TOOL_SEARCH_TOOL_NAME,
@@ -1382,6 +1385,19 @@ async function checkPermissionsAndCallTool(
 					requestId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
 			}),
 			...mcpToolDetailsForAnalytics(tool.name, mcpServerType, mcpServerBaseUrl),
+		})
+
+		// Product-side SCM telemetry belongs at the tool-execution adapter layer:
+		// the runtime kernel should not interpret command output as GitHub/PR
+		// delivery events.
+		trackShellGitOperationsFromToolResult({
+			toolName: tool.name,
+			command:
+				'command' in processedInput && typeof processedInput.command === 'string'
+					? processedInput.command
+					: undefined,
+			exitCode: result.execution?.exitCode,
+			data: result.data,
 		})
 
 		// Enrich tool parameters with git commit ID from successful git commit output

@@ -63,6 +63,13 @@ export type ToolResult<T, Message = unknown> = {
 	data: T
 	newMessages?: Message[]
 	contextModifier?: (context: any) => any
+	/**
+	 * Host/runtime-only execution metadata. Product adapters may inspect it,
+	 * but model-facing tool result mapping must ignore it.
+	 */
+	execution?: {
+		exitCode?: number
+	}
 	/** MCP protocol metadata (structuredContent, _meta) */
 	mcpMeta?: {
 		_meta?: Record<string, unknown>

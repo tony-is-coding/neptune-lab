@@ -20,6 +20,7 @@ import type {
 	SetToolJSXFn,
 	Tool,
 	ToolCallProgress,
+	ToolResult,
 	ValidationResult,
 } from '../../Tool.js'
 import {buildTool, type ToolDef} from '../../Tool.js'
@@ -71,7 +72,6 @@ import {
 	stdErrAppendShellResetMessage,
 	stripEmptyLines,
 } from '@neptune/builtin-tools/tools/BashTool/utils.js'
-import {trackGitOperations} from '@neptune/builtin-tools/tools/shared/gitOperationTracking.js'
 import {interpretCommandResult} from './commandSemantics.js'
 import {powershellToolHasPermission} from './powershellPermissions.js'
 import {getDefaultTimeoutMs, getMaxTimeoutMs, getPrompt} from './prompt.js'
@@ -599,7 +599,7 @@ export const PowerShellTool = buildTool({
 		_canUseTool?: CanUseToolFn,
 		_parentMessage?: AssistantMessage,
 		onProgress?: ToolCallProgress<PowerShellProgress>,
-	): Promise<{ data: Out }> {
+	): Promise<ToolResult<Out>> {
 		// Load-bearing guard: promptShellExecution.ts and processBashCommand.tsx
 		// call PowerShellTool.call() directly, bypassing validateInput. This is
 		// the check that covers ALL callers. See isWindowsSandboxPolicyViolation
@@ -651,28 +651,6 @@ export const PowerShellTool = buildTool({
 
 			const result = generatorResult.value
 
-			// Feed git/PR usage metrics (same counters as BashTool). PS invokes
-			// git/gh/glab/curl as external binaries with identical syntax, so the
-			// shell-agnostic regex detection in trackGitOperations works as-is.
-			// Called before the backgroundTaskId early-return so backgrounded
-			// commands are counted too (matches BashTool.tsx:912).
-			//
-			// Pre-flight sentinel guard: the two PS pre-flight paths (pwsh-not-found,
-			// exec-spawn-catch) return code: 0 + empty stdout + stderr so call() can
-			// surface stderr gracefully instead of throwing ShellError. But
-			// gitOperationTracking.ts:48 treats code 0 as success and would
-			// regex-match the command, mis-counting a command that never ran.
-			// BashTool is safe — its pre-flight goes through createFailedCommand
-			// (code: 1) so tracking early-returns. Skip tracking on this sentinel.
-			const isPreFlightSentinel =
-				result.code === 0 &&
-				!result.stdout &&
-				result.stderr &&
-				!result.backgroundTaskId
-			if (!isPreFlightSentinel) {
-				trackGitOperations(input.command, result.code, result.stdout)
-			}
-
 			// Distinguish user-driven interrupt (new message submitted) from other
 			// interrupted states. Only user-interrupt should suppress ShellError —
 			// timeout-kill or process-kill with isError should still throw.
@@ -716,6 +694,9 @@ export const PowerShellTool = buildTool({
 						backgroundTaskId: result.backgroundTaskId,
 						backgroundedByUser: result.backgroundedByUser,
 						assistantAutoBackgrounded: result.assistantAutoBackgrounded,
+					},
+					execution: {
+						exitCode: result.code,
 					},
 				}
 			}
@@ -847,6 +828,9 @@ export const PowerShellTool = buildTool({
 					isImage,
 					persistedOutputPath,
 					persistedOutputSize,
+				},
+				execution: {
+					exitCode: result.code,
 				},
 			}
 		} finally {

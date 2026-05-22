@@ -1,18 +1,18 @@
-/**
- * Shell-agnostic git operation tracking for usage metrics.
- *
- * Detects `git commit`, `git push`, `gh pr create`, `glab mr create`, and
- * curl-based PR creation in command strings, then increments OTLP counters
- * and fires analytics events. The regexes operate on raw command text so they
- * work identically for Bash and PowerShell (both invoke git/gh/glab/curl as
- * external binaries with the same argv syntax).
- */
-
 import {getCommitCounter, getPrCounter} from 'src/bootstrap/state.js'
 import {
 	type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
 	logEvent,
 } from 'src/services/analytics/index.js'
+
+/**
+ * Product-side SCM operation tracking for delivery telemetry.
+ *
+ * Detects `git commit`, `git push`, `gh pr create`, `glab mr create`, and
+ * curl-based PR creation in command strings, then increments product counters
+ * and fires analytics events. This intentionally lives outside the runtime
+ * kernel: commit/PR interpretation is a delivery-console concern, not a tool
+ * execution primitive.
+ */
 
 /**
  * Build a regex that matches `git <subcmd>` while tolerating git's global
@@ -274,4 +274,62 @@ export function trackGitOperations(
 		})
 		getPrCounter()?.add(1)
 	}
+}
+
+export function shellGitOperationTrackingInputFromToolResult({
+	toolName,
+	command,
+	exitCode,
+	data,
+}: {
+	toolName: string
+	command?: string
+	exitCode?: number
+	data: unknown
+}): {command: string; exitCode: number; output?: string} | undefined {
+	if (
+		(toolName !== 'Bash' && toolName !== 'PowerShell') ||
+		!command ||
+		exitCode === undefined ||
+		!data ||
+		typeof data !== 'object'
+	) {
+		return undefined
+	}
+
+	const resultData = data as {
+		stdout?: unknown
+		stderr?: unknown
+		backgroundTaskId?: unknown
+	}
+	const stderr = resultData.stderr == null ? '' : String(resultData.stderr)
+	const isPowerShellPreFlightSentinel =
+		toolName === 'PowerShell' &&
+		exitCode === 0 &&
+		!resultData.stdout &&
+		(stderr === 'PowerShell is not available on this system.' ||
+			stderr.startsWith('Failed to execute PowerShell command:')) &&
+		!resultData.backgroundTaskId
+
+	if (isPowerShellPreFlightSentinel) {
+		return undefined
+	}
+
+	const output = [resultData.stdout, resultData.stderr]
+		.map(value => (value == null ? '' : String(value)))
+		.filter(Boolean)
+		.join('\n')
+	return {command, exitCode, output: output || undefined}
+}
+
+export function trackShellGitOperationsFromToolResult(
+	input: Parameters<typeof shellGitOperationTrackingInputFromToolResult>[0],
+): void {
+	const trackingInput = shellGitOperationTrackingInputFromToolResult(input)
+	if (!trackingInput) return
+	trackGitOperations(
+		trackingInput.command,
+		trackingInput.exitCode,
+		trackingInput.output,
+	)
 }

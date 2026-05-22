@@ -35,6 +35,13 @@ export interface ToolResult<T = unknown> {
     error?: string;
     newMessages?: (Message)[];
     contextModifier?: (context: unknown) => unknown;
+    /**
+     * Host/runtime-only execution metadata. Product adapters may inspect it,
+     * but model-facing tool result mapping must ignore it.
+     */
+    execution?: {
+        exitCode?: number;
+    };
     mcpMeta?: {
         _meta?: Record<string, unknown>;
         structuredContent?: Record<string, unknown>;

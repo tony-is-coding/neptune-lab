@@ -7,6 +7,7 @@ import type {FrontmatterShell} from './frontmatterParser.js'
 import {createAssistantMessage} from './messages.js'
 import {hasPermissionsToUseTool} from './permissions/permissions.js'
 import {processToolResultBlock} from './toolResultStorage.js'
+import {trackShellGitOperationsFromToolResult} from './gitOperationTracking.js'
 
 // Narrow structural slice both BashTool and PowerShellTool satisfy. We can't
 // use the base Tool type: it marks call()'s canUseTool/parentMessage as
@@ -21,7 +22,7 @@ type PromptShellTool = Tool & {
 	call(
 		input: { command: string },
 		context: ToolUseContext,
-	): Promise<{ data: ShellOut }>
+	): Promise<{ data: ShellOut; execution?: {exitCode?: number} }>
 }
 
 import {isPowerShellToolEnabled} from './shell/shellToolUtils.js'
@@ -112,7 +113,14 @@ export async function executeShellCommandsInPrompt(
 						)
 					}
 
-					const {data} = await shellTool.call({command}, context)
+					const response = await shellTool.call({command}, context)
+					const {data} = response
+					trackShellGitOperationsFromToolResult({
+						toolName: shellTool.name,
+						command,
+						exitCode: response.execution?.exitCode,
+						data,
+					})
 					// Reuse the same persistence flow as regular Bash tool calls
 					const toolResultBlock = await processToolResultBlock(
 						shellTool,

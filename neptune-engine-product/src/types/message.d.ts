@@ -1,7 +1,7 @@
 import type { UUID } from 'crypto';
 import type { ContentBlockParam, ContentBlock } from '@anthropic-ai/sdk/resources/index.mjs';
 import type { BetaUsage } from '@anthropic-ai/sdk/resources/beta/messages/messages.mjs';
-import type { BranchAction, CommitKind, PrAction } from '@neptune/builtin-tools/tools/shared/gitOperationTracking.js';
+import type { BranchAction, CommitKind, PrAction } from '../utils/gitOperationTracking.js';
 /**
  * Base message type with discriminant `type` field and common properties.
  * Individual message subtypes (UserMessage, AssistantMessage, etc.) extend

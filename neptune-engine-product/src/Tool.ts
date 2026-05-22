@@ -334,9 +334,16 @@ export type ToolResult<T> = {
 		| AssistantMessage
 		| AttachmentMessage
 		| SystemMessage
-		)[]
+	)[]
 	// contextModifier is only honored for tools that aren't concurrency safe.
 	contextModifier?: (context: ToolUseContext) => ToolUseContext
+	/**
+	 * Host/runtime-only execution metadata. Product adapters may inspect it,
+	 * but model-facing tool result mapping must ignore it.
+	 */
+	execution?: {
+		exitCode?: number
+	}
 	/** MCP protocol metadata (structuredContent, _meta) to pass through to SDK consumers */
 	mcpMeta?: {
 		_meta?: Record<string, unknown>

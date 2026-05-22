@@ -12,7 +12,7 @@ import {
 	type CommitKind,
 	detectGitOperation,
 	type PrAction,
-} from '@neptune/builtin-tools/tools/shared/gitOperationTracking.js'
+} from './gitOperationTracking.js'
 import {TOOL_SEARCH_TOOL_NAME} from '@neptune/builtin-tools/tools/ToolSearchTool/prompt.js'
 import type {
 	CollapsedReadSearchGroup,
