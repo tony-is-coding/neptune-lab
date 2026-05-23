@@ -34,6 +34,7 @@ import {platformFactRoutes} from './routes/platform-facts';
 import {closingRoutes} from './routes/closing';
 import {authMiddleware} from './middleware/auth';
 import {initLogger, createLogger} from './utils/logger';
+import {sendApiError, toApiErrorEnvelope} from './utils/api-error';
 import {initObservability, shutdownObservability} from './services/observability';
 
 // 初始化全局日志
@@ -87,6 +88,50 @@ async function createApp() {
 
     // 注册认证装饰器
     app.decorate('authenticate', authMiddleware);
+
+    // 全局未捕获错误兜底：保证任何 throw / Fastify schema 校验失败 / 路由抛出
+    // 都会以标准错误信封 + requestId 返回，并写入审计可追溯的日志。
+    app.setErrorHandler((error: unknown, request, reply) => {
+        const fastifyValidationError = (error as {validation?: unknown}).validation;
+        if (fastifyValidationError) {
+            log.warn('Fastify schema 校验失败', {
+                requestId: request.requestId,
+                url: request.url,
+                method: request.method,
+                detail: error instanceof Error ? error.message : String(error),
+            });
+            return sendApiError(reply, 400, {
+                error: 'VALIDATION_FAILED',
+                message: 'Schema 校验失败：' + (error instanceof Error ? error.message : String(error)),
+                requestId: request.requestId,
+                details: {validation: fastifyValidationError},
+            });
+        }
+
+        log.error('未捕获的路由异常', {
+            requestId: request.requestId,
+            url: request.url,
+            method: request.method,
+            detail: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+        });
+
+        const {statusCode, envelope} = toApiErrorEnvelope(error, {
+            error: 'INTERNAL_ERROR',
+            message: '服务器内部错误',
+            requestId: request.requestId,
+        });
+        return sendApiError(reply, statusCode, envelope);
+    });
+
+    // 全局 404 兜底：路由未匹配也走标准错误信封。
+    app.setNotFoundHandler((request, reply) => {
+        return sendApiError(reply, 404, {
+            error: 'RESOURCE_NOT_FOUND',
+            message: `路由不存在：${request.method} ${request.url}`,
+            requestId: request.requestId,
+        });
+    });
 
     // 健康检查端点
     app.get('/health', async () => {

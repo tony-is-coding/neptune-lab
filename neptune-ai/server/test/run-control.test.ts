@@ -441,7 +441,7 @@ describe('RunControl API', () => {
         });
         expect(otherTenantRes.statusCode).toBe(404);
         expect(otherTenantRes.json()).toMatchObject({
-            error: 'NOT_FOUND',
+            error: 'RESOURCE_NOT_FOUND',
             message: 'Thread 不存在',
         });
     });
@@ -459,7 +459,7 @@ describe('RunControl API', () => {
 
         expect(res.statusCode).toBe(400);
         expect(res.json()).toMatchObject({
-            error: 'BAD_REQUEST',
+            error: 'VALIDATION_FAILED',
             message: '运行输入不能为空',
             requestId: expect.any(String),
             details: {field: 'input'},

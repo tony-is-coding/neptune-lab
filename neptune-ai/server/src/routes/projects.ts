@@ -1,7 +1,7 @@
 import type {FastifyInstance} from 'fastify';
 import {auditEventService} from '../services/audit';
 import {projectService} from '../services/project';
-import {sendApiError} from '../utils/api-error';
+import {sendApiError, replyApiError, replyUnknownError} from '../utils/api-error';
 import {createLogger} from '../utils/logger';
 import type {CreateCustomerProjectRequest, UpdateCustomerProjectRequest} from '@shared/neptune-ai';
 
@@ -24,7 +24,7 @@ function validateProjectName(
 ) {
     if (typeof name !== 'string' || !name.trim()) {
         sendApiError(reply, 400, {
-            error: 'BAD_REQUEST',
+            error: 'VALIDATION_FAILED',
             message: '客户项目名称不能为空',
             requestId,
             details: {field: 'name'},

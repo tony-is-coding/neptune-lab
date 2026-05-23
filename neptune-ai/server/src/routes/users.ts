@@ -2,6 +2,7 @@ import type {FastifyInstance} from 'fastify';
 import bcrypt from 'bcrypt';
 import {userService} from '../services/user';
 import {roleMiddleware} from '../middleware/auth';
+import {replyApiError, replyUnknownError} from '../utils/api-error';
 import {createLogger} from '../utils/logger';
 
 const log = createLogger('routes:users');
@@ -27,9 +28,8 @@ export async function userRoutes(fastify: FastifyInstance) {
         const tenantId = request.user!.tenantId;
 
         if (!name || !email || !password) {
-            return reply.status(400).send({
-                error: 'BAD_REQUEST',
-                message: '缺少必填字段',
+            return replyApiError(request, reply, 'VALIDATION_FAILED', '缺少必填字段', {
+                details: {missing: [!name && 'name', !email && 'email', !password && 'password'].filter(Boolean)},
             });
         }
 
@@ -37,9 +37,8 @@ export async function userRoutes(fastify: FastifyInstance) {
             // 检查邮箱是否已被使用
             const existingUser = await userService.findByEmail(email);
             if (existingUser) {
-                return reply.status(400).send({
-                    error: 'BAD_REQUEST',
-                    message: '邮箱已被使用',
+                return replyApiError(request, reply, 'STATE_CONFLICT', '邮箱已被使用', {
+                    details: {reason: 'email_taken'},
                 });
             }
 
@@ -54,11 +53,8 @@ export async function userRoutes(fastify: FastifyInstance) {
 
             reply.status(201).send(user);
         } catch (error) {
-            log.error('Request failed', {detail: (error as Error).message});
-            reply.status(500).send({
-                error: 'INTERNAL_ERROR',
-                message: '创建用户失败',
-            });
+            log.error('Request failed', {requestId: request.requestId, detail: (error as Error).message});
+            return replyUnknownError(request, reply, error, '创建用户失败');
         }
     });
 
@@ -75,21 +71,15 @@ export async function userRoutes(fastify: FastifyInstance) {
             const user = await userService.findById(id);
 
             if (!user) {
-                return reply.status(404).send({
-                    error: 'NOT_FOUND',
-                    message: '用户不存在',
-                });
+                return replyApiError(request, reply, 'RESOURCE_NOT_FOUND', '用户不存在');
             }
 
             // 不返回密码哈希
             const {passwordHash, ...userWithoutPassword} = user;
             reply.send(userWithoutPassword);
         } catch (error) {
-            log.error('Request failed', {detail: (error as Error).message});
-            reply.status(500).send({
-                error: 'INTERNAL_ERROR',
-                message: '获取用户失败',
-            });
+            log.error('Request failed', {requestId: request.requestId, detail: (error as Error).message});
+            return replyUnknownError(request, reply, error, '获取用户失败');
         }
     });
 
@@ -126,11 +116,8 @@ export async function userRoutes(fastify: FastifyInstance) {
                 },
             });
         } catch (error) {
-            log.error('Request failed', {detail: (error as Error).message});
-            reply.status(500).send({
-                error: 'INTERNAL_ERROR',
-                message: '获取用户列表失败',
-            });
+            log.error('Request failed', {requestId: request.requestId, detail: (error as Error).message});
+            return replyUnknownError(request, reply, error, '获取用户列表失败');
         }
     });
 
@@ -154,9 +141,8 @@ export async function userRoutes(fastify: FastifyInstance) {
             if (email) {
                 const existingUser = await userService.isEmailTaken(email, id);
                 if (existingUser) {
-                    return reply.status(400).send({
-                        error: 'BAD_REQUEST',
-                        message: '邮箱已被使用',
+                    return replyApiError(request, reply, 'STATE_CONFLICT', '邮箱已被使用', {
+                        details: {reason: 'email_taken'},
                     });
                 }
             }
@@ -169,21 +155,15 @@ export async function userRoutes(fastify: FastifyInstance) {
             const user = await userService.update(id, updateData as Parameters<typeof userService.update>[1]);
 
             if (!user) {
-                return reply.status(404).send({
-                    error: 'NOT_FOUND',
-                    message: '用户不存在',
-                });
+                return replyApiError(request, reply, 'RESOURCE_NOT_FOUND', '用户不存在');
             }
 
             // 不返回密码哈希
             const {passwordHash: _, ...userWithoutPassword} = user;
             reply.send(userWithoutPassword);
         } catch (error) {
-            log.error('Request failed', {detail: (error as Error).message});
-            reply.status(500).send({
-                error: 'INTERNAL_ERROR',
-                message: '更新用户失败',
-            });
+            log.error('Request failed', {requestId: request.requestId, detail: (error as Error).message});
+            return replyUnknownError(request, reply, error, '更新用户失败');
         }
     });
 
@@ -200,19 +180,13 @@ export async function userRoutes(fastify: FastifyInstance) {
             const success = await userService.delete(id);
 
             if (!success) {
-                return reply.status(404).send({
-                    error: 'NOT_FOUND',
-                    message: '用户不存在',
-                });
+                return replyApiError(request, reply, 'RESOURCE_NOT_FOUND', '用户不存在');
             }
 
             reply.status(204).send();
         } catch (error) {
-            log.error('Request failed', {detail: (error as Error).message});
-            reply.status(500).send({
-                error: 'INTERNAL_ERROR',
-                message: '删除用户失败',
-            });
+            log.error('Request failed', {requestId: request.requestId, detail: (error as Error).message});
+            return replyUnknownError(request, reply, error, '删除用户失败');
         }
     });
 }

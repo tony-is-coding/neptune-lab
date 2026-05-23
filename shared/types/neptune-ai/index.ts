@@ -1,4 +1,5 @@
 export * from './api/common';
+export * from './api/errors';
 export * from './api/projects';
 export * from './api/agents';
 export * from './api/threads';

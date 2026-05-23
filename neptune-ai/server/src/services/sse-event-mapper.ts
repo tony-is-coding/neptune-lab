@@ -70,11 +70,12 @@ function extractAssistantText(event: Record<string, unknown>): string {
  */
 function extractErrorEnvelope(event: Record<string, unknown>) {
     const rawError = event.error ?? event.result ?? event;
-    return toApiErrorEnvelope(rawError, {
-        error: 'QUERY_ERROR',
+    const {envelope} = toApiErrorEnvelope(rawError, {
+        error: 'INTERNAL_ERROR',
         message: extractErrorMessage(event),
         requestId: typeof event.requestId === 'string' ? event.requestId : undefined,
     });
+    return envelope;
 }
 
 function extractErrorMessage(event: Record<string, unknown>): string {

@@ -607,7 +607,7 @@ describe('AgentOps platform facts', () => {
         });
         expect(duplicateDecisionRes.statusCode).toBe(409);
         expect(duplicateDecisionRes.json()).toMatchObject({
-            error: 'REVIEW_ALREADY_DECIDED',
+            error: 'STATE_CONFLICT',
             message: '该复核项已经处理，不能重复决策。',
         });
     });

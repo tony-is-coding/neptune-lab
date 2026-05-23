@@ -8,6 +8,7 @@ import {mkdir, writeFile, unlink} from 'fs/promises';
 import {existsSync} from 'fs';
 import path from 'path';
 import {createLogger} from '../utils/logger';
+import {replyApiError, replyUnknownError} from '../utils/api-error';
 
 const log = createLogger('routes:agents');
 
@@ -55,10 +56,7 @@ export async function agentRoutes(fastify: FastifyInstance) {
         const tenantId = request.user!.tenantId;
 
         if (!name || !systemPrompt || !modelConfig) {
-            return reply.status(400).send({
-                error: 'BAD_REQUEST',
-                message: '缺少必填字段',
-            });
+            return replyApiError(request, reply, 'VALIDATION_FAILED', '缺少必填字段');
         }
 
         try {
@@ -82,10 +80,7 @@ export async function agentRoutes(fastify: FastifyInstance) {
         } catch (error) {
             if (reply.sent || reply.raw.headersSent) return;
             log.error('Request failed', {detail: (error as Error).message});
-            return reply.status(500).send({
-                error: 'INTERNAL_ERROR',
-                message: '创建 Agent 模板失败',
-            });
+            return replyApiError(request, reply, 'INTERNAL_ERROR', '创建 Agent 模板失败');
         }
     });
 
@@ -102,19 +97,13 @@ export async function agentRoutes(fastify: FastifyInstance) {
             const template = await agentTemplateService.findById(id);
 
             if (!template) {
-                return reply.status(404).send({
-                    error: 'NOT_FOUND',
-                    message: 'Agent 模板不存在',
-                });
+                return replyApiError(request, reply, 'RESOURCE_NOT_FOUND', 'Agent 模板不存在');
             }
 
             reply.send(template);
         } catch (error) {
             log.error('Request failed', {detail: (error as Error).message});
-            reply.status(500).send({
-                error: 'INTERNAL_ERROR',
-                message: '获取 Agent 模板失败',
-            });
+            replyApiError(request, reply, 'INTERNAL_ERROR', '获取 Agent 模板失败');
         }
     });
 
@@ -171,10 +160,7 @@ export async function agentRoutes(fastify: FastifyInstance) {
             });
         } catch (error) {
             log.error('Request failed', {detail: (error as Error).message});
-            reply.status(500).send({
-                error: 'INTERNAL_ERROR',
-                message: '获取 Agent 模板列表失败',
-            });
+            replyApiError(request, reply, 'INTERNAL_ERROR', '获取 Agent 模板列表失败');
         }
     });
 
@@ -232,20 +218,14 @@ export async function agentRoutes(fastify: FastifyInstance) {
             });
 
             if (!template) {
-                return reply.status(404).send({
-                    error: 'NOT_FOUND',
-                    message: 'Agent 模板不存在',
-                });
+                return replyApiError(request, reply, 'RESOURCE_NOT_FOUND', 'Agent 模板不存在');
             }
 
             reply.send(template);
         } catch (error) {
             if (reply.sent || reply.raw.headersSent) return;
             log.error('Request failed', {detail: (error as Error).message});
-            return reply.status(500).send({
-                error: 'INTERNAL_ERROR',
-                message: '更新 Agent 模板失败',
-            });
+            return replyApiError(request, reply, 'INTERNAL_ERROR', '更新 Agent 模板失败');
         }
     });
 
@@ -263,20 +243,14 @@ export async function agentRoutes(fastify: FastifyInstance) {
             const template = await agentTemplateService.setActive(id, true);
 
             if (!template) {
-                return reply.status(404).send({
-                    error: 'NOT_FOUND',
-                    message: 'Agent 模板不存在',
-                });
+                return replyApiError(request, reply, 'RESOURCE_NOT_FOUND', 'Agent 模板不存在');
             }
 
             reply.send(template);
         } catch (error) {
             if (reply.sent || reply.raw.headersSent) return;
             log.error('Request failed', {detail: (error as Error).message});
-            return reply.status(500).send({
-                error: 'INTERNAL_ERROR',
-                message: '激活 Agent 模板失败',
-            });
+            return replyApiError(request, reply, 'INTERNAL_ERROR', '激活 Agent 模板失败');
         }
     });
 
@@ -294,20 +268,14 @@ export async function agentRoutes(fastify: FastifyInstance) {
             const template = await agentTemplateService.setActive(id, false);
 
             if (!template) {
-                return reply.status(404).send({
-                    error: 'NOT_FOUND',
-                    message: 'Agent 模板不存在',
-                });
+                return replyApiError(request, reply, 'RESOURCE_NOT_FOUND', 'Agent 模板不存在');
             }
 
             reply.send(template);
         } catch (error) {
             if (reply.sent || reply.raw.headersSent) return;
             log.error('Request failed', {detail: (error as Error).message});
-            return reply.status(500).send({
-                error: 'INTERNAL_ERROR',
-                message: '停用 Agent 模板失败',
-            });
+            return replyApiError(request, reply, 'INTERNAL_ERROR', '停用 Agent 模板失败');
         }
     });
 
@@ -325,20 +293,14 @@ export async function agentRoutes(fastify: FastifyInstance) {
             const success = await agentTemplateService.delete(id);
 
             if (!success) {
-                return reply.status(404).send({
-                    error: 'NOT_FOUND',
-                    message: 'Agent 模板不存在',
-                });
+                return replyApiError(request, reply, 'RESOURCE_NOT_FOUND', 'Agent 模板不存在');
             }
 
             reply.status(204).send();
         } catch (error) {
             if (reply.sent || reply.raw.headersSent) return;
             log.error('Request failed', {detail: (error as Error).message});
-            return reply.status(500).send({
-                error: 'INTERNAL_ERROR',
-                message: '删除 Agent 模板失败',
-            });
+            return replyApiError(request, reply, 'INTERNAL_ERROR', '删除 Agent 模板失败');
         }
     });
 
@@ -357,19 +319,13 @@ export async function agentRoutes(fastify: FastifyInstance) {
             const stats = await agentTemplateService.getStats(id);
 
             if (!stats) {
-                return reply.status(404).send({
-                    error: 'NOT_FOUND',
-                    message: 'Agent 模板不存在',
-                });
+                return replyApiError(request, reply, 'RESOURCE_NOT_FOUND', 'Agent 模板不存在');
             }
 
             reply.send(stats);
         } catch (error) {
             log.error('Request failed', {detail: (error as Error).message});
-            reply.status(500).send({
-                error: 'INTERNAL_ERROR',
-                message: '获取统计数据失败',
-            });
+            replyApiError(request, reply, 'INTERNAL_ERROR', '获取统计数据失败');
         }
     });
 
@@ -396,10 +352,7 @@ export async function agentRoutes(fastify: FastifyInstance) {
         try {
             const belongsToTenant = await agentTemplateService.belongsToTenant(id, tenantId);
             if (!belongsToTenant) {
-                return reply.status(404).send({
-                    error: 'NOT_FOUND',
-                    message: 'Agent 不存在',
-                });
+                return replyApiError(request, reply, 'RESOURCE_NOT_FOUND', 'Agent 不存在');
             }
 
             const conditions = [eq(documents.templateId, id)];
@@ -413,10 +366,7 @@ export async function agentRoutes(fastify: FastifyInstance) {
             reply.send({data: docs});
         } catch (error) {
             log.error('Request failed', {detail: (error as Error).message});
-            reply.status(500).send({
-                error: 'INTERNAL_ERROR',
-                message: '获取文档列表失败',
-            });
+            replyApiError(request, reply, 'INTERNAL_ERROR', '获取文档列表失败');
         }
     });
 
@@ -438,10 +388,7 @@ export async function agentRoutes(fastify: FastifyInstance) {
         try {
             const belongsToTenant = await agentTemplateService.belongsToTenant(id, tenantId);
             if (!belongsToTenant) {
-                return reply.status(404).send({
-                    error: 'NOT_FOUND',
-                    message: 'Agent 不存在',
-                });
+                return replyApiError(request, reply, 'RESOURCE_NOT_FOUND', 'Agent 不存在');
             }
 
             let fileName: string;
@@ -456,10 +403,7 @@ export async function agentRoutes(fastify: FastifyInstance) {
                 const file = formData.get('file');
 
                 if (!file || !(file instanceof File)) {
-                    return reply.status(400).send({
-                        error: 'BAD_REQUEST',
-                        message: '缺少 file 字段',
-                    });
+                    return replyApiError(request, reply, 'VALIDATION_FAILED', '缺少 file 字段');
                 }
 
                 fileName = file.name;
@@ -483,10 +427,7 @@ export async function agentRoutes(fastify: FastifyInstance) {
                 };
 
                 if (!data.name || !data.type) {
-                    return reply.status(400).send({
-                        error: 'BAD_REQUEST',
-                        message: '缺少文件名或类型',
-                    });
+                    return replyApiError(request, reply, 'VALIDATION_FAILED', '缺少文件名或类型');
                 }
 
                 fileName = data.name;
@@ -501,10 +442,7 @@ export async function agentRoutes(fastify: FastifyInstance) {
             // 验证 category 值
             const validCategories = ['memory', 'knowledge', 'document'];
             if (!validCategories.includes(category)) {
-                return reply.status(400).send({
-                    error: 'BAD_REQUEST',
-                    message: `无效的 category 值，允许: ${validCategories.join(', ')}`,
-                });
+                return replyApiError(request, reply, 'VALIDATION_FAILED', `无效的 category 值，允许: ${validCategories.join(', ')}`);
             }
 
             // 存储文件
@@ -546,10 +484,7 @@ export async function agentRoutes(fastify: FastifyInstance) {
             reply.status(201).send(doc);
         } catch (error) {
             log.error('Request failed', {detail: (error as Error).message});
-            reply.status(500).send({
-                error: 'INTERNAL_ERROR',
-                message: '上传文档失败',
-            });
+            replyApiError(request, reply, 'INTERNAL_ERROR', '上传文档失败');
         }
     });
 
@@ -567,10 +502,7 @@ export async function agentRoutes(fastify: FastifyInstance) {
         try {
             const belongsToTenant = await agentTemplateService.belongsToTenant(id, tenantId);
             if (!belongsToTenant) {
-                return reply.status(404).send({
-                    error: 'NOT_FOUND',
-                    message: 'Agent 不存在',
-                });
+                return replyApiError(request, reply, 'RESOURCE_NOT_FOUND', 'Agent 不存在');
             }
 
             const [doc] = await db.select().from(documents).where(
@@ -578,10 +510,7 @@ export async function agentRoutes(fastify: FastifyInstance) {
             ).limit(1);
 
             if (!doc) {
-                return reply.status(404).send({
-                    error: 'NOT_FOUND',
-                    message: '文档不存在',
-                });
+                return replyApiError(request, reply, 'RESOURCE_NOT_FOUND', '文档不存在');
             }
 
             // Delete file from disk
@@ -612,10 +541,7 @@ export async function agentRoutes(fastify: FastifyInstance) {
         } catch (error) {
             if (reply.sent || reply.raw.headersSent) return;
             log.error('Request failed', {detail: (error as Error).message});
-            return reply.status(500).send({
-                error: 'INTERNAL_ERROR',
-                message: '删除文档失败',
-            });
+            return replyApiError(request, reply, 'INTERNAL_ERROR', '删除文档失败');
         }
     });
 }

@@ -220,7 +220,7 @@ export function sendThreadMessage(
     .then(async (res) => {
       if (!res.ok) {
         const envelope = await readApiErrorEnvelope(res, {
-          error: res.status === 401 ? 'UNAUTHORIZED' : `HTTP_${res.status}`,
+          error: res.status === 401 ? 'UNAUTHORIZED' : 'INTERNAL_ERROR',
           message: res.status === 401 ? '登录已过期，请重新登录' : `Chat failed: ${res.status}`,
         });
         const event = {

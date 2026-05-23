@@ -167,7 +167,7 @@ describe('Agent 文档与记忆治理 API', () => {
         });
         expect(listRes.statusCode).toBe(404);
         expect(listRes.json()).toMatchObject({
-            error: 'NOT_FOUND',
+            error: 'RESOURCE_NOT_FOUND',
             message: 'Agent 不存在',
         });
 
@@ -185,7 +185,7 @@ describe('Agent 文档与记忆治理 API', () => {
         });
         expect(uploadRes.statusCode).toBe(404);
         expect(uploadRes.json()).toMatchObject({
-            error: 'NOT_FOUND',
+            error: 'RESOURCE_NOT_FOUND',
             message: 'Agent 不存在',
         });
     });

@@ -8,7 +8,7 @@ import {transformHistory} from '../services/history-transformer';
 import {createLogger} from '../utils/logger';
 import {resolveTranscriptPath, resolveTranscriptPaths} from '../utils/transcript-resolver';
 import type {ChatConnectedEvent, ChatDoneEvent, ChatErrorEvent, ChatRequestContext} from '@shared/neptune-ai';
-import {sendApiError} from '../utils/api-error';
+import {sendApiError, replyApiError, replyUnknownError} from '../utils/api-error';
 
 const log = createLogger('routes:sessions');
 
@@ -38,7 +38,7 @@ export async function sessionRoutes(fastify: FastifyInstance) {
 
         // 验证 content
         if (!content) {
-            return sendApiError(reply, 400, {error: 'MISSING_CONTENT', message: '缺少 content 参数', requestId});
+            return sendApiError(reply, 400, {error: 'VALIDATION_FAILED', message: '缺少 content 参数', requestId});
         }
 
         const requestContext: Omit<ChatRequestContext, 'threadId'> = {
@@ -148,7 +148,7 @@ export async function sessionRoutes(fastify: FastifyInstance) {
             if (!abortController.signal.aborted) {
                 const errorEvent: ChatErrorEvent = {
                     type: 'error',
-                    error: 'QUERY_ERROR',
+                    error: 'INTERNAL_ERROR',
                     message: String(error),
                     requestId,
                 };
@@ -241,11 +241,7 @@ export async function sessionRoutes(fastify: FastifyInstance) {
                 },
             });
         } catch (error) {
-            reply.status(500).send({
-                error: 'INTERNAL_ERROR',
-                message: '获取历史记录失败',
-                details: error instanceof Error ? error.message : 'Unknown error',
-            });
+            replyApiError(request, reply, 'INTERNAL_ERROR', '获取历史记录失败');
         }
     });
 }

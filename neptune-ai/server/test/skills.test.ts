@@ -464,7 +464,7 @@ describe('Skills CRUD API', () => {
 
             expect(res.statusCode).toBe(409);
             expect(res.json()).toMatchObject({
-                error: 'SKILL_NOT_PUBLISHED',
+                error: 'STATE_CONFLICT',
                 message: '草稿技能不能绑定到智能体，请先上架为可用状态',
             });
         });
@@ -498,7 +498,7 @@ describe('Skills CRUD API', () => {
 
             expect(res.statusCode).toBe(404);
             expect(res.json()).toMatchObject({
-                error: 'NOT_FOUND',
+                error: 'RESOURCE_NOT_FOUND',
                 message: 'Agent 不存在',
             });
 

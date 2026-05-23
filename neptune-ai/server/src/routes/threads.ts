@@ -22,16 +22,12 @@ import {roleMiddleware} from '../middleware/auth';
 import {createLogger} from '../utils/logger';
 import {resolveTranscriptPath, resolveTranscriptPaths} from '../utils/transcript-resolver';
 import type {ChatConnectedEvent, ChatDoneEvent, ChatErrorEvent, ChatRequestContext} from '@shared/neptune-ai';
-import {sendApiError, toApiErrorEnvelope} from '../utils/api-error';
+import {sendApiError, toApiErrorEnvelope, replyApiError, replyUnknownError} from '../utils/api-error';
 import {agentTemplateService} from '../services/agent-template';
 import {runService} from '../services/run';
 
 const log = createLogger('routes:threads');
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
-function notFoundEnvelope(message: string) {
-    return {error: 'NOT_FOUND', message};
-}
 
 async function canAccessAgent(agentId: string, tenantId: string): Promise<boolean> {
     if (!UUID_RE.test(agentId)) return false;
@@ -187,7 +183,7 @@ export async function threadRoutes(fastify: FastifyInstance) {
 
         try {
             if (!(await canAccessAgent(agentId, user.tenantId))) {
-                return reply.status(404).send(notFoundEnvelope('Agent 模板不存在'));
+                return replyApiError(request, reply, 'RESOURCE_NOT_FOUND', 'Agent 模板不存在');
             }
 
             const thread = await threadManager.create({
@@ -201,10 +197,7 @@ export async function threadRoutes(fastify: FastifyInstance) {
         } catch (error) {
             if (reply.sent || reply.raw.headersSent) return;
             log.error('Request failed', {detail: (error as Error).message});
-            return reply.status(500).send({
-                error: 'INTERNAL_ERROR',
-                message: '创建 Thread 失败',
-            });
+            return replyApiError(request, reply, 'INTERNAL_ERROR', '创建 Thread 失败');
         }
     });
 
@@ -223,7 +216,7 @@ export async function threadRoutes(fastify: FastifyInstance) {
 
         try {
             if (!(await canAccessAgent(agentId, user.tenantId))) {
-                return reply.status(404).send(notFoundEnvelope('Agent 模板不存在'));
+                return replyApiError(request, reply, 'RESOURCE_NOT_FOUND', 'Agent 模板不存在');
             }
 
             const result = await threadManager.list(agentId, user.userId, {
@@ -236,10 +229,7 @@ export async function threadRoutes(fastify: FastifyInstance) {
         } catch (error) {
             if (reply.sent || reply.raw.headersSent) return;
             log.error('Request failed', {detail: (error as Error).message});
-            return reply.status(500).send({
-                error: 'INTERNAL_ERROR',
-                message: '获取 Thread 列表失败',
-            });
+            return replyApiError(request, reply, 'INTERNAL_ERROR', '获取 Thread 列表失败');
         }
     });
 
@@ -257,19 +247,13 @@ export async function threadRoutes(fastify: FastifyInstance) {
         try {
             const thread = await getOwnedThread(agentId, threadId, user.tenantId);
             if (!thread) {
-                return reply.status(404).send({
-                    error: 'NOT_FOUND',
-                    message: 'Thread 不存在',
-                });
+                return replyApiError(request, reply, 'RESOURCE_NOT_FOUND', 'Thread 不存在');
             }
 
             reply.send(thread);
         } catch (error) {
             log.error('Request failed', {detail: (error as Error).message});
-            reply.status(500).send({
-                error: 'INTERNAL_ERROR',
-                message: '获取 Thread 详情失败',
-            });
+            replyApiError(request, reply, 'INTERNAL_ERROR', '获取 Thread 详情失败');
         }
     });
 
@@ -292,10 +276,7 @@ export async function threadRoutes(fastify: FastifyInstance) {
         try {
             const thread = await getOwnedThread(agentId, threadId, user.tenantId);
             if (!thread) {
-                return reply.status(404).send({
-                    error: 'NOT_FOUND',
-                    message: 'Thread 不存在',
-                });
+                return replyApiError(request, reply, 'RESOURCE_NOT_FOUND', 'Thread 不存在');
             }
 
             const parsedLimit = limit ? Number.parseInt(limit, 10) : 20;
@@ -310,10 +291,7 @@ export async function threadRoutes(fastify: FastifyInstance) {
             return reply.send(result);
         } catch (error) {
             log.error('Request failed', {detail: (error as Error).message});
-            return reply.status(500).send({
-                error: 'INTERNAL_ERROR',
-                message: '获取 Thread 关联运行失败',
-            });
+            return replyApiError(request, reply, 'INTERNAL_ERROR', '获取 Thread 关联运行失败');
         }
     });
 
@@ -336,10 +314,7 @@ export async function threadRoutes(fastify: FastifyInstance) {
             // 先验证 thread 存在且属于当前租户
             const existing = await getOwnedThread(agentId, threadId, user.tenantId);
             if (!existing) {
-                return reply.status(404).send({
-                    error: 'NOT_FOUND',
-                    message: 'Thread 不存在',
-                });
+                return replyApiError(request, reply, 'RESOURCE_NOT_FOUND', 'Thread 不存在');
             }
 
             const thread = await threadManager.update(threadId, {title, status});
@@ -347,10 +322,7 @@ export async function threadRoutes(fastify: FastifyInstance) {
         } catch (error) {
             if (reply.sent || reply.raw.headersSent) return;
             log.error('Request failed', {detail: (error as Error).message});
-            return reply.status(500).send({
-                error: 'INTERNAL_ERROR',
-                message: '更新 Thread 失败',
-            });
+            return replyApiError(request, reply, 'INTERNAL_ERROR', '更新 Thread 失败');
         }
     });
 
@@ -366,10 +338,7 @@ export async function threadRoutes(fastify: FastifyInstance) {
         const user = request.user;
 
         try {
-            const sendNotFound = () => reply.status(404).send({
-                error: 'NOT_FOUND',
-                message: 'Thread 不存在',
-            });
+            const sendNotFound = () => replyApiError(request, reply, 'RESOURCE_NOT_FOUND', 'Thread 不存在');
 
             // 先验证 thread 存在且属于当前租户
             const existing = await getOwnedThread(agentId, threadId, user.tenantId);
@@ -386,10 +355,7 @@ export async function threadRoutes(fastify: FastifyInstance) {
         } catch (error) {
             if (reply.sent || reply.raw.headersSent) return;
             log.error('Request failed', {detail: (error as Error).message});
-            return reply.status(500).send({
-                error: 'INTERNAL_ERROR',
-                message: '删除 Thread 失败',
-            });
+            return replyApiError(request, reply, 'INTERNAL_ERROR', '删除 Thread 失败');
         }
     });
 
@@ -410,7 +376,7 @@ export async function threadRoutes(fastify: FastifyInstance) {
         // 验证 content
         if (!content) {
             return sendApiError(reply, 400, {
-                error: 'MISSING_CONTENT',
+                error: 'VALIDATION_FAILED',
                 message: '缺少 content 参数',
                 requestId,
             });
@@ -420,7 +386,7 @@ export async function threadRoutes(fastify: FastifyInstance) {
         const thread = await getOwnedThread(agentId, threadId, user.tenantId);
         if (!thread) {
             return sendApiError(reply, 404, {
-                error: 'NOT_FOUND',
+                error: 'RESOURCE_NOT_FOUND',
                 message: 'Thread 不存在',
                 requestId,
             });
@@ -429,14 +395,14 @@ export async function threadRoutes(fastify: FastifyInstance) {
         // 验证状态
         if (thread.status === 'running') {
             return sendApiError(reply, 409, {
-                error: 'CONFLICT',
+                error: 'STATE_CONFLICT',
                 message: 'Thread 正在执行中',
                 requestId,
             });
         }
         if (thread.status === 'completed') {
             return sendApiError(reply, 400, {
-                error: 'BAD_REQUEST',
+                error: 'VALIDATION_FAILED',
                 message: 'Thread 已结束 (completed)',
                 requestId,
             });
@@ -634,8 +600,8 @@ export async function threadRoutes(fastify: FastifyInstance) {
             }
         } catch (error) {
             if (!abortController.signal.aborted) {
-                const envelope = toApiErrorEnvelope(error, {
-                    error: 'QUERY_ERROR',
+                const {envelope} = toApiErrorEnvelope(error, {
+                    error: 'INTERNAL_ERROR',
                     message: error instanceof Error ? error.message : '运行失败',
                     requestId,
                 });
@@ -670,19 +636,13 @@ export async function threadRoutes(fastify: FastifyInstance) {
         const user = request.user;
 
         if (!toolUseId || !answers) {
-            return reply.status(400).send({
-                error: 'MISSING_PARAMS',
-                message: '缺少 toolUseId 或 answers 参数',
-            });
+            return replyApiError(request, reply, 'VALIDATION_FAILED', '缺少 toolUseId 或 answers 参数');
         }
 
         // 验证 Thread 归属
         const thread = await getOwnedThread(agentId, threadId, user.tenantId);
         if (!thread) {
-            return reply.status(404).send({
-                error: 'NOT_FOUND',
-                message: 'Thread 不存在',
-            });
+            return replyApiError(request, reply, 'RESOURCE_NOT_FOUND', 'Thread 不存在');
         }
 
         // TODO: 将 answers 作为 tool_result 注入 Engine
@@ -710,7 +670,7 @@ export async function threadRoutes(fastify: FastifyInstance) {
         try {
             const thread = await getOwnedThread(agentId, threadId, user.tenantId);
             if (!thread) {
-                return reply.status(404).send({error: 'NOT_FOUND', message: 'Thread 不存在'});
+                return replyApiError(request, reply, 'RESOURCE_NOT_FOUND', 'Thread 不存在');
             }
 
             const {PlanManager} = await import('../services/plan/PlanManager');
@@ -719,7 +679,7 @@ export async function threadRoutes(fastify: FastifyInstance) {
             reply.send({data: tasks});
         } catch (error) {
             log.error('Request failed', {detail: (error as Error).message});
-            reply.status(500).send({error: 'INTERNAL_ERROR', message: '获取任务列表失败'});
+            replyApiError(request, reply, 'INTERNAL_ERROR', '获取任务列表失败');
         }
     });
 
@@ -738,10 +698,7 @@ export async function threadRoutes(fastify: FastifyInstance) {
         try {
             const thread = await getOwnedThread(agentId, threadId, user.tenantId);
             if (!thread) {
-                return reply.status(404).send({
-                    error: 'NOT_FOUND',
-                    message: 'Thread 不存在',
-                });
+                return replyApiError(request, reply, 'RESOURCE_NOT_FOUND', 'Thread 不存在');
             }
 
             const workspace = thread.workspace;
@@ -834,11 +791,7 @@ export async function threadRoutes(fastify: FastifyInstance) {
             });
         } catch (error) {
             log.error('Request failed', {detail: (error as Error).message});
-            reply.status(500).send({
-                error: 'INTERNAL_ERROR',
-                message: '获取历史记录失败',
-                details: error instanceof Error ? error.message : 'Unknown error',
-            });
+            replyApiError(request, reply, 'INTERNAL_ERROR', '获取历史记录失败');
         }
     });
 }

@@ -161,7 +161,7 @@ describe('Thread CRUD + Chat 错误处理', () => {
 
             expect(response.statusCode).toBe(404);
             const json = response.json();
-            expect(json).toHaveProperty('error', 'NOT_FOUND');
+            expect(json).toHaveProperty('error', 'RESOURCE_NOT_FOUND');
         });
 
         test('不存在的 Agent 应该返回 404', async () => {
@@ -176,7 +176,7 @@ describe('Thread CRUD + Chat 错误处理', () => {
 
             expect(response.statusCode).toBe(404);
             const json = response.json();
-            expect(json).toHaveProperty('error', 'NOT_FOUND');
+            expect(json).toHaveProperty('error', 'RESOURCE_NOT_FOUND');
         });
     });
 
@@ -256,7 +256,7 @@ describe('Thread CRUD + Chat 错误处理', () => {
 
             expect(response.statusCode).toBe(404);
             const json = response.json();
-            expect(json).toHaveProperty('error', 'NOT_FOUND');
+            expect(json).toHaveProperty('error', 'RESOURCE_NOT_FOUND');
         });
 
         test('不存在的 Agent 应该返回 404 而不是空列表', async () => {
@@ -270,7 +270,7 @@ describe('Thread CRUD + Chat 错误处理', () => {
 
             expect(response.statusCode).toBe(404);
             const json = response.json();
-            expect(json).toHaveProperty('error', 'NOT_FOUND');
+            expect(json).toHaveProperty('error', 'RESOURCE_NOT_FOUND');
         });
     });
 
@@ -316,7 +316,7 @@ describe('Thread CRUD + Chat 错误处理', () => {
 
             expect(response.statusCode).toBe(404);
             const json = response.json();
-            expect(json).toHaveProperty('error', 'NOT_FOUND');
+            expect(json).toHaveProperty('error', 'RESOURCE_NOT_FOUND');
         });
     });
 
@@ -454,7 +454,7 @@ describe('Thread CRUD + Chat 错误处理', () => {
 
             expect(response.statusCode).toBe(400);
             const json = response.json();
-            expect(json).toHaveProperty('error', 'MISSING_CONTENT');
+            expect(json).toHaveProperty('error', 'VALIDATION_FAILED');
         });
 
         test('不存在的 Thread 应该返回 404', async () => {
@@ -471,7 +471,7 @@ describe('Thread CRUD + Chat 错误处理', () => {
 
             expect(response.statusCode).toBe(404);
             const json = response.json();
-            expect(json).toHaveProperty('error', 'NOT_FOUND');
+            expect(json).toHaveProperty('error', 'RESOURCE_NOT_FOUND');
         });
 
         test('非法 Thread ID 应该返回 404 而不是 500', async () => {
@@ -488,7 +488,7 @@ describe('Thread CRUD + Chat 错误处理', () => {
 
             expect(response.statusCode).toBe(404);
             const json = response.json();
-            expect(json).toHaveProperty('error', 'NOT_FOUND');
+            expect(json).toHaveProperty('error', 'RESOURCE_NOT_FOUND');
         });
 
         test('Thread 状态 running 应该返回 409', async () => {
@@ -517,7 +517,7 @@ describe('Thread CRUD + Chat 错误处理', () => {
 
             expect(response.statusCode).toBe(409);
             const json = response.json();
-            expect(json).toHaveProperty('error', 'CONFLICT');
+            expect(json).toHaveProperty('error', 'STATE_CONFLICT');
         });
 
         test('Thread 状态 completed 应该返回 400', async () => {
@@ -546,7 +546,7 @@ describe('Thread CRUD + Chat 错误处理', () => {
 
             expect(response.statusCode).toBe(400);
             const json = response.json();
-            expect(json).toHaveProperty('error', 'BAD_REQUEST');
+            expect(json).toHaveProperty('error', 'VALIDATION_FAILED');
         });
 
         test('Thread 状态 error 允许重试（但会因缺少 EngineFactory 而失败）', async () => {
@@ -695,7 +695,7 @@ describe('Thread CRUD + Chat 错误处理', () => {
 
             expect(response.statusCode).toBe(404);
             const json = response.json();
-            expect(json).toHaveProperty('error', 'NOT_FOUND');
+            expect(json).toHaveProperty('error', 'RESOURCE_NOT_FOUND');
         });
     });
 
@@ -716,7 +716,7 @@ describe('Thread CRUD + Chat 错误处理', () => {
 
             expect(response.statusCode).toBe(404);
             const json = response.json();
-            expect(json).toHaveProperty('error', 'NOT_FOUND');
+            expect(json).toHaveProperty('error', 'RESOURCE_NOT_FOUND');
         });
 
         test('tasks 非法 Thread ID 应该返回 404 而不是 500', async () => {
@@ -730,7 +730,7 @@ describe('Thread CRUD + Chat 错误处理', () => {
 
             expect(response.statusCode).toBe(404);
             const json = response.json();
-            expect(json).toHaveProperty('error', 'NOT_FOUND');
+            expect(json).toHaveProperty('error', 'RESOURCE_NOT_FOUND');
         });
     });
 });

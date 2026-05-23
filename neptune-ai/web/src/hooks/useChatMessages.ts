@@ -19,7 +19,8 @@ function formatChatErrorMessage(error: Error, event?: ChatErrorEvent): string {
     ].filter(Boolean).join('\n');
   }
 
-  if (event?.error === 'POLICY_DENIED') {
+  // Policy denial 在 server 端走 FORBIDDEN + details.reason='policy_denied'。
+  if (event?.error === 'FORBIDDEN' && (event.details as {reason?: string} | undefined)?.reason === 'policy_denied') {
     return [
       event.message || '本次操作被策略拒绝。',
       '',

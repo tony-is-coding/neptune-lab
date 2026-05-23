@@ -81,7 +81,7 @@ async function getPlatformFact<T>(path: string, params?: Record<string, string |
 
   if (!res.ok) {
     await throwApiClientError(res, {
-      error: res.status === 401 ? 'UNAUTHORIZED' : `PLATFORM_FACTS_${res.status}`,
+      error: res.status === 401 ? 'UNAUTHORIZED' : 'INTERNAL_ERROR',
       message: res.status === 401 ? '登录已过期，请重新登录' : `平台事实加载失败：${res.status}`,
     });
   }
@@ -102,7 +102,7 @@ async function mutatePlatformFact<T>(path: string, body: unknown): Promise<T> {
 
   if (!res.ok) {
     await throwApiClientError(res, {
-      error: res.status === 401 ? 'UNAUTHORIZED' : `PLATFORM_FACTS_MUTATION_${res.status}`,
+      error: res.status === 401 ? 'UNAUTHORIZED' : 'INTERNAL_ERROR',
       message: res.status === 401 ? '登录已过期，请重新登录' : `平台事实写入失败：${res.status}`,
     });
   }
@@ -199,7 +199,7 @@ export async function exportAuditEventsCsv(params?: Omit<ListAuditEventsParams, 
 
   if (!res.ok) {
     await throwApiClientError(res, {
-      error: res.status === 401 ? 'UNAUTHORIZED' : `AUDIT_EXPORT_${res.status}`,
+      error: res.status === 401 ? 'UNAUTHORIZED' : 'INTERNAL_ERROR',
       message: res.status === 401 ? '登录已过期，请重新登录' : `审计事件导出失败：${res.status}`,
     });
   }

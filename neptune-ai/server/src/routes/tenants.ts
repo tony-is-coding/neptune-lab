@@ -1,6 +1,7 @@
 import type {FastifyInstance} from 'fastify';
 import {tenantService} from '../services/tenant';
 import {roleMiddleware} from '../middleware/auth';
+import {replyApiError, replyUnknownError} from '../utils/api-error';
 import {createLogger} from '../utils/logger';
 
 const log = createLogger('routes:tenants');
@@ -23,10 +24,7 @@ export async function tenantRoutes(fastify: FastifyInstance) {
         };
 
         if (!name) {
-            return reply.status(400).send({
-                error: 'BAD_REQUEST',
-                message: '租户名称不能为空',
-            });
+            return replyApiError(request, reply, 'VALIDATION_FAILED', '租户名称不能为空');
         }
 
         try {
@@ -38,11 +36,8 @@ export async function tenantRoutes(fastify: FastifyInstance) {
 
             reply.status(201).send(tenant);
         } catch (error) {
-            log.error('Request failed', {detail: (error as Error).message});
-            reply.status(500).send({
-                error: 'INTERNAL_ERROR',
-                message: '创建租户失败',
-            });
+            log.error('Request failed', {requestId: request.requestId, detail: (error as Error).message});
+            return replyUnknownError(request, reply, error, '创建租户失败');
         }
     });
 
@@ -59,19 +54,13 @@ export async function tenantRoutes(fastify: FastifyInstance) {
             const tenant = await tenantService.findById(id);
 
             if (!tenant) {
-                return reply.status(404).send({
-                    error: 'NOT_FOUND',
-                    message: '租户不存在',
-                });
+                return replyApiError(request, reply, 'RESOURCE_NOT_FOUND', '租户不存在');
             }
 
             reply.send(tenant);
         } catch (error) {
-            log.error('Request failed', {detail: (error as Error).message});
-            reply.status(500).send({
-                error: 'INTERNAL_ERROR',
-                message: '获取租户失败',
-            });
+            log.error('Request failed', {requestId: request.requestId, detail: (error as Error).message});
+            return replyUnknownError(request, reply, error, '获取租户失败');
         }
     });
 
@@ -102,11 +91,8 @@ export async function tenantRoutes(fastify: FastifyInstance) {
                 },
             });
         } catch (error) {
-            log.error('Request failed', {detail: (error as Error).message});
-            reply.status(500).send({
-                error: 'INTERNAL_ERROR',
-                message: '获取租户列表失败',
-            });
+            log.error('Request failed', {requestId: request.requestId, detail: (error as Error).message});
+            return replyUnknownError(request, reply, error, '获取租户列表失败');
         }
     });
 
@@ -132,19 +118,13 @@ export async function tenantRoutes(fastify: FastifyInstance) {
             });
 
             if (!tenant) {
-                return reply.status(404).send({
-                    error: 'NOT_FOUND',
-                    message: '租户不存在',
-                });
+                return replyApiError(request, reply, 'RESOURCE_NOT_FOUND', '租户不存在');
             }
 
             reply.send(tenant);
         } catch (error) {
-            log.error('Request failed', {detail: (error as Error).message});
-            reply.status(500).send({
-                error: 'INTERNAL_ERROR',
-                message: '更新租户失败',
-            });
+            log.error('Request failed', {requestId: request.requestId, detail: (error as Error).message});
+            return replyUnknownError(request, reply, error, '更新租户失败');
         }
     });
 
@@ -161,19 +141,13 @@ export async function tenantRoutes(fastify: FastifyInstance) {
             const success = await tenantService.delete(id);
 
             if (!success) {
-                return reply.status(404).send({
-                    error: 'NOT_FOUND',
-                    message: '租户不存在',
-                });
+                return replyApiError(request, reply, 'RESOURCE_NOT_FOUND', '租户不存在');
             }
 
             reply.status(204).send();
         } catch (error) {
-            log.error('Request failed', {detail: (error as Error).message});
-            reply.status(500).send({
-                error: 'INTERNAL_ERROR',
-                message: '删除租户失败',
-            });
+            log.error('Request failed', {requestId: request.requestId, detail: (error as Error).message});
+            return replyUnknownError(request, reply, error, '删除租户失败');
         }
     });
 }

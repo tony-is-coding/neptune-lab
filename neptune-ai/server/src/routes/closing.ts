@@ -1,6 +1,7 @@
 import type {FastifyInstance} from 'fastify';
 import {closingWorkbenchService} from '../services/closing-workbench';
-import {ApiError, sendApiError} from '../utils/api-error';
+import {ApiError, sendApiError, replyApiError, replyUnknownError} from '../utils/api-error';
+import {API_ERROR_STATUS, type ApiErrorEnvelope} from '@shared/neptune-ai';
 import {createLogger} from '../utils/logger';
 import type {
     CreateCloseWorkspaceRequest,
@@ -75,16 +76,12 @@ function parsePage(query: {limit?: string; offset?: string}, defaults: {limit?: 
     };
 }
 
-function sendRouteError(reply: Parameters<typeof sendApiError>[0], error: unknown, fallback: {
-    error: string;
-    message: string;
-    requestId?: string;
-}) {
+function sendRouteError(reply: Parameters<typeof sendApiError>[0], error: unknown, fallback: ApiErrorEnvelope) {
     if (error instanceof ApiError) {
         return sendApiError(reply, error.statusCode, error.envelope);
     }
 
-    return sendApiError(reply, 500, fallback);
+    return sendApiError(reply, API_ERROR_STATUS[fallback.error], fallback);
 }
 
 export async function closingRoutes(fastify: FastifyInstance) {
@@ -405,7 +402,7 @@ export async function closingRoutes(fastify: FastifyInstance) {
             if (message.endsWith('_NOT_FOUND')) return notFound(reply, request.requestId);
             if (message === 'REVIEW_ALREADY_DECIDED') {
                 return sendApiError(reply, 409, {
-                    error: 'REVIEW_ALREADY_DECIDED',
+                    error: 'STATE_CONFLICT',
                     message: '该复核项已经处理，不能重复决策。',
                     requestId: request.requestId,
                 });
@@ -440,7 +437,7 @@ export async function closingRoutes(fastify: FastifyInstance) {
             if (message.endsWith('_NOT_FOUND')) return notFound(reply, request.requestId);
             if (message.startsWith('CLOSE_REPORT_NOT_READY:')) {
                 return sendApiError(reply, 409, {
-                    error: 'CLOSE_REPORT_NOT_READY',
+                    error: 'STATE_CONFLICT',
                     message: message.slice('CLOSE_REPORT_NOT_READY:'.length),
                     requestId: request.requestId,
                 });

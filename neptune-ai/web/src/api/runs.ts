@@ -16,7 +16,7 @@ async function runRequest<T>(path: string, options: RequestInit = {}): Promise<T
 
   if (!res.ok) {
     await throwApiClientError(res, {
-      error: res.status === 401 ? 'UNAUTHORIZED' : `RUN_CONTROL_${res.status}`,
+      error: res.status === 401 ? 'UNAUTHORIZED' : 'INTERNAL_ERROR',
       message: res.status === 401 ? '登录已过期，请重新登录' : `运行控制请求失败：${res.status}`,
     });
   }

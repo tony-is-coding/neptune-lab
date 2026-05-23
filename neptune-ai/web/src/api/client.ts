@@ -1,11 +1,12 @@
 import { getStoredToken, useAuthStore } from '../stores/auth';
-import type { ApiErrorEnvelope } from '@shared/neptune-ai';
+import type { ApiErrorCode, ApiErrorEnvelope } from '@shared/neptune-ai';
+import { isApiErrorCode } from '@shared/neptune-ai';
 
 export const API_BASE = '/api/v1';
 
 export class ApiClientError extends Error {
   readonly status: number;
-  readonly error: string;
+  readonly error: ApiErrorCode;
   readonly requestId: string;
   readonly details: Record<string, unknown>;
   readonly envelope: Required<ApiErrorEnvelope>;
@@ -24,7 +25,7 @@ export class ApiClientError extends Error {
 
 export function normalizeApiErrorEnvelope(envelope: ApiErrorEnvelope): Required<ApiErrorEnvelope> {
   return {
-    error: envelope.error || 'UNKNOWN_ERROR',
+    error: isApiErrorCode(envelope.error) ? envelope.error : 'INTERNAL_ERROR',
     message: envelope.message || '请求失败',
     requestId: envelope.requestId || '',
     details: envelope.details || {},
@@ -45,8 +46,12 @@ export async function readApiErrorEnvelope(
     payload = {};
   }
 
+  // 如果服务端返回了非枚举内的错误码（旧接口或上游异常），统一回退到 INTERNAL_ERROR
+  // 以保证客户端分支判断的封闭性。
+  const fallbackCode: ApiErrorCode = isApiErrorCode(fallback?.error) ? fallback!.error : 'INTERNAL_ERROR';
+
   return normalizeApiErrorEnvelope({
-    error: typeof payload.error === 'string' ? payload.error : fallback?.error || `HTTP_${response.status}`,
+    error: isApiErrorCode(payload.error) ? payload.error : fallbackCode,
     message: typeof payload.message === 'string' ? payload.message : fallback?.message || `请求失败：${response.status}`,
     requestId: typeof payload.requestId === 'string'
       ? payload.requestId

@@ -8,7 +8,7 @@ import {artifactEvidenceService} from '../services/artifact-evidence';
 import {platformCostService} from '../services/platform-cost';
 import {humanReviewService} from '../services/human-review';
 import {runObservabilityService} from '../services/run-observability';
-import {sendApiError} from '../utils/api-error';
+import {sendApiError, replyApiError, replyUnknownError} from '../utils/api-error';
 import {createLogger} from '../utils/logger';
 import type {
     CostSummaryPeriod,
@@ -450,7 +450,7 @@ export async function platformFactRoutes(fastify: FastifyInstance) {
             }
             if (message === 'REVIEW_ALREADY_DECIDED') {
                 return sendApiError(reply, 409, {
-                    error: 'REVIEW_ALREADY_DECIDED',
+                    error: 'STATE_CONFLICT',
                     message: '该复核项已经处理，不能重复决策。',
                     requestId: request.requestId,
                 });

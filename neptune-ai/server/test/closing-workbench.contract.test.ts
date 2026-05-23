@@ -881,7 +881,7 @@ describe('关账工作台 MVP contract', () => {
         });
         expect(beforeChecksRes.statusCode).toBe(409);
         expect(beforeChecksRes.json()).toMatchObject({
-            error: 'CLOSE_REPORT_NOT_READY',
+            error: 'STATE_CONFLICT',
             message: expect.stringContaining('请先发起关账检查'),
         });
 
@@ -905,7 +905,7 @@ describe('关账工作台 MVP contract', () => {
         });
         expect(beforeReviewRes.statusCode).toBe(409);
         expect(beforeReviewRes.json()).toMatchObject({
-            error: 'CLOSE_REPORT_NOT_READY',
+            error: 'STATE_CONFLICT',
             message: expect.stringContaining('阻塞异常尚未提交复核'),
         });
 
@@ -927,7 +927,7 @@ describe('关账工作台 MVP contract', () => {
         });
         expect(pendingReviewRes.statusCode).toBe(409);
         expect(pendingReviewRes.json()).toMatchObject({
-            error: 'CLOSE_REPORT_NOT_READY',
+            error: 'STATE_CONFLICT',
             message: expect.stringContaining('阻塞异常等待复核决策'),
         });
     });
@@ -987,7 +987,7 @@ describe('关账工作台 MVP contract', () => {
         });
         expect(reportRes.statusCode).toBe(409);
         expect(reportRes.json()).toMatchObject({
-            error: 'CLOSE_REPORT_NOT_READY',
+            error: 'STATE_CONFLICT',
             message: expect.stringContaining('会计期间尚未批准'),
         });
     });

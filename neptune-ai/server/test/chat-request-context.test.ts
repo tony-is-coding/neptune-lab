@@ -19,7 +19,7 @@ describe('chat request context contract', () => {
         };
         const error: ChatErrorEvent = {
             type: 'error',
-            error: 'QUERY_ERROR',
+            error: 'INTERNAL_ERROR',
             message: 'failed',
             requestId: 'req_123',
         };

@@ -207,7 +207,7 @@ describe('CustomerProject API', () => {
 
         expect(res.statusCode).toBe(400);
         expect(res.json()).toMatchObject({
-            error: 'BAD_REQUEST',
+            error: 'VALIDATION_FAILED',
             message: '客户项目名称不能为空',
             requestId: expect.any(String),
             details: {

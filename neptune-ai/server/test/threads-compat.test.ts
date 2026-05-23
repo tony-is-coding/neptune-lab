@@ -105,7 +105,7 @@ describe('Backward Compatibility — session.ts wrapper', () => {
                 payload: {},
             });
             expect(res.statusCode).toBe(400);
-            expect(res.json()).toHaveProperty('error', 'MISSING_CONTENT');
+            expect(res.json()).toHaveProperty('error', 'VALIDATION_FAILED');
         });
 
         test('GET /agents/:agentId/history — 旧 API 返回数据', async () => {

@@ -3,7 +3,8 @@ import {threadManager} from '../services/thread-manager';
 import {runService} from '../services/run';
 import {auditEventService} from '../services/audit';
 import {agentTemplateService} from '../services/agent-template';
-import {ApiError, sendApiError} from '../utils/api-error';
+import {ApiError, sendApiError, replyApiError, replyUnknownError} from '../utils/api-error';
+import {API_ERROR_STATUS, type ApiErrorEnvelope} from '@shared/neptune-ai';
 import {createLogger} from '../utils/logger';
 import type {CreateRunRequest, RetryRunRequest, RunDto} from '@shared/neptune-ai';
 
@@ -19,16 +20,12 @@ function normalizeTitle(value: unknown): string | undefined {
     return title || undefined;
 }
 
-function sendRouteError(reply: Parameters<typeof sendApiError>[0], error: unknown, fallback: {
-    error: string;
-    message: string;
-    requestId?: string;
-}) {
+function sendRouteError(reply: Parameters<typeof sendApiError>[0], error: unknown, fallback: ApiErrorEnvelope) {
     if (error instanceof ApiError) {
         return sendApiError(reply, error.statusCode, error.envelope);
     }
 
-    return sendApiError(reply, 500, fallback);
+    return sendApiError(reply, API_ERROR_STATUS[fallback.error], fallback);
 }
 
 async function consumeRunDispatch(threadId: string, input: string, requestContext: {
@@ -115,7 +112,7 @@ export async function runRoutes(fastify: FastifyInstance) {
 
         if (!input) {
             return sendApiError(reply, 400, {
-                error: 'BAD_REQUEST',
+                error: 'VALIDATION_FAILED',
                 message: '运行输入不能为空',
                 requestId: request.requestId,
                 details: {field: 'input'},
@@ -221,7 +218,7 @@ export async function runRoutes(fastify: FastifyInstance) {
 
         if (!input) {
             return sendApiError(reply, 400, {
-                error: 'BAD_REQUEST',
+                error: 'VALIDATION_FAILED',
                 message: '运行输入不能为空',
                 requestId: request.requestId,
                 details: {field: 'input'},

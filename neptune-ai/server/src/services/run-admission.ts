@@ -120,12 +120,7 @@ export class RunAdmissionService {
             ...details,
         });
 
-        throw new ApiError(429, {
-            error: 'QUOTA_EXCEEDED',
-            message: '租户配额不足',
-            requestId,
-            details,
-        });
+        throw new ApiError('QUOTA_EXCEEDED', '租户配额不足', details, {requestId});
     }
 }
 

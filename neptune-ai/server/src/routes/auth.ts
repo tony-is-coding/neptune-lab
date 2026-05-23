@@ -3,6 +3,7 @@ import {authService} from '../services/auth';
 import {db, users, tenants} from '../db';
 import {eq} from 'drizzle-orm';
 import bcrypt from 'bcrypt';
+import {replyApiError, replyUnknownError} from '../utils/api-error';
 import {createLogger} from '../utils/logger';
 
 const log = createLogger('routes:auth');
@@ -16,24 +17,13 @@ export async function authRoutes(fastify: FastifyInstance) {
      * 用户登录
      */
     fastify.post('/login', async (request, reply) => {
-        const loginSchema = {
-            type: 'object',
-            required: ['email', 'password'],
-            properties: {
-                email: {type: 'string', format: 'email'},
-                password: {type: 'string'},
-            },
-        };
-
         // 简单验证
         const {email, password} = request.body as { email: string; password: string };
 
         if (!email || !password) {
-            reply.status(400).send({
-                error: 'BAD_REQUEST',
-                message: '邮箱和密码不能为空',
+            return replyApiError(request, reply, 'VALIDATION_FAILED', '邮箱和密码不能为空', {
+                details: {missing: [!email && 'email', !password && 'password'].filter(Boolean)},
             });
-            return;
         }
 
         try {
@@ -43,22 +33,14 @@ export async function authRoutes(fastify: FastifyInstance) {
             });
 
             if (!user) {
-                reply.status(401).send({
-                    error: 'UNAUTHORIZED',
-                    message: '邮箱或密码错误',
-                });
-                return;
+                return replyApiError(request, reply, 'UNAUTHORIZED', '邮箱或密码错误');
             }
 
             // 使用 bcrypt 验证密码
             const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
 
             if (!isPasswordValid) {
-                reply.status(401).send({
-                    error: 'UNAUTHORIZED',
-                    message: '邮箱或密码错误',
-                });
-                return;
+                return replyApiError(request, reply, 'UNAUTHORIZED', '邮箱或密码错误');
             }
 
             // 生成令牌
@@ -80,11 +62,8 @@ export async function authRoutes(fastify: FastifyInstance) {
                 ...tokens,
             });
         } catch (error) {
-            log.error('Request failed', {detail: (error as Error).message});
-            reply.status(500).send({
-                error: 'INTERNAL_ERROR',
-                message: '登录失败',
-            });
+            log.error('Request failed', {requestId: request.requestId, detail: (error as Error).message});
+            return replyUnknownError(request, reply, error, '登录失败');
         }
     });
 
@@ -106,19 +85,13 @@ export async function authRoutes(fastify: FastifyInstance) {
         };
 
         if (!name || !email || !password) {
-            reply.status(400).send({
-                error: 'BAD_REQUEST',
-                message: 'name, email, password 为必填字段',
+            return replyApiError(request, reply, 'VALIDATION_FAILED', 'name, email, password 为必填字段', {
+                details: {missing: [!name && 'name', !email && 'email', !password && 'password'].filter(Boolean)},
             });
-            return;
         }
 
         if (!tenantId && !tenantName) {
-            reply.status(400).send({
-                error: 'BAD_REQUEST',
-                message: '必须提供 tenantId（加入已有租户）或 tenantName（创建新租户）',
-            });
-            return;
+            return replyApiError(request, reply, 'VALIDATION_FAILED', '必须提供 tenantId（加入已有租户）或 tenantName（创建新租户）');
         }
 
         try {
@@ -140,11 +113,7 @@ export async function authRoutes(fastify: FastifyInstance) {
                 });
 
                 if (!tenant) {
-                    reply.status(400).send({
-                        error: 'BAD_REQUEST',
-                        message: '租户不存在',
-                    });
-                    return;
+                    return replyApiError(request, reply, 'RESOURCE_NOT_FOUND', '租户不存在');
                 }
             }
 
@@ -154,11 +123,9 @@ export async function authRoutes(fastify: FastifyInstance) {
             });
 
             if (existingUser) {
-                reply.status(400).send({
-                    error: 'BAD_REQUEST',
-                    message: '邮箱已被注册',
+                return replyApiError(request, reply, 'STATE_CONFLICT', '邮箱已被注册', {
+                    details: {reason: 'email_taken'},
                 });
-                return;
             }
 
             // 使用 bcrypt 哈希密码
@@ -195,11 +162,8 @@ export async function authRoutes(fastify: FastifyInstance) {
                 ...tokens,
             });
         } catch (error) {
-            log.error('Request failed', {detail: (error as Error).message});
-            reply.status(500).send({
-                error: 'INTERNAL_ERROR',
-                message: '注册失败',
-            });
+            log.error('Request failed', {requestId: request.requestId, detail: (error as Error).message});
+            return replyUnknownError(request, reply, error, '注册失败');
         }
     });
 
@@ -211,11 +175,7 @@ export async function authRoutes(fastify: FastifyInstance) {
         const {refreshToken} = request.body as { refreshToken: string };
 
         if (!refreshToken) {
-            reply.status(400).send({
-                error: 'BAD_REQUEST',
-                message: '刷新令牌不能为空',
-            });
-            return;
+            return replyApiError(request, reply, 'VALIDATION_FAILED', '刷新令牌不能为空');
         }
 
         try {
@@ -223,10 +183,7 @@ export async function authRoutes(fastify: FastifyInstance) {
 
             reply.send(tokens);
         } catch (error) {
-            reply.status(401).send({
-                error: 'UNAUTHORIZED',
-                message: '刷新令牌无效或已过期',
-            });
+            return replyApiError(request, reply, 'UNAUTHORIZED', '刷新令牌无效或已过期');
         }
     });
 
@@ -239,18 +196,18 @@ export async function authRoutes(fastify: FastifyInstance) {
             // 这里应该使用认证中间件
             const authHeader = request.headers.authorization;
             if (!authHeader) {
-                return reply.status(401).send({error: 'UNAUTHORIZED', message: '需要认证'});
+                return replyApiError(request, reply, 'UNAUTHORIZED', '需要认证');
             }
             const [, token] = authHeader.split(' ');
             if (!token) {
-                return reply.status(401).send({error: 'UNAUTHORIZED', message: '无效的令牌格式'});
+                return replyApiError(request, reply, 'UNAUTHORIZED', '无效的令牌格式');
             }
             try {
                 const {authService} = await import('../services/auth');
                 const payload = await authService.verifyAccessToken(token);
                 (request as any).user = payload;
             } catch (error) {
-                return reply.status(401).send({error: 'UNAUTHORIZED', message: '令牌无效'});
+                return replyApiError(request, reply, 'UNAUTHORIZED', '令牌无效');
             }
         }],
     }, async (request, reply) => {
@@ -258,10 +215,7 @@ export async function authRoutes(fastify: FastifyInstance) {
 
         // 再次检查用户是否存在（防止中间件未正确阻止）
         if (!user) {
-            return reply.status(401).send({
-                error: 'UNAUTHORIZED',
-                message: '需要认证',
-            });
+            return replyApiError(request, reply, 'UNAUTHORIZED', '需要认证');
         }
 
         try {
@@ -271,11 +225,7 @@ export async function authRoutes(fastify: FastifyInstance) {
             });
 
             if (!userInfo) {
-                reply.status(404).send({
-                    error: 'NOT_FOUND',
-                    message: '用户不存在',
-                });
-                return;
+                return replyApiError(request, reply, 'RESOURCE_NOT_FOUND', '用户不存在');
             }
 
             reply.send({
@@ -286,11 +236,8 @@ export async function authRoutes(fastify: FastifyInstance) {
                 tenantId: userInfo.tenantId,
             });
         } catch (error) {
-            log.error('Request failed', {detail: (error as Error).message});
-            reply.status(500).send({
-                error: 'INTERNAL_ERROR',
-                message: '获取用户信息失败',
-            });
+            log.error('Request failed', {requestId: request.requestId, detail: (error as Error).message});
+            return replyUnknownError(request, reply, error, '获取用户信息失败');
         }
     });
 }

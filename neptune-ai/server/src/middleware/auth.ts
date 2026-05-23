@@ -1,11 +1,12 @@
 import type {FastifyRequest, FastifyReply, HookHandlerDoneFunction} from 'fastify';
 import {authService, type JwtPayload} from '../services/auth';
 import {sendApiError} from '../utils/api-error';
+import type {ApiErrorEnvelope} from '@shared/neptune-ai';
 
 function sendAndStop(
     reply: FastifyReply,
     statusCode: number,
-    envelope: Parameters<typeof sendApiError>[2],
+    envelope: ApiErrorEnvelope,
 ): void {
     sendApiError(reply, statusCode, envelope);
 }

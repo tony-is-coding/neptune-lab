@@ -29,7 +29,7 @@ export async function listProjects(params?: {
   if (res.status === 401) handleUnauthorized(res);
   if (!res.ok) {
     await throwApiClientError(res, {
-      error: res.status === 401 ? 'UNAUTHORIZED' : `PROJECTS_${res.status}`,
+      error: res.status === 401 ? 'UNAUTHORIZED' : 'INTERNAL_ERROR',
       message: res.status === 401 ? '登录已过期，请重新登录' : `客户项目加载失败：${res.status}`,
     });
   }
@@ -47,7 +47,7 @@ export async function createProject(input: CreateCustomerProjectRequest): Promis
   if (res.status === 401) handleUnauthorized(res);
   if (!res.ok) {
     await throwApiClientError(res, {
-      error: res.status === 401 ? 'UNAUTHORIZED' : `PROJECT_CREATE_${res.status}`,
+      error: res.status === 401 ? 'UNAUTHORIZED' : 'INTERNAL_ERROR',
       message: res.status === 401 ? '登录已过期，请重新登录' : `客户项目创建失败：${res.status}`,
     });
   }
@@ -64,7 +64,7 @@ export async function archiveProject(projectId: string): Promise<CustomerProject
   if (res.status === 401) handleUnauthorized(res);
   if (!res.ok) {
     await throwApiClientError(res, {
-      error: res.status === 401 ? 'UNAUTHORIZED' : `PROJECT_ARCHIVE_${res.status}`,
+      error: res.status === 401 ? 'UNAUTHORIZED' : 'INTERNAL_ERROR',
       message: res.status === 401 ? '登录已过期，请重新登录' : `客户项目归档失败：${res.status}`,
     });
   }
