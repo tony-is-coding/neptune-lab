@@ -82,6 +82,8 @@ export interface AgentLoopParams {
 	usageTracker?: UsageTracker
 	/** Prompt caching policy（默认无 caching；注入 DefaultCachePolicy 即可启用）。 */
 	cachePolicy?: import('../caching/CacheControlPolicy.js').CacheControlPolicy
+	/** History compaction policy（默认无；注入 MicroCompaction 即可启用）。 */
+	compactionPolicy?: import('../compaction/CompactionPolicy.js').CompactionPolicy
 }
 
 // ============================================================
@@ -236,6 +238,20 @@ export class AgentLoop {
 			// preStream hook
 			if (params.hooks) {
 				await params.hooks.runPreStream({turn: turnCount, messageCount: messages.length})
+			}
+
+			// History compaction（可选）
+			if (params.compactionPolicy) {
+				const should = params.compactionPolicy.shouldCompact(messages, {
+					usage: cumulativeUsage,
+				})
+				if (should) {
+					const result = params.compactionPolicy.compact(messages)
+					if (result.messagesCompacted > 0) {
+						messages.length = 0
+						messages.push(...result.messages)
+					}
+				}
 			}
 
 			// 调 provider，收集流。如果有 cachePolicy，先序列化 messages 然后让 policy 改写 cache_control。

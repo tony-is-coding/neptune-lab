@@ -99,3 +99,12 @@ export type {
 	CachePlanInput,
 	CachePlanOutput,
 } from './caching/CacheControlPolicy.js'
+
+// Batch 15: History Compaction
+export {MicroCompaction, NoOpCompactionPolicy} from './compaction/CompactionPolicy.js'
+export type {
+	CompactionPolicy,
+	CompactionContext,
+	CompactionResult,
+	MicroCompactionOptions,
+} from './compaction/CompactionPolicy.js'
