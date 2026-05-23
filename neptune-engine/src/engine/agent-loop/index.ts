@@ -34,3 +34,15 @@ export type {
 	StreamingQueryParams,
 } from './provider/StreamingProviderAdapter.js'
 export {AnthropicStreamingProvider} from './provider/AnthropicStreamingProvider.js'
+
+// Batch 9: ToolDispatcher + ToolUseContext
+export type {
+	ToolUseContext,
+	CanUseToolFn,
+	CanUseToolResult,
+	KernelProtocolBag,
+	CreateToolUseContextOptions,
+} from './dispatcher/ToolUseContext.js'
+export {createToolUseContext, allowAllCanUseTool} from './dispatcher/ToolUseContext.js'
+export {ToolDispatcher} from './dispatcher/ToolDispatcher.js'
+export type {ToolUpdate, ToolResultBlock, ToolUseBlock} from './dispatcher/ToolDispatcher.js'
