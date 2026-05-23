@@ -3,6 +3,9 @@ process.env.DATA_ROOT = `/tmp/neptune-controlled-chat-${Date.now()}`;
 import {afterAll, beforeAll, describe, expect, test} from 'bun:test';
 import type {FastifyInstance} from 'fastify';
 import {createTestApp, TEST_AGENT_TEMPLATE} from './setup';
+import {db} from '../src/db';
+import {auditEvents, billingRecords, policyDecisions, runEvents, runs, tenants, toolInvocations} from '../src/db/schema';
+import {and, eq} from 'drizzle-orm';
 
 function parseSSE(payload: string): Array<{event: string; data: any}> {
     const events: Array<{event: string; data: any}> = [];
@@ -48,6 +51,7 @@ describe('Controlled Engine chat SSE', () => {
     let app: FastifyInstance;
     let previousEngineMode: string | undefined;
     let token: string;
+    let tenantId: string;
     let agentId: string;
     let threadId: string;
 
@@ -58,6 +62,7 @@ describe('Controlled Engine chat SSE', () => {
         app = await createTestApp();
         const user = await createTestUser(app);
         token = user.token;
+        tenantId = user.tenantId;
 
         const agentRes = await app.inject({
             method: 'POST',
@@ -127,5 +132,137 @@ describe('Controlled Engine chat SSE', () => {
         expect(JSON.stringify(history)).toContain('verify controlled model dispatch');
         expect(JSON.stringify(history)).toContain('E2E OK');
         expect(JSON.stringify(history)).toContain('E2EControlledTool');
+
+        const billing = await db
+            .select()
+            .from(billingRecords)
+            .where(and(
+                eq(billingRecords.tenantId, tenantId),
+                eq(billingRecords.sessionId, threadId),
+                eq(billingRecords.model, 'neptune-controlled-model'),
+            ));
+
+        expect(billing.length).toBeGreaterThanOrEqual(1);
+        expect(billing.at(-1)?.inputTokens).toBeGreaterThan(0);
+        expect(billing.at(-1)?.outputTokens).toBe(36);
+
+        const [run] = await db.select()
+            .from(runs)
+            .where(and(
+                eq(runs.tenantId, tenantId),
+                eq(runs.threadId, threadId),
+                eq(runs.requestId, String(chatRes.headers['x-request-id'])),
+            ));
+        expect(run).toBeTruthy();
+
+        const persistedEvents = await db.select()
+            .from(runEvents)
+            .where(and(
+                eq(runEvents.tenantId, tenantId),
+                eq(runEvents.runId, run.id),
+            ));
+        expect(persistedEvents.map(event => event.eventType)).toContain('run.started');
+        expect(persistedEvents.map(event => event.eventType)).toContain('tool.invocation.started');
+        expect(persistedEvents.map(event => event.eventType)).toContain('tool.invocation.completed');
+        expect(persistedEvents.map(event => event.eventType)).toContain('run.completed');
+
+        const persistedTools = await db.select()
+            .from(toolInvocations)
+            .where(and(
+                eq(toolInvocations.tenantId, tenantId),
+                eq(toolInvocations.runId, run.id),
+            ));
+        expect(persistedTools).toHaveLength(1);
+        expect(persistedTools[0]).toMatchObject({
+            toolName: 'E2EControlledTool',
+            status: 'completed',
+        });
+
+        const decisions = await db.select()
+            .from(policyDecisions)
+            .where(and(
+                eq(policyDecisions.tenantId, tenantId),
+                eq(policyDecisions.runId, run.id),
+            ));
+        expect(decisions.map(decision => decision.policyType)).toContain('model');
+        expect(decisions.map(decision => decision.policyType)).toContain('tool');
+        expect(decisions.every(decision => decision.decision === 'allow')).toBe(true);
+    });
+
+    test('rejects chat before engine dispatch when tenant quota is exhausted', async () => {
+        await db.update(tenants)
+            .set({quota: {maxTokensPerDay: 0, maxConcurrentSessions: 10}})
+            .where(eq(tenants.id, tenantId));
+
+        const quotaThreadRes = await app.inject({
+            method: 'POST',
+            url: `/api/v1/agents/${agentId}/threads`,
+            headers: {authorization: `Bearer ${token}`},
+            payload: {title: 'Quota gate'},
+        });
+        expect(quotaThreadRes.statusCode).toBe(201);
+        const quotaThreadId = quotaThreadRes.json().id;
+
+        const chatRes = await app.inject({
+            method: 'POST',
+            url: `/api/v1/agents/${agentId}/threads/${quotaThreadId}/chat`,
+            headers: {authorization: `Bearer ${token}`},
+            payload: {content: 'this should be rejected before engine starts'},
+        });
+
+        expect(chatRes.statusCode).toBe(200);
+        const events = parseSSE(chatRes.payload);
+        const error = events.find(evt => evt.event === 'error')?.data;
+        expect(error).toMatchObject({
+            type: 'error',
+            error: 'QUOTA_EXCEEDED',
+            message: '租户配额不足',
+            requestId: chatRes.headers['x-request-id'],
+            details: {
+                reason: 'TOKEN_QUOTA_EXCEEDED',
+                quota: {maxTokensPerDay: 0, maxConcurrentSessions: 10},
+            },
+        });
+
+        const blockedRuns = await db.select()
+            .from(runs)
+            .where(and(
+                eq(runs.tenantId, tenantId),
+                eq(runs.threadId, quotaThreadId),
+            ));
+        expect(blockedRuns.length).toBe(0);
+
+        const blockedBilling = await db.select()
+            .from(billingRecords)
+            .where(and(
+                eq(billingRecords.tenantId, tenantId),
+                eq(billingRecords.sessionId, quotaThreadId),
+            ));
+        expect(blockedBilling.length).toBe(0);
+
+        const blockedAudit = await db.select()
+            .from(auditEvents)
+            .where(and(
+                eq(auditEvents.tenantId, tenantId),
+                eq(auditEvents.requestId, String(chatRes.headers['x-request-id'])),
+                eq(auditEvents.action, 'quota.blocked'),
+                eq(auditEvents.resourceType, 'thread'),
+                eq(auditEvents.resourceId, quotaThreadId),
+                eq(auditEvents.outcome, 'failure'),
+            ));
+        expect(blockedAudit.length).toBe(1);
+
+        const blockedPolicy = await db.select()
+            .from(policyDecisions)
+            .where(and(
+                eq(policyDecisions.tenantId, tenantId),
+                eq(policyDecisions.requestId, String(chatRes.headers['x-request-id'])),
+                eq(policyDecisions.policyType, 'quota'),
+                eq(policyDecisions.subjectType, 'thread'),
+                eq(policyDecisions.subjectId, quotaThreadId),
+                eq(policyDecisions.decision, 'deny'),
+            ));
+        expect(blockedPolicy).toHaveLength(1);
+        expect(blockedPolicy[0].reason).toBe('租户 token 配额不足');
     });
 });

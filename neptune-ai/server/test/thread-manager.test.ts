@@ -15,7 +15,10 @@ process.env.DATA_ROOT = `/tmp/neptune-test-data-${Date.now()}`;
 
 import {describe, test, expect, beforeAll, beforeEach} from 'bun:test';
 import {createTestApp, TEST_AGENT_TEMPLATE} from './setup';
-import {mkdirSync} from 'fs';
+import {mkdirSync, writeFileSync} from 'fs';
+import path from 'path';
+import {eq} from 'drizzle-orm';
+import {db, auditEvents, documents, policyDecisions, runs, sessions, tenants} from '../src/db';
 
 /**
  * 辅助函数：创建唯一测试用户并获取 token
@@ -578,6 +581,60 @@ describe('Thread CRUD + Chat 错误处理', () => {
             // 实际行为：SSE 流开始，然后在 error 事件中关闭
             expect(response.statusCode).toBe(200);
         });
+
+        test('配额拒绝时 SSE 应返回稳定错误信封并留下策略与审计事实', async () => {
+            const requestId = `req-quota-${Math.random().toString(36).slice(2)}`;
+            await db.update(tenants)
+                .set({quota: {maxTokensPerDay: 0, maxConcurrentSessions: 10}})
+                .where(eq(tenants.id, adminTenantId));
+
+            const response = await app.inject({
+                method: 'POST',
+                url: `/api/v1/agents/${agentId}/threads/${testThreadId}/chat`,
+                headers: {
+                    authorization: `Bearer ${userToken}`,
+                    'x-request-id': requestId,
+                },
+                payload: {
+                    content: '测试配额拒绝',
+                },
+            });
+
+            expect(response.statusCode).toBe(200);
+            expect(response.payload).toContain('event: error');
+            expect(response.payload).toContain('"error":"QUOTA_EXCEEDED"');
+            expect(response.payload).toContain('"message":"租户配额不足"');
+            expect(response.payload).toContain(`"requestId":"${requestId}"`);
+            expect(response.payload).toContain('"reason":"TOKEN_QUOTA_EXCEEDED"');
+
+            const decisions = await db
+                .select()
+                .from(policyDecisions)
+                .where(eq(policyDecisions.requestId, requestId));
+            expect(decisions.length).toBe(1);
+            expect(decisions[0]!.policyType).toBe('quota');
+            expect(decisions[0]!.decision).toBe('deny');
+
+            const audits = await db
+                .select()
+                .from(auditEvents)
+                .where(eq(auditEvents.requestId, requestId));
+            expect(audits.length).toBe(1);
+            expect(audits[0]!.action).toBe('quota.blocked');
+            expect(audits[0]!.outcome).toBe('failure');
+
+            const blockedRuns = await db
+                .select()
+                .from(runs)
+                .where(eq(runs.requestId, requestId));
+            expect(blockedRuns.length).toBe(0);
+
+            const [threadAfter] = await db
+                .select({status: sessions.status})
+                .from(sessions)
+                .where(eq(sessions.id, testThreadId));
+            expect(threadAfter!.status).toBe('idle');
+        });
     });
 
     // ===== 7. History 端点 =====
@@ -690,9 +747,16 @@ describe('ThreadManager 无池化 Engine 生命周期', () => {
         public createCallCount = 0;
         public destroyCallCount = 0;
         public queryCallHistory: Array<{ threadId: string; sessionId: string; content: string }> = [];
+        public createCallHistory: Array<{
+            identityOverride?: string;
+            instructions?: string;
+            skills?: Array<{ name: string; description?: string; content: string }>;
+        }> = [];
 
         async createAndLoad(params: {
-            systemPrompt: string;
+            identityOverride?: string;
+            instructions?: string;
+            skills?: Array<{ name: string; description?: string; content: string }>;
             memoryRoot: string;
             workspace: string;
             tools: string[];
@@ -706,6 +770,11 @@ describe('ThreadManager 无池化 Engine 生命周期', () => {
             sdkSessionId: string;
         }> {
             this.createCallCount++;
+            this.createCallHistory.push({
+                identityOverride: params.identityOverride,
+                instructions: params.instructions,
+                skills: params.skills,
+            });
             // 生成唯一的 sdkSessionId
             const sdkSessionId = `mock-sdk-session-${this.createCallCount}-${Date.now()}`;
 
@@ -773,7 +842,7 @@ describe('ThreadManager 无池化 Engine 生命周期', () => {
         expect(userResponse.statusCode).toBe(201);
         const user = userResponse.json();
 
-        return {app, adminToken: admin.token, userToken: user.accessToken, agentId};
+        return {app, admin, adminToken: admin.token, userToken: user.accessToken, agentId};
     }
 
     test('每次 dispatch 应创建 engine、使用返回的 sdkSessionId，并在结束后销毁', async () => {
@@ -909,5 +978,53 @@ describe('ThreadManager 无池化 Engine 生命周期', () => {
 
         // 验证：所有 dispatch 都已销毁 engine
         expect(mockFactory.destroyCallCount).toBe(4);
+    });
+
+    test('dispatch 只把 knowledge 文档注入运行提示，不把 memory 当知识库注入', async () => {
+        const {manager, mockFactory} = await createTestThreadManager();
+        const {app, userToken, agentId, admin} = await setupTestData();
+
+        const docsDir = path.join(process.env.DATA_ROOT!, 'document-category-fixtures');
+        mkdirSync(docsDir, {recursive: true});
+        const memoryPath = path.join(docsDir, 'memory.md');
+        const knowledgePath = path.join(docsDir, 'knowledge.md');
+        writeFileSync(memoryPath, 'MEMORY_SHOULD_NOT_ENTER_PROMPT');
+        writeFileSync(knowledgePath, 'KNOWLEDGE_SHOULD_ENTER_PROMPT');
+
+        await db.insert(documents).values([
+            {
+                templateId: agentId,
+                tenantId: admin.tenantId,
+                name: '偏好记忆.md',
+                type: 'text/markdown',
+                category: 'memory',
+                size: 30,
+                path: memoryPath,
+            },
+            {
+                templateId: agentId,
+                tenantId: admin.tenantId,
+                name: '制度知识.md',
+                type: 'text/markdown',
+                category: 'knowledge',
+                size: 30,
+                path: knowledgePath,
+            },
+        ]);
+
+        const threadResponse = await app.inject({
+            method: 'POST',
+            url: `/api/v1/agents/${agentId}/threads`,
+            headers: {authorization: `Bearer ${userToken}`},
+            payload: {title: '文档分类注入测试'},
+        });
+
+        for await (const _ of manager.dispatch(threadResponse.json().id, '检查文档分类注入')) {
+            // 消费事件
+        }
+
+        const instructions = mockFactory.createCallHistory[0]?.instructions ?? '';
+        expect(instructions).toContain('KNOWLEDGE_SHOULD_ENTER_PROMPT');
+        expect(instructions).not.toContain('MEMORY_SHOULD_NOT_ENTER_PROMPT');
     });
 });
