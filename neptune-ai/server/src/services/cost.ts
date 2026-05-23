@@ -1,8 +1,21 @@
 import {db} from '../db/index.js';
-import {billingRecords} from '../db/schema.js';
-import {eq, sql} from 'drizzle-orm';
+import {billingRecords, sessions, tenants} from '../db/schema.js';
+import {and, eq, sql} from 'drizzle-orm';
 import Redis from 'ioredis';
 import {config} from '../config.js';
+
+export interface TenantQuotaGateResult {
+    allowed: boolean;
+    reason?: 'TOKEN_QUOTA_EXCEEDED' | 'CONCURRENT_SESSION_LIMIT';
+    quota: {
+        maxTokensPerDay: number;
+        maxConcurrentSessions: number;
+    };
+    usage: {
+        totalTokensToday: number;
+        runningSessions: number;
+    };
+}
 
 /**
  * 计费聚合器
@@ -87,6 +100,59 @@ export class CostAggregator {
     async getQuotaCounter(tenantId: string): Promise<Record<string, string>> {
         const key = `tenant:${tenantId}:quota`;
         return this.redis.hgetall(key);
+    }
+
+    async checkTenantQuotaGate(tenantId: string): Promise<TenantQuotaGateResult> {
+        const [tenant] = await db
+            .select({quota: tenants.quota})
+            .from(tenants)
+            .where(eq(tenants.id, tenantId))
+            .limit(1);
+
+        const quota = tenant?.quota ?? {
+            maxTokensPerDay: 1000000,
+            maxConcurrentSessions: 10,
+        };
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const [usage] = await db
+            .select({
+                totalTokensToday: sql<number>`coalesce(sum(${billingRecords.inputTokens} + ${billingRecords.outputTokens}), 0)::int`,
+            })
+            .from(billingRecords)
+            .where(and(
+                eq(billingRecords.tenantId, tenantId),
+                sql`${billingRecords.createdAt} >= ${today.toISOString()}`,
+            ));
+
+        const [running] = await db
+            .select({
+                runningSessions: sql<number>`count(*)::int`,
+            })
+            .from(sessions)
+            .where(and(
+                eq(sessions.tenantId, tenantId),
+                eq(sessions.status, 'running'),
+            ));
+
+        const gate = {
+            quota,
+            usage: {
+                totalTokensToday: usage?.totalTokensToday ?? 0,
+                runningSessions: running?.runningSessions ?? 0,
+            },
+        };
+
+        if (gate.usage.totalTokensToday >= quota.maxTokensPerDay) {
+            return {...gate, allowed: false, reason: 'TOKEN_QUOTA_EXCEEDED'};
+        }
+
+        if (gate.usage.runningSessions >= quota.maxConcurrentSessions) {
+            return {...gate, allowed: false, reason: 'CONCURRENT_SESSION_LIMIT'};
+        }
+
+        return {...gate, allowed: true};
     }
 
     /**
