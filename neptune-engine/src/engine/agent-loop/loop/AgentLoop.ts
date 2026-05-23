@@ -47,6 +47,8 @@ import type {StreamingProviderAdapter} from '../provider/StreamingProviderAdapte
 import {ToolDispatcher, type ToolUseBlock, type ToolResultBlock} from '../dispatcher/ToolDispatcher.js'
 import type {ToolUseContext} from '../dispatcher/ToolUseContext.js'
 import type {LoopEvent, LoopResult} from './loopEvents.js'
+import type {HookSurface} from '../hook/HookSurface.js'
+import type {UsageTracker} from '../usage/UsageTracker.js'
 
 const DEFAULT_MAX_TURNS = 50
 
@@ -74,6 +76,10 @@ export interface AgentLoopParams {
 	maxTurns?: number
 	/** 透传给 provider.extra（caching breakpoints / beta flags）。 */
 	extra?: Record<string, unknown>
+	/** 业务 hook 注入（默认无）。 */
+	hooks?: HookSurface
+	/** Usage tracker（默认无；上层可注入跨 turn 累计）。 */
+	usageTracker?: UsageTracker
 }
 
 // ============================================================
@@ -195,6 +201,9 @@ export class AgentLoop {
 				: undefined
 		} catch (err) {
 			const error = err instanceof Error ? err : new Error(String(err))
+			if (params.hooks) {
+				await params.hooks.runOnError({phase: 'serialization', error})
+			}
 			yield {type: 'error', error, phase: 'serialization'}
 			return {
 				reason: 'error',
@@ -222,6 +231,11 @@ export class AgentLoop {
 
 			yield {type: 'stream_request_start', turn: turnCount}
 
+			// preStream hook
+			if (params.hooks) {
+				await params.hooks.runPreStream({turn: turnCount, messageCount: messages.length})
+			}
+
 			// 调 provider，收集流
 			let collected: CollectedAssistant
 			try {
@@ -238,6 +252,9 @@ export class AgentLoop {
 				)
 			} catch (err) {
 				const error = err instanceof Error ? err : new Error(String(err))
+				if (params.hooks) {
+					await params.hooks.runOnError({phase: 'stream', error, turn: turnCount})
+				}
 				yield {type: 'error', error, phase: 'stream'}
 				return {
 					reason: 'error',
@@ -252,10 +269,21 @@ export class AgentLoop {
 			// 累加 usage
 			Object.assign(cumulativeUsage, addUsage(cumulativeUsage, collected.finalUsage))
 
+			// 注入 UsageTracker
+			if (params.usageTracker) {
+				params.usageTracker.recordTurn(turnCount, params.model, collected.finalUsage)
+			}
+
 			// 构造 AssistantMessage 并 emit
 			const assistantMessage = buildAssistantMessage(collected)
 			messages.push(assistantMessage)
 			yield {type: 'assistant_message', message: assistantMessage}
+
+			// postStream hook
+			if (params.hooks) {
+				await params.hooks.runPostStream({turn: turnCount, message: assistantMessage})
+			}
+
 			yield {
 				type: 'usage_update',
 				usage: collected.finalUsage,
@@ -336,21 +364,62 @@ export class AgentLoop {
 				}
 			}
 
-			// 跑工具，收集 tool_result
+			// 跑工具，收集 tool_result。preTool / postTool hook 在这里包一层。
 			const toolResults: ToolResultBlock[] = []
 			try {
-				for await (const update of ToolDispatcher.execute(
-					toolUseBlocks,
-					params.context,
-				)) {
-					yield {type: 'tool_update', update}
-					if (update.kind === 'result') {
-						toolResults.push(update.toolResultBlock)
+				for (const block of toolUseBlocks) {
+					// preTool hook：可拒绝
+					if (params.hooks) {
+						const decision = await params.hooks.runPreTool({
+							toolUse: block,
+							context: params.context,
+						})
+						if (!decision.allow) {
+							const denied: ToolResultBlock = {
+								type: 'tool_result',
+								tool_use_id: block.id,
+								content: decision.reason ?? 'Hook rejected this tool call.',
+								is_error: true,
+							}
+							yield {
+								type: 'tool_update',
+								update: {
+									kind: 'result',
+									toolUseId: block.id,
+									toolName: block.name,
+									toolResultBlock: denied,
+								},
+							}
+							toolResults.push(denied)
+							continue
+						}
+					}
+
+					// 真正调 dispatcher
+					let lastResult: ToolResultBlock | undefined
+					for await (const update of ToolDispatcher.execute([block], params.context)) {
+						yield {type: 'tool_update', update}
+						if (update.kind === 'result') {
+							lastResult = update.toolResultBlock
+							toolResults.push(update.toolResultBlock)
+						}
+					}
+
+					// postTool hook
+					if (params.hooks && lastResult) {
+						await params.hooks.runPostTool({
+							toolUse: block,
+							toolResult: lastResult,
+							context: params.context,
+						})
 					}
 				}
 			} catch (err) {
 				// dispatcher 内部 throw（不应该发生 —— 它会包错为 tool_result is_error）
 				const error = err instanceof Error ? err : new Error(String(err))
+				if (params.hooks) {
+					await params.hooks.runOnError({phase: 'tool', error, turn: turnCount})
+				}
 				yield {type: 'error', error, phase: 'tool'}
 				return {
 					reason: 'error',

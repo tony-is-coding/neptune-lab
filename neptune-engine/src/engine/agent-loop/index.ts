@@ -51,3 +51,20 @@ export type {ToolUpdate, ToolResultBlock, ToolUseBlock} from './dispatcher/ToolD
 export {AgentLoop} from './loop/AgentLoop.js'
 export type {AgentLoopParams} from './loop/AgentLoop.js'
 export type {LoopEvent, LoopResult} from './loop/loopEvents.js'
+
+// Batch 11: UsageTracker + HookSurface + Cancellation 硬化
+export {UsageTracker} from './usage/UsageTracker.js'
+export type {UsageTrackerOptions, TurnUsageRecord} from './usage/UsageTracker.js'
+export {calculateCost, DEFAULT_PRICES} from './usage/cost.js'
+export type {ModelPrices, PriceTable} from './usage/cost.js'
+export {HookSurface} from './hook/HookSurface.js'
+export type {
+	HookRegistry,
+	PreStreamHook,
+	PostStreamHook,
+	PreToolHook,
+	PostToolHook,
+	OnErrorHook,
+} from './hook/HookSurface.js'
+export {CancellationToken} from './cancellation/CancellationToken.js'
+export type {CancellationReason, CancellationInfo} from './cancellation/CancellationToken.js'
