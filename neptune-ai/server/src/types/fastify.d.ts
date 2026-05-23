@@ -8,5 +8,6 @@ declare module 'fastify' {
     interface FastifyRequest {
         user?: JwtPayload;
         tenantId?: string;
+        requestId?: string;
     }
 }
