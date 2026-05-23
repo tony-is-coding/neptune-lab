@@ -46,3 +46,8 @@ export type {
 export {createToolUseContext, allowAllCanUseTool} from './dispatcher/ToolUseContext.js'
 export {ToolDispatcher} from './dispatcher/ToolDispatcher.js'
 export type {ToolUpdate, ToolResultBlock, ToolUseBlock} from './dispatcher/ToolDispatcher.js'
+
+// Batch 10: AgentLoop multi-turn while + stop_reason 状态机
+export {AgentLoop} from './loop/AgentLoop.js'
+export type {AgentLoopParams} from './loop/AgentLoop.js'
+export type {LoopEvent, LoopResult} from './loop/loopEvents.js'
