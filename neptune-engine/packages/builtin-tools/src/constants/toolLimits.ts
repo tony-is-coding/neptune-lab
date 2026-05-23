@@ -1,0 +1,1 @@
+export const TOOL_SUMMARY_MAX_LENGTH = 50

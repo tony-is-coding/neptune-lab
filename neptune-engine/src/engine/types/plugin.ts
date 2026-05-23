@@ -1,22 +1,42 @@
 /**
- * engine/types/plugin.ts - 重新导出 src/types/plugin.ts 的类型
+ * engine/types/plugin.ts
  *
- * 此文件作为 engine/ 内部的类型声明层，避免从 engine/ 向外穿透到 src/types/
- * engine/ 内的文件应该从这里导入类型，而不是直接从 src/types/ 导入
+ * Plugin 最小接口 — engine-local opaque types
+ *
+ * engine 层只需要 LoadedPlugin 和 PluginError 的最小结构，
+ * 内联于此，消除对 @neptune/engine-product 的反向依赖。
  */
 
-// 重新导出插件类型
-export type {
-	PluginRepository,
-	PluginConfig,
-	LoadedPlugin,
-	PluginComponent,
-	PluginError,
-	PluginLoadResult,
-	BuiltinPluginDefinition,
-} from '../../types/plugin.js'
+/** LoadedPlugin — engine 层最小接口 */
+export type LoadedPlugin = {
+	name: string
+	path: string
+	source: string
+	repository: string
+	enabled?: boolean
+	isBuiltin?: boolean
+	sha?: string
+	manifest: {
+		name: string
+		version?: string
+		description?: string
+		[key: string]: unknown
+	}
+	commandsPath?: string
+	commandsPaths?: string[]
+	commandsMetadata?: Record<string, unknown>
+	agentsPath?: string
+}
 
-// 重新导出辅助函数
-export {
-	getPluginErrorMessage,
-} from '../../types/plugin.js'
+/** PluginError — engine 层最小接口 */
+export type PluginError = {
+	name: string
+	error: Error | string
+	source?: string
+}
+
+/** PluginLoadResult — engine 层最小接口 */
+export type PluginLoadResult = {
+	plugins: LoadedPlugin[]
+	errors: PluginError[]
+}

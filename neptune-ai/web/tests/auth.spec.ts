@@ -5,39 +5,22 @@ test.describe('Auth Flow', () => {
   test('login with valid credentials', async ({ page }) => {
     const diag = attachDiagnostics(page);
 
-    await page.goto('/login');
+    await page.goto('/login', { waitUntil: 'domcontentloaded' });
 
     // 填写登录表单
     await page.fill('#email', TEST_USER.email);
     await page.fill('#password', TEST_USER.password);
     await page.click('button[type="submit"]');
 
-    // 等待跳转（登录成功到首页，或停留在登录页显示错误）
-    await page.waitForURL(/\/(login|$)/, { timeout: 10000 });
+    await expect(page.locator('[data-testid="primary-sidebar"]')).toBeVisible({ timeout: 10000 });
+    expect(page.url()).not.toContain('/login');
 
-    // 检查是否登录成功
     const stored = await page.evaluate(() => localStorage.getItem('neptune-auth'));
-
-    if (page.url().endsWith('/login')) {
-      // 登录失败 — 可能是测试用户不存在
-      // 检查是否有错误提示
-      const errorEl = page.locator('.bg-red-50');
-      if (await errorEl.isVisible()) {
-        console.log('Login failed (test user may not exist in DB):', await errorEl.innerText());
-      }
-      // 跳过断言，测试标记为通过（环境依赖）
-      test.info().annotations.push({ type: 'skip-reason', description: 'Test user not found in backend DB' });
-    } else {
-      // 登录成功
-      expect(stored).not.toBeNull();
-      const parsed = JSON.parse(stored!);
-      expect(parsed.state.isAuthenticated).toBe(true);
-      expect(parsed.state.token).toBeTruthy();
-      expect(parsed.state.user).toBeTruthy();
-
-      // 验证侧边栏存在
-      await expect(page.locator('[data-testid="primary-sidebar"]')).toBeVisible();
-    }
+    expect(stored).not.toBeNull();
+    const parsed = JSON.parse(stored!);
+    expect(parsed.state.isAuthenticated).toBe(true);
+    expect(parsed.state.token).toBeTruthy();
+    expect(parsed.state.user).toBeTruthy();
 
     printReport(diag, page.url(), stored);
   });
@@ -46,23 +29,14 @@ test.describe('Auth Flow', () => {
     const diag = attachDiagnostics(page);
 
     // 先登录
-    await page.goto('/login');
+    await page.goto('/login', { waitUntil: 'domcontentloaded' });
     await page.fill('#email', TEST_USER.email);
     await page.fill('#password', TEST_USER.password);
     await page.click('button[type="submit"]');
-    await page.waitForURL(/\/(login|$)/, { timeout: 10000 });
+    await expect(page.locator('[data-testid="primary-sidebar"]')).toBeVisible({ timeout: 10000 });
 
-    // 如果登录失败，跳过
-    if (page.url().endsWith('/login')) {
-      test.info().annotations.push({ type: 'skip-reason', description: 'Login failed, skipping refresh test' });
-      return;
-    }
+    await page.reload({ waitUntil: 'domcontentloaded' });
 
-    // 刷新页面
-    await page.reload();
-    await page.waitForLoadState('networkidle');
-
-    // 应该仍然在首页，没有被重定向到 /login
     expect(page.url()).not.toContain('/login');
     await expect(page.locator('[data-testid="primary-sidebar"]')).toBeVisible();
 
@@ -73,7 +47,7 @@ test.describe('Auth Flow', () => {
   test('login with wrong credentials shows error', async ({ page }) => {
     const diag = attachDiagnostics(page);
 
-    await page.goto('/login');
+    await page.goto('/login', { waitUntil: 'domcontentloaded' });
 
     await page.fill('#email', 'wrong@test.com');
     await page.fill('#password', 'wrongpassword');
@@ -98,7 +72,7 @@ test.describe('Auth Flow', () => {
   test('register mode works', async ({ page }) => {
     const diag = attachDiagnostics(page);
 
-    await page.goto('/login');
+    await page.goto('/login', { waitUntil: 'domcontentloaded' });
 
     // 切换到注册模式
     await page.click('text=Sign up');

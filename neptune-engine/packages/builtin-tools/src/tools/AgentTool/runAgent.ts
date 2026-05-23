@@ -25,7 +25,7 @@ import type {
 	MCPServerConnection,
 	ScopedMcpServerConfig,
 } from 'src/services/mcp/types.js'
-import type {Tool, Tools, ToolUseContext} from 'src/Tool.js'
+import type {Tool, Tools, ToolUseContext} from '../../tool.js'
 import {killShellTasksForAgent} from 'src/tasks/LocalShellTask/killShellTasks.js'
 import type {Command} from 'src/types/command.js'
 import type {AgentId} from 'src/types/ids.js'
@@ -41,7 +41,7 @@ import type {
 	UserMessage,
 } from 'src/types/message.js'
 import {createAttachmentMessage} from 'src/utils/attachments.js'
-import {AbortError} from 'src/utils/errors.js'
+import {AbortError} from '../../utils/errors.js'
 import {getDisplayPath} from 'src/utils/file.js'
 import {
 	cloneFileStateCache,

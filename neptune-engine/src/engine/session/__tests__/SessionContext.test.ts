@@ -21,7 +21,7 @@ import {
 	incrementBudgetContinuationCount,
 	getBudgetContinuationCount,
 } from '../index.js'
-import type {SessionId} from '../../../types/ids.js'
+import type {SessionId} from '../types/ids.js'
 
 describe('SessionContext', () => {
 	describe('createDefaultSessionContext', () => {

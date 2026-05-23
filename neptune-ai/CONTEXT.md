@@ -21,7 +21,8 @@
 ## 关键目录
 
 - `server/` — 后端编排层（[子 context](server/CONTEXT.md)）
-- `desktop/` — 前端桌面端（[子 context](desktop/CONTEXT.md)）
+- `web/` — 前端 Web 应用（React 19 + Vite 6 + Tailwind v4）
+- `desktop/` — Tauri 桌面端壳（共享 web/ 代码）
 - `docs/` — 产品设计文档
 
 ## 如何开发
@@ -32,7 +33,11 @@ cd neptune-ai/server
 docker-compose up -d    # PostgreSQL + Redis
 bun install && bun run dev
 
-# 前端
-cd neptune-ai/desktop
-bun install && bun run dev
+# 前端 (Web)
+cd neptune-ai/web
+bun install && bun run dev  # port 3004
+
+# 测试
+cd neptune-ai/server && bun test
+cd neptune-ai/web && npx playwright test
 ```

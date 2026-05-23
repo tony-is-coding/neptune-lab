@@ -8,8 +8,8 @@
  */
 
 import {Langfuse} from 'langfuse';
-import {NoOpTracingProvider, NoOpMetricsProvider} from 'claude-code-best/engine';
-import type {ITracingProvider, IMetricsProvider} from 'claude-code-best/engine';
+import {NoOpTracingProvider, NoOpMetricsProvider} from '@neptune/engine';
+import type {ITracingProvider, IMetricsProvider} from '@neptune/engine';
 import {LangfuseTracingProvider} from './langfuse-tracing-provider';
 import {createLogger} from '../../utils/logger';
 
@@ -44,6 +44,19 @@ export function initObservability(): void {
  */
 export function getTracingProvider(): ITracingProvider {
     return tracingProvider;
+}
+
+/**
+ * 为一次请求创建独立 TracingProvider。
+ *
+ * LangfuseTracingProvider 内部维护当前 trace/span/generation 引用；
+ * chat dispatch 必须使用请求级实例，避免并发请求覆盖彼此状态。
+ */
+export function createTracingProviderForRequest(): ITracingProvider {
+    if (langfuseInstance) {
+        return new LangfuseTracingProvider(langfuseInstance);
+    }
+    return NoOpTracingProvider.getInstance();
 }
 
 /**

@@ -1,0 +1,1 @@
+{"version":3,"file":"toolTypes.d.ts","sourceRoot":"","sources":["toolTypes.ts"],"names":[],"mappings":"AAAA;;GAEG;AACH,MAAM,MAAM,iBAAiB,GAAG;IAC/B,IAAI,EAAE,MAAM,CAAA;IACZ,WAAW,EAAE,MAAM,CAAA;IACnB,WAAW,EAAE,MAAM,CAAC,MAAM,EAAE,OAAO,CAAC,CAAA;IACpC,CAAC,GAAG,EAAE,MAAM,GAAG,OAAO,CAAA;CACtB,CAAA"}

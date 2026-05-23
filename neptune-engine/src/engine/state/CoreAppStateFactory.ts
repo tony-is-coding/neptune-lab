@@ -8,8 +8,13 @@
  */
 
 import type {CoreAppState} from '../types/CoreAppState.js'
-import type {ToolPermissionContext} from '../../Tool.js'
-import type {AttributionState} from '../../utils/commitAttribution.js'
+import type {ToolPermissionContext} from '../types/permissions.js'
+import {getEmptyToolPermissionContext as createDefaultToolPermissionContext} from '../types/tool.js'
+/** Inline from @neptune/engine-product/utils/commitAttribution.js — pure type, no AppState dep */
+export type AttributionState = {
+	commits?: {sha: string; [key: string]: unknown}[]
+	[key: string]: unknown
+}
 
 /**
  * 创建空的 ToolPermissionContext 的函数类型
@@ -51,17 +56,11 @@ export interface CoreAppStateFactoryOptions {
 export function createDefaultCoreAppState(
 	options?: CoreAppStateFactoryOptions,
 ): CoreAppState {
-	// 延迟导入工厂函数（仅在运行时需要时）
-	// 这样可以保持模块的 value import 自由
-	const getEmptyToolPermissionContext = options?.getEmptyToolPermissionContext ?? (() => {
-		// 动态导入（仅在需要时）
-		return require('../../Tool.js').getEmptyToolPermissionContext()
-	}) as GetEmptyToolPermissionContextFn
+	const getEmptyToolPermissionContext =
+		options?.getEmptyToolPermissionContext ?? createDefaultToolPermissionContext
 
-	const createEmptyAttributionState = options?.createEmptyAttributionState ?? (() => {
-		// 动态导入（仅在需要时）
-		return require('../../utils/commitAttribution.js').createEmptyAttributionState()
-	}) as CreateEmptyAttributionStateFn
+	const createEmptyAttributionState =
+		options?.createEmptyAttributionState ?? (() => ({commits: []}))
 
 	return {
 		toolPermissionContext: getEmptyToolPermissionContext(),

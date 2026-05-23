@@ -10,7 +10,7 @@
  * @module engine/config/ConfigValidation
  */
 
-import type {PermissionMode} from '../../types/permissions.js'
+import type {PermissionMode} from '../types/permissions.js'
 import type {FeatureOverride} from '../compat/featureCompat.js'
 
 /**

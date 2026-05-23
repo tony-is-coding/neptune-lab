@@ -21,13 +21,13 @@ export function attachDiagnostics(page: Page): Diagnostics {
   });
 
   page.on('request', (req) => {
-    if (req.url().includes(':3000') || req.url().includes(':1420/api') || req.url().includes(':3004/api')) {
+    if (isTrackedApiUrl(req.url())) {
       diag.requests.push(`>> ${req.method()} ${req.url()}`);
     }
   });
 
   page.on('response', (res) => {
-    if (res.url().includes(':3000') || res.url().includes(':1420/api') || res.url().includes(':3004/api')) {
+    if (isTrackedApiUrl(res.url())) {
       diag.requests.push(`<< ${res.status()} ${res.url()}`);
     }
   });
@@ -74,26 +74,34 @@ export function printReport(diag: Diagnostics, finalUrl: string, stored: string 
   }
 }
 
+function isTrackedApiUrl(url: string): boolean {
+  return url.includes(':3000/api/') || url.includes(':3004/api/');
+}
+
 /**
  * 测试配置常量
  */
-export const DEV_URL = 'http://localhost:1420';
+export const WEB_URL = 'http://localhost:3004';
 export const API_URL = 'http://localhost:3000/api/v1';
-export const TEST_USER = {
-  email: 'terrence@neptune.ai',
-  password: 'Neptune2024!',
-  name: 'Terrence',
+export const E2E_USER = {
+  email: 'e2e@neptune.ai',
+  password: 'NeptuneE2E2026!',
+  name: 'Neptune E2E',
 };
+export const E2E_AGENT = {
+  name: 'E2E Assistant',
+  description: 'Deterministic assistant for browser acceptance.',
+};
+export const TEST_USER = E2E_USER;
 
 /**
  * 通过 API 登录获取 token
  */
 export async function loginViaApi(page: Page): Promise<void> {
-  // 使用测试用户登录
   const response = await page.request.post(`${API_URL}/auth/login`, {
     data: {
-      email: 'test@neptune.ai',
-      password: 'Test1234!',
+      email: E2E_USER.email,
+      password: E2E_USER.password,
     },
   });
 
@@ -110,10 +118,9 @@ export async function loginViaApi(page: Page): Promise<void> {
     throw new Error(`Login succeeded but no token in response: ${JSON.stringify(Object.keys(data))}`);
   }
 
-  // 导航到 Playwright baseURL (localhost:3004) 确保 localStorage 在正确的 origin 下设置
-  await page.goto('/login');
+  await page.goto('/login', { waitUntil: 'domcontentloaded' });
+  await page.locator('text=Welcome back').waitFor({ state: 'visible', timeout: 10000 });
 
-  // 设置 localStorage
   await page.evaluate(({ token, user }) => {
     localStorage.setItem('neptune-auth', JSON.stringify({
       state: {
@@ -125,7 +132,6 @@ export async function loginViaApi(page: Page): Promise<void> {
     }));
   }, { token, user });
 
-  // 验证设置成功
   const stored = await page.evaluate(() => localStorage.getItem('neptune-auth'));
   if (!stored) {
     throw new Error('Failed to set auth in localStorage');

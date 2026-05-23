@@ -1,0 +1,1 @@
+{"version":3,"file":"streamAdapter.d.ts","sourceRoot":"","sources":["streamAdapter.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAC,yBAAyB,EAAC,MAAM,wDAAwD,CAAA;AACrG,OAAO,KAAK,EAAC,mBAAmB,EAAC,MAAM,mDAAmD,CAAA;AAG1F;;;;;;;;;;;;;;;;;;;;;;;;;;;;;GA6BG;AACH,wBAAuB,4BAA4B,CAClD,MAAM,EAAE,aAAa,CAAC,mBAAmB,CAAC,EAC1C,KAAK,EAAE,MAAM,GACX,cAAc,CAAC,yBAAyB,EAAE,IAAI,CAAC,CA0TjD"}

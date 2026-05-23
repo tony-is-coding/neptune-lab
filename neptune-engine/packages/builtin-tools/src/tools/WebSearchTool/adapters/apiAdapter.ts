@@ -11,7 +11,7 @@ import {getFeatureValue_CACHED_MAY_BE_STALE} from 'src/services/analytics/growth
 import {queryModelWithStreaming} from 'src/services/api/claude.js'
 import {createUserMessage} from 'src/utils/messages.js'
 import {getMainLoopModel, getSmallFastModel} from 'src/utils/model/model.js'
-import {jsonParse} from 'src/utils/slowOperations.js'
+import {jsonParse} from '../../../utils/json.js'
 import {asSystemPrompt} from 'src/utils/systemPromptType.js'
 import type {SearchResult, SearchOptions, WebSearchAdapter} from './types.js'
 

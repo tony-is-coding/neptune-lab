@@ -15,10 +15,6 @@
  */
 
 import type {ProviderAdapter} from './ProviderAdapter.js'
-import {AnthropicProvider} from './adapters/AnthropicProvider.js'
-import {OpenAIProvider} from './adapters/OpenAIProvider.js'
-import {GeminiProvider} from './adapters/GeminiProvider.js'
-import {GrokProvider} from './adapters/GrokProvider.js'
 import {EngineError, EngineErrorCode} from '../errors.js'
 import {LogUtil} from '../log/index.js'
 
@@ -140,7 +136,12 @@ export async function getGlobalProviderRegistry(): Promise<ProviderRegistry> {
 	if (!globalRegistry) {
 		globalRegistry = new ProviderRegistry()
 
-		// 注册核心 Provider（必需依赖）
+		// 注册核心 Provider。保持动态加载，避免仅导入 engine 公共 API 时
+		// 把 provider SDK 或宿主运行时依赖带入后端进程。
+		const {AnthropicProvider} = await import('./adapters/AnthropicProvider.js')
+		const {OpenAIProvider} = await import('./adapters/OpenAIProvider.js')
+		const {GeminiProvider} = await import('./adapters/GeminiProvider.js')
+		const {GrokProvider} = await import('./adapters/GrokProvider.js')
 		globalRegistry.register('anthropic', new AnthropicProvider())
 		globalRegistry.register('openai', new OpenAIProvider())
 		globalRegistry.register('gemini', new GeminiProvider())

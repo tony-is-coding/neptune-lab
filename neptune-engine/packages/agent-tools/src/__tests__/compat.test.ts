@@ -1,27 +1,20 @@
 import {describe, expect, test} from 'bun:test'
 import type {
 	CoreTool,
-	Tool,
-	Tools,
-	AnyObject,
 	ToolResult,
 	ValidationResult,
-	PermissionResult
-} from '@claude-code-best/agent-tools'
-import type {Tool as HostTool} from '../../../../src/Tool.js'
+	PermissionResult,
+} from '@neptune/engine-tools'
 
 describe('agent-tools compatibility', () => {
-	test('CoreTool structural compatibility with host Tool', () => {
-		// The host's Tool should structurally satisfy CoreTool
-		// because it has all required fields (name, call, description, etc.)
-		// This test verifies the type-level compatibility at runtime
-		const mockHostTool: HostTool = {
+	test('CoreTool structural fixture works without host source imports', async () => {
+		const fixtureTool: CoreTool = {
 			name: 'test',
 			aliases: [],
 			searchHint: 'test tool',
-			inputSchema: {} as any,
-			async call() {
-				return {data: 'ok'} as any
+			inputSchema: {} as CoreTool['inputSchema'],
+			async call(): Promise<ToolResult<string>> {
+				return {data: 'ok'}
 			},
 			async description() {
 				return 'test'
@@ -32,19 +25,24 @@ describe('agent-tools compatibility', () => {
 			isConcurrencySafe: () => false,
 			isEnabled: () => true,
 			isReadOnly: () => false,
-			async checkPermissions() {
-				return {behavior: 'allow' as const, updatedInput: {}}
+			async checkPermissions(): Promise<PermissionResult> {
+				return {behavior: 'allow', updatedInput: {}}
 			},
 			toAutoClassifierInput: () => '',
 			userFacingName: () => 'test',
 			maxResultSizeChars: 100000,
-			mapToolResultToToolResultBlockParam: () => ({type: 'tool_result', tool_use_id: '1', content: 'ok'}),
-			renderToolUseMessage: () => null,
+			mapToolResultToToolResultBlockParam: () => ({
+				type: 'tool_result',
+				tool_use_id: '1',
+				content: 'ok',
+			}),
 		}
 
-		// This assignment should work if HostTool structurally extends CoreTool
-		const coreTool: CoreTool = mockHostTool as unknown as CoreTool
-		expect(coreTool.name).toBe('test')
-		expect(coreTool.isEnabled()).toBe(true)
+		const validation: ValidationResult = {result: true}
+		const result = await fixtureTool.call({}, {}, async () => validation, {})
+
+		expect(fixtureTool.name).toBe('test')
+		expect(fixtureTool.isEnabled()).toBe(true)
+		expect(result.data).toBe('ok')
 	})
 })

@@ -8,8 +8,6 @@
  * @module
  */
 
-import type {z} from 'zod/v4'
-
 /**
  * SDK 工具接口
  *
@@ -19,8 +17,8 @@ import type {z} from 'zod/v4'
 export interface SDKTool {
 	/** 工具名称 */
 	name: string
-	/** 输入模式（Zod schema） */
-	inputSchema: z.ZodType<unknown>
+	/** 输入模式（opaque schema，由宿主或 API adapter 解释） */
+	inputSchema: unknown
 	/** 输入 JSON Schema（可选） */
 	inputJSONSchema?: {
 		[x: string]: unknown

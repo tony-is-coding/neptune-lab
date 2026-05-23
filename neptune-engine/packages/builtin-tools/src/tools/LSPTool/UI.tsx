@@ -5,7 +5,7 @@ import {FallbackToolUseErrorMessage} from '../../../../../src/ui/components/Fall
 import {MessageResponse} from '../../../../../src/ui/components/MessageResponse'
 import {Box, Text} from '@anthropic/ink'
 import {getDisplayPath} from 'src/utils/file.js'
-import {extractTag} from 'src/utils/messages.js'
+import {extractTag} from '../../utils/messages.js'
 import type {Input, Output} from './LSPTool.js'
 import {getSymbolAtPosition} from './symbolContext.js'
 

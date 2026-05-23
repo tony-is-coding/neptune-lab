@@ -1,5 +1,21 @@
 {
   "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "paths": {
+      "@neptune/engine-tools": [
+        "../agent-tools/src/index.ts"
+      ],
+      "@neptune/engine-tools/*": [
+        "../agent-tools/src/*"
+      ],
+      "@neptune/builtin-tools": [
+        "./src/index.ts"
+      ],
+      "@neptune/builtin-tools/*": [
+        "./src/*"
+      ]
+    }
+  },
   "include": [
     "src/**/*.ts",
     "src/**/*.tsx"

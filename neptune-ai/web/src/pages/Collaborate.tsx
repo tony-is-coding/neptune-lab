@@ -45,7 +45,7 @@ export function Collaborate() {
   } = useThreads(agentId || '');
 
   // Chat
-  const { getMessages, getPlanTasks, sendMessage, loadHistory, isStreaming, updateBlock } = useChatMessages();
+  const { getMessages, getPlanTasks, sendMessage, loadHistory, isStreaming, abortStream, updateBlock } = useChatMessages();
   const messages = getMessages(activeThreadId || '');
   const planTasks = getPlanTasks(activeThreadId || '');
 
@@ -539,6 +539,8 @@ export function Collaborate() {
                 <ChatInput
                   agentName={activeAgent.name}
                   onSend={handleSend}
+                  onStop={abortStream}
+                  streaming={isStreaming}
                   disabled={
                     isStreaming ||
                     isSwitchingThread ||
@@ -562,6 +564,8 @@ export function Collaborate() {
                 <ChatInput
                   agentName={activeAgent.name}
                   onSend={handleSend}
+                  onStop={abortStream}
+                  streaming={isStreaming}
                   disabled={isStreaming}
                 />
               )}

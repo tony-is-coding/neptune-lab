@@ -1,7 +1,7 @@
 /**
  * Neptune-AI 统一日志模块
  *
- * 基于 Engine 的 LogUtil（claude-code-best/engine），提供：
+ * 基于 Engine 的 LogUtil（@neptune/engine），提供：
  * - initLogger()：应用启动时初始化 LogUtil
  * - createLogger(module)：服务层获取带模块名的 child logger
  *
@@ -12,8 +12,8 @@
  * - StandardLogFormatter 单行输出
  */
 
-import {LogUtil, MDC} from 'claude-code-best/engine';
-import type {LogLevel} from 'claude-code-best/engine';
+import {LogUtil, MDC} from '@neptune/engine';
+import type {LogLevel} from '@neptune/engine';
 
 /**
  * 初始化全局日志（应用启动时调用一次）

@@ -9,12 +9,10 @@
  * - 测试友好：MockCCRuntime 可轻松替换实现
  */
 
-import type {Tools} from '../../Tool.js'
-import type {QueryEngineConfig} from '../../QueryEngine.js'
-import type {ToolRegistry} from '../../ToolRegistry.js'
-
-// 重新导出 QueryEngineConfig 供外部使用
-export type {QueryEngineConfig}
+import type {Tools} from '../types/tool.js'
+/** Inlined from @neptune/engine-product/QueryEngine.js — engine-local opaque type */
+export type QueryEngineConfig = Record<string, unknown>
+import type {ToolRegistry} from '../types/tool.js'
 
 // ============================================================
 // CWD 上下文类型

@@ -19,8 +19,8 @@ import type {
 	ToolPermissionContext,
 	Tools,
 	ToolUseContext,
-} from 'src/Tool.js'
-import {toolMatchesName} from 'src/Tool.js'
+} from '../../tool.js'
+import {toolMatchesName} from '../../tool.js'
 import {
 	completeAgentTask as completeAsyncAgent,
 	createActivityDescriptionResolver,
@@ -37,12 +37,12 @@ import {
 } from 'src/tasks/LocalAgentTask/LocalAgentTask.js'
 import {asAgentId} from 'src/types/ids.js'
 import type {Message as MessageType, ContentItem} from 'src/types/message.js'
-import {isAgentSwarmsEnabled} from 'src/utils/agentSwarmsEnabled.js'
+import {isAgentSwarmsEnabled} from '../../utils/featureFlags.js'
 import {logForDebugging} from 'src/utils/debug.js'
-import {isInProtectedNamespace} from 'src/utils/envUtils.js'
-import {AbortError, errorMessage} from 'src/utils/errors.js'
+import {isInProtectedNamespace} from '../../utils/featureFlags.js'
+import {AbortError, errorMessage} from '../../utils/errors.js'
 import type {CacheSafeParams} from 'src/utils/forkedAgent.js'
-import {lazySchema} from 'src/utils/lazySchema.js'
+import {lazySchema} from '../../utils/lazySchema.js'
 import {
 	extractTextContent,
 	getLastAssistantMessage,

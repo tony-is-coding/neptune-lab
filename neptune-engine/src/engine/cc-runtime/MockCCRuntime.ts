@@ -14,8 +14,8 @@ import type {
 	FileStateCache,
 	FileStateValue,
 } from './CCRuntime.js'
-import type {Tools} from '../../Tool.js'
-import type {ToolRegistry} from '../../ToolRegistry.js'
+import type {Tools} from '../types/tool.js'
+import type {ToolRegistry} from '../types/tool.js'
 
 // ============================================================
 // Mock QueryEngine

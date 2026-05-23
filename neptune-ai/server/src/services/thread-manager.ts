@@ -26,9 +26,10 @@ import {
     type Document
 } from './prompt-assembler.js';
 import {createLogger} from '../utils/logger.js';
-import {getTracingProvider} from './observability/index.js';
+import {createTracingProviderForRequest} from './observability/index.js';
 import {LangfuseTracingProvider} from './observability/langfuse-tracing-provider.js';
 import {TracingEventProcessor} from './observability/tracing-event-processor.js';
+import type {ChatRequestContext} from '@shared/neptune-ai';
 
 const log = createLogger('thread-manager');
 
@@ -84,7 +85,7 @@ export interface EngineFactory {
         memoryRoot: string;
         workspace: string;
         tools: string[];
-        mcpServerUrls: string[];
+        mcpServers: Array<{ name: string; url: string }>;
         tenantId: string;
     }): Promise<{
         engine: QueryableEngine;
@@ -105,6 +106,13 @@ export interface QueryUsageResult {
         costUSD: number;
     }>;
 }
+
+export interface DispatchDoneEvent {
+    type: 'dispatch_done';
+    usage?: QueryUsageResult;
+}
+
+export type ThreadDispatchEvent = Record<string, unknown> | DispatchDoneEvent;
 
 /**
  * 默认 workspace 基础路径
@@ -348,14 +356,15 @@ export class ThreadManager {
     async* dispatch(
         threadId: string,
         content: string,
-    ): AsyncGenerator<unknown> {
+        requestContext?: ChatRequestContext,
+    ): AsyncGenerator<ThreadDispatchEvent> {
         const thread = await this.get(threadId);
         if (!thread) {
             throw new Error(`Thread 不存在: ${threadId}`);
         }
 
         const agentId = thread.templateId;
-        const ctx = {threadId, tenantId: thread.tenantId, agentId};
+        const ctx = {threadId, tenantId: thread.tenantId, agentId, requestId: requestContext?.requestId};
 
         // 验证状态
         if (thread.status === 'running') {
@@ -377,6 +386,7 @@ export class ThreadManager {
 
         let tracingProcessor: TracingEventProcessor | null = null;
         let engine: QueryableEngine | null = null;
+        let dispatchUsage: QueryUsageResult | undefined;
 
         try {
             if (!agentId) {
@@ -440,7 +450,8 @@ export class ThreadManager {
             });
 
             // 步骤 3：创建 Engine（结构化参数，Engine 内部按原生机制注入）
-            const mcpServerUrls = (template.mcpServers as Array<{ name: string; url: string }> || []).map(s => s.url);
+            const mcpServers = (template.mcpServers as Array<{ name: string; url: string }> || [])
+                .map(server => ({name: server.name, url: server.url}));
             const result = await this.engineFactory.createAndLoad({
                 identityOverride,
                 skills: skillExtensions.length > 0 ? skillExtensions : undefined,
@@ -448,7 +459,7 @@ export class ThreadManager {
                 memoryRoot: `${this.dataRoot}/tenants/${thread.tenantId}/agents/${agentId}`,
                 workspace: thread.workspace,
                 tools: (template.tools as string[]) || [],
-                mcpServerUrls,
+                mcpServers,
                 tenantId: thread.tenantId,
             });
 
@@ -459,7 +470,8 @@ export class ThreadManager {
             // 步骤 4：监听 query:complete 事件收集 token 用量
             if (typeof engine.on === 'function') {
                 engine.on('query:complete', (payload: unknown) => {
-                    this.lastUsage = payload as QueryUsageResult;
+                    dispatchUsage = payload as QueryUsageResult;
+                    this.lastUsage = dispatchUsage;
                     log.debug('query:complete 收到 usage', {threadId});
                 });
             }
@@ -469,7 +481,7 @@ export class ThreadManager {
             const planManager = new PlanManager(threadId, {workspace: thread.workspace});
 
             // 步骤 6：创建 Tracing 处理器（Langfuse 上报每个 turn 的 generation + tool span）
-            const provider = getTracingProvider();
+            const provider = createTracingProviderForRequest();
             if (provider instanceof LangfuseTracingProvider) {
                 const modelConfig = template.modelConfig as { model?: string } | null;
                 const configuredModel = modelConfig?.model || process.env.NEPTUNE_LLM_MODEL || 'unknown';
@@ -480,6 +492,8 @@ export class ThreadManager {
                     userId: thread.userId,
                     tenantId: thread.tenantId,
                     agentId: agentId!,
+                    requestId: requestContext?.requestId,
+                    sdkSessionId,
                     userInput: content,
                     systemPrompt: instructions || identityOverride || '',
                 });
@@ -514,7 +528,7 @@ export class ThreadManager {
             await this.update(threadId, { status: 'idle' });
 
             const durationMs = Math.round(performance.now() - startTime);
-            const usage = this.lastUsage;
+            const usage = dispatchUsage;
             log.info('Query 完成', {
                 ...ctx,
                 durationMs,
@@ -529,6 +543,8 @@ export class ThreadManager {
 
             // 结束 Langfuse trace
             tracingProcessor?.end(usage ? {modelUsage: usage.modelUsage} : undefined, durationMs);
+
+            yield {type: 'dispatch_done', usage};
 
             // 持久化对话历史
             try {
@@ -571,7 +587,8 @@ export class ThreadManager {
         userId: string,
         agentId: string,
         content: string,
-    ): AsyncGenerator<unknown> {
+        requestContext?: Omit<ChatRequestContext, 'threadId'>,
+    ): AsyncGenerator<ThreadDispatchEvent> {
         // 查找最新的 idle thread
         const threads = await db
             .select()
@@ -601,7 +618,11 @@ export class ThreadManager {
             threadId = newThread.id;
         }
 
-        yield* this.dispatch(threadId, content);
+        yield* this.dispatch(
+            threadId,
+            content,
+            requestContext ? {...requestContext, threadId} : undefined,
+        );
     }
 
     // ===== 兼容方法 =====
@@ -861,9 +882,24 @@ export function getThreadManager(): ThreadManager {
         // 仅在 NEPTUNE_LLM_API_KEY 存在时注入 EngineFactory
         // 测试环境不需要真实 Engine，dispatch() 会因缺少 factory 而抛错
         let engineFactory: EngineFactory | undefined;
+        const engineMode = process.env.NEPTUNE_ENGINE_MODE || process.env.NEPTUNE_ENGINE_DRIVER;
+        const useControlledEngine = engineMode === 'controlled' || process.env.NEPTUNE_MOCK_LLM === '1';
+
+        if (useControlledEngine) {
+            try {
+                const {ControlledEngineFactory} = require('./controlled-engine-factory.js') as typeof import('./controlled-engine-factory.js');
+                engineFactory = new ControlledEngineFactory();
+                log.info('Controlled EngineFactory enabled');
+            } catch (error) {
+                log.warn('Controlled EngineFactory load failed, dispatch unavailable', {
+                    detail: (error as Error).message,
+                });
+            }
+        }
+
         const apiKey = process.env.NEPTUNE_LLM_API_KEY;
-        if (apiKey) {
-            // 动态 import 避免测试环境加载 claude-code-best/engine 模块
+        if (!engineFactory && apiKey) {
+            // 动态 import 避免测试环境加载 @neptune/engine 模块
             try {
                 const {ClaudeCodeEngineFactory} = require('./engine-factory.js') as typeof import('./engine-factory.js');
                 engineFactory = new ClaudeCodeEngineFactory({

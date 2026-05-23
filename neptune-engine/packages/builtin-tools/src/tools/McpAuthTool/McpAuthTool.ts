@@ -14,9 +14,9 @@ import type {
 	McpSSEServerConfig,
 	ScopedMcpServerConfig,
 } from 'src/services/mcp/types.js'
-import type {Tool} from 'src/Tool.js'
-import {errorMessage} from 'src/utils/errors.js'
-import {lazySchema} from 'src/utils/lazySchema.js'
+import type {Tool} from '../../tool.js'
+import {errorMessage} from '../../utils/errors.js'
+import {lazySchema} from '../../utils/lazySchema.js'
 import {logMCPDebug, logMCPError} from 'src/utils/log.js'
 import type {PermissionDecision} from 'src/utils/permissions/PermissionResult.js'
 

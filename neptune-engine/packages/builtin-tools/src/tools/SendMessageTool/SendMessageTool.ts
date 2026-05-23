@@ -2,8 +2,8 @@ import {feature} from 'bun:bundle'
 import {z} from 'zod/v4'
 import {isReplBridgeActive} from '../../../../../src/bootstrap/state.js'
 import {getReplBridgeHandle} from '../../../../../src/ui/bridge/replBridgeHandle'
-import type {Tool, ToolUseContext} from '../../../../../src/Tool.js'
-import {buildTool, type ToolDef} from '../../../../../src/Tool.js'
+import type {Tool, ToolUseContext} from '../../tool.js'
+import {buildTool, type ToolDef} from '../../tool.js'
 import {findTeammateTaskByAgentId} from '../../../../../src/tasks/InProcessTeammateTask/InProcessTeammateTask.js'
 import {
 	isLocalAgentTask,
@@ -14,13 +14,13 @@ import {toAgentId} from '../../../../../src/types/ids.js'
 import {generateRequestId} from '../../../../../src/utils/agentId.js'
 import {isAgentSwarmsEnabled} from '../../../../../src/utils/agentSwarmsEnabled.js'
 import {logForDebugging} from '../../../../../src/utils/debug.js'
-import {errorMessage} from '../../../../../src/utils/errors.js'
-import {truncate} from '../../../../../src/utils/format.js'
+import {errorMessage} from '../../utils/errors.js'
+import {truncate} from '../../utils/truncate.js'
 import {gracefulShutdown} from '../../../../../src/utils/gracefulShutdown.js'
-import {lazySchema} from '../../../../../src/utils/lazySchema.js'
+import {lazySchema} from '../../utils/lazySchema.js'
 import {parseAddress} from '../../../../../src/utils/peerAddress.js'
-import {semanticBoolean} from '../../../../../src/utils/semanticBoolean.js'
-import {jsonStringify} from '../../../../../src/utils/slowOperations.js'
+import {semanticBoolean} from '../../utils/semanticBoolean.js'
+import {jsonStringify} from '../../utils/json.js'
 import type {BackendType} from '../../../../../src/utils/swarm/backends/types.js'
 import {TEAM_LEAD_NAME} from '../../../../../src/utils/swarm/constants.js'
 import {readTeamFileAsync} from '../../../../../src/utils/swarm/teamHelpers.js'
@@ -41,7 +41,6 @@ import {
 import {resumeAgentBackground} from '../AgentTool/resumeAgent.js'
 import {SEND_MESSAGE_TOOL_NAME} from './constants.js'
 import {DESCRIPTION, getPrompt} from './prompt.js'
-import {renderToolResultMessage, renderToolUseMessage} from './UI.js'
 
 const StructuredMessage = lazySchema(() =>
 	z.discriminatedUnion('type', [
@@ -965,6 +964,4 @@ export const SendMessageTool: Tool<InputSchema, SendMessageToolOutput> =
 			}
 		},
 
-		renderToolUseMessage,
-		renderToolResultMessage,
 	} satisfies ToolDef<InputSchema, SendMessageToolOutput>)

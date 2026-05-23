@@ -56,18 +56,6 @@ mock.module("src/engine/log/index.ts", () => ({
 	EventBus: MockEventBus,
 }));
 
-// Mock external dependencies
-mock.module("@claude-code-best/builtin-tools/tools/AgentTool/loadAgentsDir.js", () => ({
-	loadAgentsDir: async () => ({
-		activeAgents: [],
-		allAgents: [],
-	}),
-}));
-
-mock.module("@claude-code-best/builtin-tools/tools/ExitPlanModeTool/ExitPlanModeV2Tool.js", () => ({
-	AllowedPrompt: {},
-}));
-
 mock.module("src/utils/commitAttribution.js", () => ({
 	createEmptyAttributionState: () => ({
 		commits: [],

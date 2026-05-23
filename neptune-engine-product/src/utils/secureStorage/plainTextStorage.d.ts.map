@@ -1,0 +1,1 @@
+{"version":3,"file":"plainTextStorage.d.ts","sourceRoot":"","sources":["plainTextStorage.ts"],"names":[],"mappings":"AAUA,OAAO,KAAK,EAAgB,iBAAiB,EAAC,MAAM,YAAY,CAAA;AAQhE,eAAO,MAAM,gBAAgB;;YAEpB,iBAAiB,GAAG,IAAI;iBAYb,OAAO,CAAC,iBAAiB,GAAG,IAAI,CAAC;iBAWvC,iBAAiB,GAAG;QAAE,OAAO,EAAE,OAAO,CAAC;QAAC,OAAO,CAAC,EAAE,MAAM,CAAA;KAAE;cA0B7D,OAAO;CAcO,CAAA"}

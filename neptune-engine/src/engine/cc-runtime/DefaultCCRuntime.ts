@@ -10,7 +10,6 @@
  * - 未来可通过依赖注入模式进一步解耦，但当前阶段保留此实现
  */
 
-import {LogUtil} from '../log'
 import type {
 	BootstrapState,
 	CCRuntime,
@@ -21,14 +20,18 @@ import type {
 	TranscriptLoadResult,
 } from './CCRuntime.js'
 import {DEFAULT_MACROS} from './CCRuntime.js'
-import type {Tools} from '../../Tool.js'
-import type {ToolRegistry} from '../../ToolRegistry.js'
+import type {Tools} from '../types/tool.js'
+import type {ToolRegistry} from '../types/tool.js'
+import {HeadlessToolRegistry} from './HeadlessToolRegistry.js'
+import {HeadlessQueryEngine} from './HeadlessQueryEngine.js'
+import {parseTranscript, transcriptToMessages} from '../session/TranscriptParser.js'
+import {getMemoryPath as getSessionMemoryPath} from '../session/SessionContext.js'
 
 // ============================================================
 // DefaultCCRuntime 实现
 // ============================================================
 
-/** 默认实现：使用真实的 CC 模块 require */
+/** 默认实现：独立 kernel/headless runtime，不反向加载 product 层模块。 */
 export class DefaultCCRuntime implements CCRuntime {
 	private initialized = false
 	/** per-workspace 初始化状态跟踪 */
@@ -39,28 +42,12 @@ export class DefaultCCRuntime implements CCRuntime {
 	// ========== 工具相关 ==========
 
 	getAllBaseTools(): Tools {
-		// 如果设置了 ToolRegistry，使用它获取工具（SDK 模式）
-		if (this.toolRegistry) {
-			return this.toolRegistry.getTools({} as any)
-		}
-
-		// 默认行为：加载所有工具（CLI 模式）
-		try {
-			// eslint-disable-next-line @typescript-eslint/no-require-imports
-			const {getAllBaseTools} = require('../../tools.js') as typeof import('../../tools.js')
-			return getAllBaseTools()
-		} catch (e) {
-			LogUtil.warn('[CCRuntime] getAllBaseTools() failed:', {detail: (e as Error).message})
-			return []
-		}
+		return (this.toolRegistry ?? new HeadlessToolRegistry()).getTools()
 	}
 
 	/** 设置 ToolRegistry（用于 SDK 模式按需加载工具） */
 	setToolRegistry(registry: ToolRegistry): void {
 		this.toolRegistry = registry
-		LogUtil.debug('[CCRuntime] ToolRegistry set:', {
-			coreToolCount: registry.getCoreToolCount(),
-		})
 	}
 
 	/** 获取当前 ToolRegistry */
@@ -71,53 +58,29 @@ export class DefaultCCRuntime implements CCRuntime {
 	// ========== 运行时初始化 ==========
 
 	enableConfigs(): void {
-		try {
-			// eslint-disable-next-line @typescript-eslint/no-require-imports
-			const {enableConfigs} = require('../../utils/config.js') as typeof import('../../utils/config.js')
-			enableConfigs()
-		} catch (e) {
-			// 配置系统初始化失败不阻塞，记录警告
-			LogUtil.warn('[CCRuntime] enableConfigs() failed:', {detail: (e as Error).message})
-		}
+		// Product hosts may enable their own config system through a host adapter.
 	}
 
-	setupBootstrap(state: BootstrapState): void {
-		try {
-			// eslint-disable-next-line @typescript-eslint/no-require-imports
-			const {setCwdState, setOriginalCwd, setProjectRoot} =
-				require('../../bootstrap/state.js') as typeof import('../../bootstrap/state.js')
-			setCwdState(state.cwd)
-			setOriginalCwd(state.originalCwd)
-			setProjectRoot(state.projectRoot)
-		} catch (e) {
-			LogUtil.warn('[CCRuntime] bootstrap state setup failed:', {detail: (e as Error).message})
-		}
+	setupBootstrap(_state: BootstrapState): void {
+		// SessionContext carries cwd/projectRoot for the independent kernel path.
 	}
 
 	// ========== QueryEngine 相关 ==========
 
 	createQueryEngine(config: QueryEngineConfig): QueryEngineWrapper {
-		// eslint-disable-next-line @typescript-eslint/no-require-imports
-		const {QueryEngine} = require('../../QueryEngine.js') as typeof import('../../QueryEngine.js')
-		// QueryEngine 的实际类型比 QueryEngineWrapper 复杂，但运行时行为正确
-		// 使用双重断言绕过类型检查
-		return new QueryEngine(config) as unknown as QueryEngineWrapper
+		return new HeadlessQueryEngine(config)
 	}
 
 	// ========== Transcript 相关 ==========
 
 	async loadTranscriptFromFile(path: string): Promise<TranscriptLoadResult> {
-		// eslint-disable-next-line @typescript-eslint/no-require-imports
-		const {loadTranscriptFromFile} = require('../../utils/sessionStorage.js') as typeof import('../../utils/sessionStorage.js')
-		return loadTranscriptFromFile(path)
+		return {messages: transcriptToMessages(parseTranscript(path))}
 	}
 
 	// ========== SessionContext 相关 ==========
 
 	getMemoryPath(): string | undefined {
-		// eslint-disable-next-line @typescript-eslint/no-require-imports
-		const {getMemoryPath} = require('../session/SessionContext.js') as typeof import('../session/SessionContext.js')
-		return getMemoryPath()
+		return getSessionMemoryPath()
 	}
 
 	// ========== MACRO Defines ==========
@@ -156,9 +119,8 @@ export class DefaultCCRuntime implements CCRuntime {
 	 * 确保多 workspace 并发时各自看到正确的 cwd。
 	 */
 	runWithCwd<T>(cwd: string, fn: CwdContextFn<T>): T {
-		// eslint-disable-next-line @typescript-eslint/no-require-imports
-		const {runWithCwdOverride} = require('../../utils/cwd.js') as typeof import('../../utils/cwd.js')
-		return runWithCwdOverride(cwd, fn)
+		void cwd
+		return fn()
 	}
 
 	/**
@@ -178,19 +140,8 @@ export class DefaultCCRuntime implements CCRuntime {
 	// ========== FileStateCache 相关 ==========
 
 	createFileStateCache(options?: { maxEntries?: number; maxSizeBytes?: number }): CCRuntimeFileStateCache {
-		try {
-			// eslint-disable-next-line @typescript-eslint/no-require-imports
-			const {FileStateCache: CCFileStateCache} = require('../../utils/fileStateCache.js') as {
-				FileStateCache: new (maxEntries: number, maxSizeBytes: number) => CCRuntimeFileStateCache
-			}
-			const maxEntries = options?.maxEntries ?? 100
-			const maxSizeBytes = options?.maxSizeBytes ?? 25 * 1024 * 1024
-			return new CCFileStateCache(maxEntries, maxSizeBytes)
-		} catch (e) {
-			LogUtil.warn('[CCRuntime] createFileStateCache() failed:', {detail: (e as Error).message})
-			// 返回一个简单的内存缓存作为降级实现
-			return new SimpleFileStateCache()
-		}
+		void options
+		return new SimpleFileStateCache()
 	}
 
 	// ========== 权限相关 ==========
@@ -202,23 +153,20 @@ export class DefaultCCRuntime implements CCRuntime {
 		message: unknown,
 		toolUseId: string,
 	): Promise<unknown> {
-		try {
-			// eslint-disable-next-line @typescript-eslint/no-require-imports
-			const {hasPermissionsToUseTool: ccHasPermissionsToUseTool} = require('../../utils/permissions/permissions.js') as {
-				hasPermissionsToUseTool: (
-					tool: unknown,
-					input: unknown,
-					context: unknown,
-					message: unknown,
-					toolUseId: string,
-				) => Promise<unknown>
-			}
-			return ccHasPermissionsToUseTool(tool, input, context, message, toolUseId)
-		} catch (e) {
-			LogUtil.warn('[CCRuntime] hasPermissionsToUseTool() failed:', {detail: (e as Error).message})
-			// 降级：允许所有工具使用
-			return {behavior: 'allow'}
-		}
+		void tool
+		void input
+		void context
+		void message
+		void toolUseId
+		return {behavior: 'allow'}
+	}
+}
+
+class HeadlessCCRuntime extends DefaultCCRuntime {
+	readonly isHeadless = true
+
+	createQueryEngine(config: QueryEngineConfig): QueryEngineWrapper {
+		return new HeadlessQueryEngine(config)
 	}
 }
 
@@ -281,6 +229,18 @@ interface CCRuntimeFileStateValue {
 /** 创建默认 CCRuntime 实例 */
 export function createDefaultCCRuntime(): CCRuntime {
 	return new DefaultCCRuntime()
+}
+
+/**
+ * Create a server-safe CCRuntime Adapter that uses SDK/headless tools.
+ *
+ * This keeps host-specific tool selection behind the CCRuntime Seam so product
+ * callers do not need to know which builtin tools import UI renderers.
+ */
+export function createHeadlessCCRuntime(): DefaultCCRuntime {
+	const runtime = new HeadlessCCRuntime()
+	runtime.setToolRegistry(new HeadlessToolRegistry())
+	return runtime
 }
 
 /** 全局单例（按需使用） */

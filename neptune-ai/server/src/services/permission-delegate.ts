@@ -1,4 +1,5 @@
-import type {PermissionDelegate} from 'claude-code-best/engine/permissions';
+import type {PermissionDelegate} from '@neptune/engine/permissions';
+import {isAbsolute, relative, resolve} from 'path';
 
 /**
  * 租户配置
@@ -55,7 +56,18 @@ export class TenantPermissionDelegate implements PermissionDelegate {
             return 'deny';
         }
 
-        // 2. 工具白名单检查（如果配置了白名单）
+        // 2. MCP 调用：仅允许租户注册的 MCP Server
+        if (toolName.startsWith('mcp__')) {
+            // MCP 工具名格式: mcp__{serverName}__{toolName}
+            const parts = toolName.split('__');
+            if (parts.length >= 2) {
+                const serverName = parts[1];
+                return this.tenantConfig.mcpServers.includes(serverName) ? 'allow' : 'deny';
+            }
+            return 'deny';
+        }
+
+        // 3. 工具白名单检查（如果配置了白名单）
         if (this.allowedTools.size > 0 && !this.allowedTools.has(toolName)) {
             // 内部工具（Task 系列）自动放行
             if (!toolName.startsWith('Task')) {
@@ -63,23 +75,11 @@ export class TenantPermissionDelegate implements PermissionDelegate {
             }
         }
 
-        // 3. 文件操作：路径限制在租户 workspace 内
+        // 4. 文件操作：路径限制在租户 workspace 内
         if (this.isFileTool(toolName)) {
             const path = (input.file_path as string) || (input.path as string);
             if (path && !this.isWithinWorkspace(path)) {
                 return 'deny';
-            }
-        }
-
-        // 4. MCP 调用：仅允许租户注册的 MCP Server
-        if (toolName.startsWith('mcp__')) {
-            // MCP 工具名格式: mcp__{serverName}__{toolName}
-            const parts = toolName.split('__');
-            if (parts.length >= 2) {
-                const serverName = parts[1];
-                if (!this.tenantConfig.mcpServers.includes(serverName)) {
-                    return 'deny';
-                }
             }
         }
 
@@ -89,6 +89,10 @@ export class TenantPermissionDelegate implements PermissionDelegate {
 
     private isFileTool(toolName: string): boolean {
         return [
+            'Read',
+            'Edit',
+            'Write',
+            'MultiEdit',
             'FileRead',
             'FileEdit',
             'FileWrite',
@@ -98,8 +102,11 @@ export class TenantPermissionDelegate implements PermissionDelegate {
     }
 
     private isWithinWorkspace(filePath: string): boolean {
-        const normalized = filePath.replace(/\\/g, '/');
-        const workspace = this.tenantConfig.workspace.replace(/\\/g, '/');
-        return normalized.startsWith(workspace);
+        const workspace = resolve(this.tenantConfig.workspace);
+        const candidate = isAbsolute(filePath)
+            ? resolve(filePath)
+            : resolve(workspace, filePath);
+        const rel = relative(workspace, candidate);
+        return rel === '' || (!rel.startsWith('..') && !isAbsolute(rel));
     }
 }

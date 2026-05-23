@@ -5,7 +5,7 @@
  * 1. Thread CRUD（创建、列表、获取、更新、删除）
  * 2. Chat 端点错误处理（400/404/409）
  * 3. 权限验证
- * 4. EnginePool sdkSessionId 管理（首次 dispatch、复用、淘汰）
+ * 4. Engine 生命周期管理（每次 dispatch 创建/销毁，sdkSessionId 局部使用）
  *
  * 注意：不测试实际 Engine 执行（SSE 流），因为 Engine SDK 不可用于测试环境。
  */
@@ -58,6 +58,7 @@ describe('Thread CRUD + Chat 错误处理', () => {
     let userToken: string;
     let agentId: string;
     let threadId: string;
+    const missingAgentId = '00000000-0000-0000-0000-000000000000';
 
     beforeAll(async () => {
         app = await createTestApp();
@@ -144,6 +145,36 @@ describe('Thread CRUD + Chat 错误处理', () => {
 
             expect(response.statusCode).toBe(401);
         });
+
+        test('非法 Agent ID 应该返回 404 而不是数据库错误', async () => {
+            const response = await app.inject({
+                method: 'POST',
+                url: '/api/v1/agents/not-a-uuid/threads',
+                headers: {
+                    authorization: `Bearer ${userToken}`,
+                },
+                payload: {title: 'bad agent'},
+            });
+
+            expect(response.statusCode).toBe(404);
+            const json = response.json();
+            expect(json).toHaveProperty('error', 'NOT_FOUND');
+        });
+
+        test('不存在的 Agent 应该返回 404', async () => {
+            const response = await app.inject({
+                method: 'POST',
+                url: `/api/v1/agents/${missingAgentId}/threads`,
+                headers: {
+                    authorization: `Bearer ${userToken}`,
+                },
+                payload: {title: 'missing agent'},
+            });
+
+            expect(response.statusCode).toBe(404);
+            const json = response.json();
+            expect(json).toHaveProperty('error', 'NOT_FOUND');
+        });
     });
 
     // ===== 2. 列出 Thread =====
@@ -210,6 +241,34 @@ describe('Thread CRUD + Chat 错误处理', () => {
 
             expect(response.statusCode).toBe(401);
         });
+
+        test('非法 Agent ID 应该返回 404 而不是 500', async () => {
+            const response = await app.inject({
+                method: 'GET',
+                url: '/api/v1/agents/not-a-uuid/threads',
+                headers: {
+                    authorization: `Bearer ${userToken}`,
+                },
+            });
+
+            expect(response.statusCode).toBe(404);
+            const json = response.json();
+            expect(json).toHaveProperty('error', 'NOT_FOUND');
+        });
+
+        test('不存在的 Agent 应该返回 404 而不是空列表', async () => {
+            const response = await app.inject({
+                method: 'GET',
+                url: `/api/v1/agents/${missingAgentId}/threads`,
+                headers: {
+                    authorization: `Bearer ${userToken}`,
+                },
+            });
+
+            expect(response.statusCode).toBe(404);
+            const json = response.json();
+            expect(json).toHaveProperty('error', 'NOT_FOUND');
+        });
     });
 
     // ===== 3. 获取 Thread 详情 =====
@@ -241,6 +300,20 @@ describe('Thread CRUD + Chat 错误处理', () => {
             });
 
             expect(response.statusCode).toBe(404);
+        });
+
+        test('非法 Thread ID 应该返回 404 而不是数据库错误', async () => {
+            const response = await app.inject({
+                method: 'GET',
+                url: `/api/v1/agents/${agentId}/threads/not-a-uuid`,
+                headers: {
+                    authorization: `Bearer ${userToken}`,
+                },
+            });
+
+            expect(response.statusCode).toBe(404);
+            const json = response.json();
+            expect(json).toHaveProperty('error', 'NOT_FOUND');
         });
     });
 
@@ -398,6 +471,23 @@ describe('Thread CRUD + Chat 错误处理', () => {
             expect(json).toHaveProperty('error', 'NOT_FOUND');
         });
 
+        test('非法 Thread ID 应该返回 404 而不是 500', async () => {
+            const response = await app.inject({
+                method: 'POST',
+                url: `/api/v1/agents/${agentId}/threads/not-a-uuid/chat`,
+                headers: {
+                    authorization: `Bearer ${userToken}`,
+                },
+                payload: {
+                    content: '测试消息',
+                },
+            });
+
+            expect(response.statusCode).toBe(404);
+            const json = response.json();
+            expect(json).toHaveProperty('error', 'NOT_FOUND');
+        });
+
         test('Thread 状态 running 应该返回 409', async () => {
             // 先把 thread 状态改为 running
             await app.inject({
@@ -536,13 +626,62 @@ describe('Thread CRUD + Chat 错误处理', () => {
 
             expect(response.statusCode).toBe(404);
         });
+
+        test('非法 Thread ID 应该返回 404 而不是 500', async () => {
+            const response = await app.inject({
+                method: 'GET',
+                url: `/api/v1/agents/${agentId}/threads/not-a-uuid/history`,
+                headers: {
+                    authorization: `Bearer ${userToken}`,
+                },
+            });
+
+            expect(response.statusCode).toBe(404);
+            const json = response.json();
+            expect(json).toHaveProperty('error', 'NOT_FOUND');
+        });
+    });
+
+    // ===== 8. Reply/Tasks 端点 =====
+    describe('Thread reply/tasks 错误处理', () => {
+        test('reply 非法 Thread ID 应该返回 404 而不是 500', async () => {
+            const response = await app.inject({
+                method: 'POST',
+                url: `/api/v1/agents/${agentId}/threads/not-a-uuid/reply`,
+                headers: {
+                    authorization: `Bearer ${userToken}`,
+                },
+                payload: {
+                    toolUseId: 'tool-1',
+                    answers: {choice: '继续'},
+                },
+            });
+
+            expect(response.statusCode).toBe(404);
+            const json = response.json();
+            expect(json).toHaveProperty('error', 'NOT_FOUND');
+        });
+
+        test('tasks 非法 Thread ID 应该返回 404 而不是 500', async () => {
+            const response = await app.inject({
+                method: 'GET',
+                url: `/api/v1/agents/${agentId}/threads/not-a-uuid/tasks`,
+                headers: {
+                    authorization: `Bearer ${userToken}`,
+                },
+            });
+
+            expect(response.statusCode).toBe(404);
+            const json = response.json();
+            expect(json).toHaveProperty('error', 'NOT_FOUND');
+        });
     });
 });
 
-// ===== 8. EnginePool sdkSessionId 管理测试 =====
-describe('EnginePool sdkSessionId 管理', () => {
+// ===== 9. Engine 生命周期管理测试 =====
+describe('ThreadManager 无池化 Engine 生命周期', () => {
     /**
-     * Mock EngineFactory — 用于测试 ThreadManager 的 EnginePool 集成
+     * Mock EngineFactory — 用于测试 ThreadManager 的无池化 dispatch 生命周期
      *
      * 每个 createAndLoad 调用都会生成唯一的 sdkSessionId，
      * 并记录创建历史以供验证。
@@ -550,7 +689,6 @@ describe('EnginePool sdkSessionId 管理', () => {
     class MockEngineFactory {
         public createCallCount = 0;
         public destroyCallCount = 0;
-        public sessionMap: Map<string, string> = new Map(); // threadId -> sdkSessionId
         public queryCallHistory: Array<{ threadId: string; sessionId: string; content: string }> = [];
 
         async createAndLoad(params: {
@@ -558,7 +696,7 @@ describe('EnginePool sdkSessionId 管理', () => {
             memoryRoot: string;
             workspace: string;
             tools: string[];
-            mcpServerUrls: string[];
+            mcpServers: Array<{ name: string; url: string }>;
             tenantId: string;
         }): Promise<{
             engine: {
@@ -601,7 +739,6 @@ describe('EnginePool sdkSessionId 管理', () => {
         const manager = new ThreadManager({
             dataRoot: process.env.DATA_ROOT!,
             engineFactory: mockFactory as any,
-            maxConcurrent: 2,
         });
 
         return {manager, mockFactory};
@@ -613,6 +750,7 @@ describe('EnginePool sdkSessionId 管理', () => {
     async function setupTestData() {
         const app = await createTestApp();
         const admin = await createUniqueTestUser(app, 'admin');
+        const suffix = Math.random().toString(36).substring(2, 8);
 
         const agentResponse = await app.inject({
             method: 'POST',
@@ -622,12 +760,23 @@ describe('EnginePool sdkSessionId 管理', () => {
         });
         const agentId = agentResponse.json().id;
 
-        const user = await createUniqueTestUser(app, 'user');
+        const userResponse = await app.inject({
+            method: 'POST',
+            url: '/api/v1/auth/register',
+            payload: {
+                tenantId: admin.tenantId,
+                name: `Thread Lifecycle User ${suffix}`,
+                email: `thread-lifecycle-user-${suffix}@test.com`,
+                password: 'password123',
+            },
+        });
+        expect(userResponse.statusCode).toBe(201);
+        const user = userResponse.json();
 
-        return {app, adminToken: admin.token, userToken: user.token, agentId};
+        return {app, adminToken: admin.token, userToken: user.accessToken, agentId};
     }
 
-    test('首次 dispatch 应创建 engine 并保存 sdkSessionId', async () => {
+    test('每次 dispatch 应创建 engine、使用返回的 sdkSessionId，并在结束后销毁', async () => {
         const {manager, mockFactory} = await createTestThreadManager();
         const {app, userToken, agentId} = await setupTestData();
 
@@ -655,15 +804,16 @@ describe('EnginePool sdkSessionId 管理', () => {
         expect(queryCall.sessionId).toMatch(/^mock-sdk-session-1-/);
         expect(queryCall.content).toBe('首次消息');
 
-        // 验证：engine 未被销毁
-        expect(mockFactory.destroyCallCount).toBe(0);
+        // 验证：engine 在 dispatch 完成后已销毁
+        expect(mockFactory.destroyCallCount).toBe(1);
 
-        // 验证：收到了 mock 返回的事件
-        expect(events.length).toBe(1);
+        // 验证：收到了 mock 返回的事件和 dispatch_done 终止事件
+        expect(events.length).toBe(2);
         expect(events[0]).toEqual({type: 'text', text: 'Mock response for: 首次消息'});
+        expect(events[1]).toEqual({type: 'dispatch_done', usage: undefined});
     });
 
-    test('二次 dispatch 应复用已有 engine 使用正确 sdkSessionId', async () => {
+    test('二次 dispatch 应创建新 engine，避免跨请求共享运行时状态', async () => {
         const {manager, mockFactory} = await createTestThreadManager();
         const {app, userToken, agentId} = await setupTestData();
 
@@ -688,23 +838,24 @@ describe('EnginePool sdkSessionId 管理', () => {
             // 消费事件
         }
 
-        // 验证：没有创建新的 engine（复用已有）
-        expect(mockFactory.createCallCount).toBe(1);
+        // 验证：每次 dispatch 都创建新 engine
+        expect(mockFactory.createCallCount).toBe(2);
 
-        // 验证：query 被调用两次，且使用的是同一个 sdkSessionId
+        // 验证：query 被调用两次，且第二次使用新的 sdkSessionId
         expect(mockFactory.queryCallHistory.length).toBe(2);
-        expect(mockFactory.queryCallHistory[1]!.sessionId).toBe(firstSessionId);
+        expect(mockFactory.queryCallHistory[1]!.sessionId).not.toBe(firstSessionId);
+        expect(mockFactory.queryCallHistory[1]!.sessionId).toMatch(/^mock-sdk-session-2-/);
         expect(mockFactory.queryCallHistory[1]!.content).toBe('二次消息');
 
-        // 验证：engine 仍未被销毁
-        expect(mockFactory.destroyCallCount).toBe(0);
+        // 验证：两次 dispatch 后两个 engine 都已销毁
+        expect(mockFactory.destroyCallCount).toBe(2);
     });
 
-    test('pool 淘汰后下次请求应创建新 engine', async () => {
+    test('多个 thread 的 dispatch 互不复用 sdkSessionId', async () => {
         const {manager, mockFactory} = await createTestThreadManager();
         const {app, userToken, agentId} = await setupTestData();
 
-        // 创建 3 个 thread（超过 pool 容量 2）
+        // 创建 3 个 thread
         const threadIds: string[] = [];
         for (let i = 0; i < 3; i++) {
             const threadResponse = await app.inject({
@@ -723,13 +874,13 @@ describe('EnginePool sdkSessionId 管理', () => {
         expect(mockFactory.createCallCount).toBe(1);
         const firstThreadFirstSessionId = mockFactory.queryCallHistory[0]!.sessionId;
 
-        // Thread 2 首次 dispatch（pool 达到容量上限）
+        // Thread 2 首次 dispatch
         for await (const _ of manager.dispatch(threadIds[1], 'Thread 2 首次')) {
             // 消费事件
         }
         expect(mockFactory.createCallCount).toBe(2);
 
-        // Thread 3 首次 dispatch（应触发淘汰 Thread 1）
+        // Thread 3 首次 dispatch
         for await (const _ of manager.dispatch(threadIds[2], 'Thread 3 首次')) {
             // 消费事件
         }
@@ -737,10 +888,10 @@ describe('EnginePool sdkSessionId 管理', () => {
         // 验证：创建了第 3 个 engine
         expect(mockFactory.createCallCount).toBe(3);
 
-        // 验证：Thread 1 的 engine 被销毁（淘汰）
-        expect(mockFactory.destroyCallCount).toBe(1);
+        // 验证：前三次 dispatch 均已销毁 engine
+        expect(mockFactory.destroyCallCount).toBe(3);
 
-        // Thread 1 再次 dispatch（应创建新 engine，因为之前被淘汰）
+        // Thread 1 再次 dispatch（仍应创建新 engine）
         for await (const _ of manager.dispatch(threadIds[0], 'Thread 1 再次')) {
             // 消费事件
         }
@@ -748,12 +899,15 @@ describe('EnginePool sdkSessionId 管理', () => {
         // 验证：创建了第 4 个 engine
         expect(mockFactory.createCallCount).toBe(4);
 
-        // 验证：新的 sdkSessionId 与第一次不同
+        // 验证：同一 thread 的两次 dispatch 使用不同 sdkSessionId
         const thread1Calls = mockFactory.queryCallHistory.filter(
             call => call.content === 'Thread 1 首次' || call.content === 'Thread 1 再次'
         );
         expect(thread1Calls.length).toBe(2);
         expect(thread1Calls[0]!.sessionId).toBe(firstThreadFirstSessionId);
         expect(thread1Calls[1]!.sessionId).not.toBe(firstThreadFirstSessionId);
+
+        // 验证：所有 dispatch 都已销毁 engine
+        expect(mockFactory.destroyCallCount).toBe(4);
     });
 });

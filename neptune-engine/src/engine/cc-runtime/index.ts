@@ -18,7 +18,11 @@ export type {
 export {DEFAULT_MACROS} from './CCRuntime.js'
 
 export {
-	DefaultCCRuntime, createDefaultCCRuntime, getGlobalCCRuntime, resetGlobalCCRuntimeForTesting
+	DefaultCCRuntime,
+	createDefaultCCRuntime,
+	createHeadlessCCRuntime,
+	getGlobalCCRuntime,
+	resetGlobalCCRuntimeForTesting,
 } from './DefaultCCRuntime.js'
 
 export {MockCCRuntime, createMockCCRuntime} from './MockCCRuntime.js'

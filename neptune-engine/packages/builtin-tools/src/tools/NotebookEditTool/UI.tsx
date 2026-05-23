@@ -1,7 +1,7 @@
 import type {ToolResultBlockParam} from '@anthropic-ai/sdk/resources/index.mjs'
 import * as React from 'react'
 import type {Message, ProgressMessage} from 'src/types/message.js'
-import {extractTag} from 'src/utils/messages.js'
+import {extractTag} from '../../utils/messages.js'
 import type {ThemeName} from 'src/utils/theme.js'
 import type {z} from 'zod/v4'
 import {FallbackToolUseErrorMessage} from '../../../../../src/ui/components/FallbackToolUseErrorMessage'
@@ -13,7 +13,7 @@ import {
 } from '../../../../../src/ui/components/NotebookEditToolUseRejectedMessage'
 import {Box, Text} from '@anthropic/ink'
 import {FilePathLink} from '../../../../../src/ui/components/FilePathLink'
-import type {Tools} from 'src/Tool.js'
+import type {Tools} from '../../tool.js'
 import {getDisplayPath} from 'src/utils/file.js'
 import type {inputSchema, Output} from './NotebookEditTool.js'
 

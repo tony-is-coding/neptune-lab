@@ -15,7 +15,7 @@
  * - 在不同环境间共享工具定义
  */
 
-import type {Tool, CoreTool, UITool, Tools} from '../../types/toolTypes.js'
+import type {Tool, CoreTool, UITool, Tools} from '../types/tool.js'
 
 /**
  * 从完整 Tool 提取 CoreTool

@@ -12,16 +12,16 @@ import {
 	type McpServerConfig,
 	McpServerConfigSchema,
 } from 'src/services/mcp/types.js'
-import type {ToolUseContext} from 'src/Tool.js'
+import type {ToolUseContext} from '../../tool.js'
 import {logForDebugging} from 'src/utils/debug.js'
 import {
 	EFFORT_LEVELS,
 	type EffortValue,
 	parseEffortValue,
 } from 'src/utils/effort.js'
-import {isEnvTruthy} from 'src/utils/envUtils.js'
+import {isEnvTruthy} from '../../utils/env.js'
 import {parsePositiveIntFromFrontmatter} from 'src/utils/frontmatterParser.js'
-import {lazySchema} from 'src/utils/lazySchema.js'
+import {lazySchema} from '../../utils/lazySchema.js'
 import {logError} from 'src/utils/log.js'
 import {
 	loadMarkdownFilesForSubdir,
@@ -37,7 +37,7 @@ import {
 	loadPluginAgents,
 } from 'src/utils/plugins/loadPluginAgents.js'
 import {HooksSchema, type HooksSettings} from 'src/utils/settings/types.js'
-import {jsonStringify} from 'src/utils/slowOperations.js'
+import {jsonStringify} from '../../utils/json.js'
 import {FILE_EDIT_TOOL_NAME} from '../FileEditTool/constants.js'
 import {FILE_READ_TOOL_NAME} from '../FileReadTool/prompt.js'
 import {FILE_WRITE_TOOL_NAME} from '../FileWriteTool/prompt.js'
@@ -123,12 +123,12 @@ export type BaseAgentDefinition = {
 	background?: boolean // Always run as background task when spawned
 	initialPrompt?: string // Prepended to the first user turn (slash commands work)
 	memory?: AgentMemoryScope // Persistent memory scope
-	isolation?: 'worktree' | 'remote' // Run in an isolated git worktree, or remotely in CCR (ant-only)
+	isolation?: 'worktree' | 'remote' // Run in an isolated local workspace, or through a host-provided remote runtime.
 	pendingSnapshotUpdate?: { snapshotTimestamp: string }
-	/** Omit CLAUDE.md hierarchy from the agent's userContext. Read-only agents
-	 * (Explore, Plan) don't need commit/PR/lint guidelines — the main agent has
-	 * full CLAUDE.md and interprets their output. Saves ~5-15 Gtok/week across
-	 * 34M+ Explore spawns. Kill-switch: tengu_slim_subagent_claudemd. */
+	/** Omit project instruction hierarchy from the agent's userContext.
+	 * Read-only agents do not need product workflow guidance because the main
+	 * agent has full context and interprets their output. Kill-switch:
+	 * tengu_slim_subagent_claudemd. */
 	omitClaudeMd?: boolean
 }
 

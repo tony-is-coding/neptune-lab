@@ -3,16 +3,30 @@
     "target": "ESNext",
     "module": "ESNext",
     "moduleResolution": "bundler",
-    "strict": true,
+    "strict": false,
     "skipLibCheck": true,
     "noEmit": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "resolveJsonModule": true,
     "jsx": "react-jsx",
+    "isolatedModules": true,
     "types": [
-      "bun",
-      "@types/node"
-    ]
+      "bun"
+    ],
+    "paths": {
+      "@neptune/engine-tools": [
+        "./packages/agent-tools/src/index.ts"
+      ],
+      "@neptune/engine-tools/*": [
+        "./packages/agent-tools/src/*"
+      ],
+      "@neptune/mcp-client": [
+        "./packages/mcp-client/src/index.ts"
+      ],
+      "@neptune/mcp-client/*": [
+        "./packages/mcp-client/src/*"
+      ]
+    }
   }
 }

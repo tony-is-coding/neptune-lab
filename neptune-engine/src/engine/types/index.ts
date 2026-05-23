@@ -27,17 +27,31 @@ export * from './permissions.js'
 export * from './CoreAppState.js'
 export * from './query-events.js'
 
-// V18 新增：屏障文件（消除 type import 穿透）
-export * from './tool.js'
-export * from './fileHistory.js'
-export * from './attribution.js'
-export * from './model.js'
+export {
+	buildTool,
+	filterToolProgressMessages,
+	findToolByName,
+	getEmptyToolPermissionContext,
+	toolMatchesName,
+} from './tool.js'
+export type {
+	CoreTool,
+	Tool,
+	ToolCallProgress,
+	ToolDef,
+	ToolInputJSONSchema,
+	ToolProgress,
+	ToolProgressData,
+	ToolRegistry,
+	ToolResult,
+	ToolSet,
+	Tools,
+	ToolUseContext,
+	UITool,
+} from './tool.js'
 export * from './mcp.js'
-export * from './sessionHooks.js'
 export * from './engine-events.js'
 
 // V19 新增：屏障文件（消除 type import 穿透）
-export * from './query-engine.js'
 export * from './system-prompt.js'
-export * from './settings.js'
 export * from './tool-extension.js'

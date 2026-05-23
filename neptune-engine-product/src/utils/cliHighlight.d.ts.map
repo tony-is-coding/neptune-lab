@@ -1,0 +1,1 @@
+{"version":3,"file":"cliHighlight.d.ts","sourceRoot":"","sources":["cliHighlight.ts"],"names":[],"mappings":"AASA,MAAM,MAAM,YAAY,GAAG;IAC1B,SAAS,EAAE,cAAc,eAAe,EAAE,SAAS,CAAA;IACnD,gBAAgB,EAAE,cAAc,eAAe,EAAE,gBAAgB,CAAA;CACjE,CAAA;AAyBD,wBAAgB,sBAAsB,IAAI,OAAO,CAAC,YAAY,GAAG,IAAI,CAAC,CAGrE;AAED;;;;;GAKG;AACH,wBAAsB,eAAe,CAAC,SAAS,EAAE,MAAM,GAAG,OAAO,CAAC,MAAM,CAAC,CAKxE"}

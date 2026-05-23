@@ -13,15 +13,32 @@
 // 类型导入（使用 import type 避免 value import）
 import type {Message} from '../types/message.js'
 import type {UserMessage} from '../types/message.js'
-import type {
-	FileHistoryState,
-} from '../../utils/fileHistory.js'
-import type {AttributionState} from '../../utils/commitAttribution.js'
 import type {ToolPermissionContext} from '../types/permissions.js'
-import type {Tool} from '../../Tool.js'
-import type {MCPServerConnection} from '../../services/mcp/types.js'
-import type {ModelSetting} from '../../utils/model/model.js'
-import type {SessionHooksState} from '../../utils/hooks/sessionHooks.js'
+import type {MCPServerConnection} from '../types/mcp.js'
+import type {Tool} from '../types/tool.js'
+
+// ============================================================
+// Inlined from @neptune/engine-product — pure types, no AppState dep
+// ============================================================
+
+/** Inlined from @neptune/engine-product/utils/fileHistory.js */
+export type FileHistoryState = {
+	snapshots: unknown[]
+	trackedFiles: Set<string>
+	snapshotSequence: number
+	[key: string]: unknown
+}
+
+/** Inlined from @neptune/engine-product/utils/commitAttribution.js */
+export type AttributionState = {
+	[key: string]: unknown
+}
+
+/** Inlined from @neptune/engine-product/utils/model/model.js */
+export type ModelSetting = string | null
+
+/** Inlined from @neptune/engine-product/utils/hooks/sessionHooks.js */
+export type SessionHooksState = Map<string, unknown[]>
 
 // EffortValue 类型定义（本地定义，避免导入非导出类型）
 export type EffortValue = 'low' | 'medium' | 'high'

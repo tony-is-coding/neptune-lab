@@ -1,0 +1,8 @@
+export const BASH_TOOL_NAME = 'Bash'
+export const FILE_EDIT_TOOL_NAME = 'Edit'
+export const FILE_READ_TOOL_NAME = 'Read'
+export const GLOB_TOOL_NAME = 'Glob'
+export const GREP_TOOL_NAME = 'Grep'
+export const SEND_MESSAGE_TOOL_NAME = 'SendMessage'
+export const WEB_FETCH_TOOL_NAME = 'WebFetch'
+export const WEB_SEARCH_TOOL_NAME = 'WebSearch'

@@ -13,7 +13,6 @@
  */
 
 import type {ProviderQueryParams, ProviderMessage} from '../ProviderAdapter.js'
-import {asSystemPrompt} from '../../../utils/systemPromptType.js'
 import {BaseProvider, type BaseProviderConfig} from './BaseProvider.js'
 import type {OpenAIProviderConfig} from '../types/ProviderConfigs.js'
 
@@ -54,30 +53,8 @@ export class OpenAIProvider extends BaseProvider<OpenAIProviderConfig> {
 		this.applyConfig()
 
 		try {
-			const {queryModelOpenAI} = await import('../../../services/api/openai/index.js')
-
-			const systemPrompt = asSystemPrompt(params.systemPrompt ? [params.systemPrompt] : [])
-			const options = this.buildOptions(params)
-
-			const stream = queryModelOpenAI(
-				params.messages,
-				systemPrompt,
-				params.tools ?? [],
-				params.signal || new AbortController().signal,
-				options,
-			)
-
-			try {
-				for await (const event of stream) {
-					yield this.convertToProviderMessage(event)
-				}
-			} finally {
-				// 确保在提前退出/中断/超时场景下清理 stream
-				const iterator = stream[Symbol.asyncIterator]()
-				if (typeof iterator.return === 'function') {
-					await iterator.return()
-				}
-			}
+			void params
+			yield this.unsupportedProductRuntimeProvider()
 		} catch (error) {
 			yield this.createErrorResponse(error)
 		} finally {

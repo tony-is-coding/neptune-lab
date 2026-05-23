@@ -17,9 +17,11 @@
     "noEmit": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["src/*"],
+      "@shared/neptune-ai": ["../../shared/types/neptune-ai/index.ts"],
+      "@shared/neptune-ai/*": ["../../shared/types/neptune-ai/*"]
     }
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "../../neptune-engine"]
+  "exclude": ["node_modules", "../../neptune-engine", "../../neptune-engine-product"]
 }

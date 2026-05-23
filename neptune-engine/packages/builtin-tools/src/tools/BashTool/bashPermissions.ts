@@ -6,9 +6,9 @@ import {
 	type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
 	logEvent,
 } from 'src/services/analytics/index.js'
-import type {ToolPermissionContext, ToolUseContext} from 'src/Tool.js'
+import type {ToolPermissionContext, ToolUseContext} from '../../tool.js'
 import type {PendingClassifierCheck} from 'src/types/permissions.js'
-import {count} from 'src/utils/array.js'
+import {count} from '../../utils/array.js'
 import {
 	checkSemantics,
 	nodeTypeId,
@@ -27,8 +27,8 @@ import {parseCommandRaw} from 'src/utils/bash/parser.js'
 import {tryParseShellCommand} from 'src/utils/bash/shellQuote.js'
 import {getCwd} from 'src/utils/cwd.js'
 import {logForDebugging} from 'src/utils/debug.js'
-import {isEnvTruthy} from 'src/utils/envUtils.js'
-import {AbortError} from 'src/utils/errors.js'
+import {isEnvTruthy} from '../../utils/env.js'
+import {AbortError} from '../../utils/errors.js'
 import type {
 	ClassifierBehavior,
 	ClassifierResult,
@@ -65,7 +65,7 @@ import {
 } from 'src/utils/permissions/shellRuleMatching.js'
 import {getPlatform} from 'src/utils/platform.js'
 import {SandboxManager} from 'src/utils/sandbox/sandbox-adapter.js'
-import {jsonStringify} from 'src/utils/slowOperations.js'
+import {jsonStringify} from '../../utils/json.js'
 import {windowsPathToPosixPath} from 'src/utils/windowsPaths.js'
 import {BashTool} from './BashTool.js'
 import {checkCommandOperatorPermissions} from './bashCommandHelpers.js'

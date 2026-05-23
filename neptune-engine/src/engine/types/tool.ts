@@ -1,28 +1,197 @@
 /**
  * engine/types/tool.ts
  *
- * Tool 类型屏障文件
+ * Tool 核心类型 — engine-local definitions
  *
- * 重新导出 src/Tool.ts 的核心类型，避免 engine/ 向外穿透到 src/。
- *
- * 注意：CanUseToolFn 和 ToolPermissionContext 由 permissions.ts 屏障文件导出，
- * 此处不重复导出以避免 index.ts 的歧义冲突。
- *
- * @module
+ * 完全内联，消除对 @neptune/engine-product/Tool.js 的反向依赖。
+ * Tool 类型使用 opaque 最小接口，函数实现直接内联。
  */
 
-// 重新导出 Tool 相关类型（不含 CanUseToolFn 和 ToolPermissionContext，它们在 permissions.ts 中）
-export type {
-	Tool,
-	Tools,
-	ToolDef,
-	ToolInputJSONSchema,
-	ToolUseContext,
-	ToolResult,
-	ToolProgress,
-	ToolProgressData,
-	ToolCallProgress,
-} from '../../Tool.js'
+import type {ToolPermissionContext} from './permissions.js'
 
-// 重新导出函数
-export {findToolByName, toolMatchesName, filterToolProgressMessages, getEmptyToolPermissionContext} from '../../Tool.js'
+// ============================================================
+// 基础类型
+// ============================================================
+
+export type ToolInputJSONSchema = {
+	[x: string]: unknown
+	type?: string
+	properties?: {
+		[x: string]: unknown
+	}
+}
+
+/** Tool progress 数据基类 */
+export type ToolProgressData = {
+	type: string
+	[key: string]: unknown
+}
+
+/** Tool progress 消息 */
+export type ToolProgress<P extends ToolProgressData = ToolProgressData> = {
+	data: P
+	[key: string]: unknown
+}
+
+/** Tool call progress callback */
+export type ToolCallProgress<P extends ToolProgressData = ToolProgressData> = (
+	progress: ToolProgress<P>,
+) => void
+
+/** ToolUseContext — engine 最小接口 */
+export type ToolUseContext = {
+	[key: string]: unknown
+}
+
+/** ToolResult — engine 最小接口 */
+export type ToolResult<T = unknown> = {
+	type?: string
+	data: T
+	resultForAssistant?: unknown
+	newMessages?: unknown[]
+	contextModifier?: (context: ToolUseContext) => ToolUseContext
+	mcpMeta?: {
+		_meta?: Record<string, unknown>
+		structuredContent?: Record<string, unknown>
+	}
+}
+
+// ============================================================
+// Tool 定义类型
+// ============================================================
+
+/** ToolDef — engine 最小接口 */
+export type ToolDef<I = Record<string, unknown>> = {
+	name: string
+	description: string | ((...args: unknown[]) => string | Promise<string>)
+	inputSchema?: unknown
+	inputJSONSchema?: ToolInputJSONSchema
+	aliases?: string[]
+	[key: string]: unknown
+}
+
+/** CoreTool — 无 UI 方法的工具接口 */
+export type CoreTool<
+	I = Record<string, unknown>,
+	O = unknown,
+	P = unknown,
+> = {
+	name: string
+	description: string | ((...args: unknown[]) => string | Promise<string>)
+	aliases?: string[]
+	inputSchema?: unknown
+	inputJSONSchema?: ToolInputJSONSchema
+	call?: (input: I, context: ToolUseContext, progress: ToolCallProgress) => Promise<ToolResult<O>>
+	[key: string]: unknown
+}
+
+/** UITool — UI 渲染方法接口 */
+export type UITool<
+	I = Record<string, unknown>,
+	O = unknown,
+	P = unknown,
+> = {
+	userFacingName?: (input: I) => string
+	userFacingNameBackgroundColor?: string
+	renderToolUseMessage?: (input: I, context: unknown) => unknown
+	renderToolResultMessage?: (output: O, input: I, context: unknown) => unknown
+	renderToolUseProgressMessage?: (progress: ToolProgress, input: I) => unknown
+	renderGroupedToolUse?: (inputs: I[], context: unknown) => unknown
+	isTransparentWrapper?: boolean
+	getToolUseSummary?: (input: I, output: O) => string
+	getActivityDescription?: (input: I) => string
+	toAutoClassifierInput?: (input: I) => string
+	isResultTruncated?: (output: O) => boolean
+	renderToolUseTag?: (input: I) => unknown
+	renderToolUseQueuedMessage?: (input: I) => unknown
+	renderToolUseRejectedMessage?: (input: I) => unknown
+	renderToolUseErrorMessage?: (input: I, error: Error) => unknown
+	extractSearchText?: (input: I) => string | undefined
+	isSearchOrReadCommand?: boolean
+	isOpenWorld?: boolean
+}
+
+/** Tool — 完整工具类型（CoreTool + UITool） */
+export type Tool<
+	I = Record<string, unknown>,
+	O = unknown,
+	P = unknown,
+> = CoreTool<I, O, P> & Partial<UITool<I, O, P>>
+
+/** Tools — 工具列表 */
+export type Tools = Tool[]
+
+/** ToolSet — 可注册到 registry 的工具集合 */
+export type ToolSet = {
+	tools: Tool[]
+	enabled?: boolean
+}
+
+/** ToolRegistry — 工具注册表接口 */
+export type ToolRegistry = {
+	getTools(permissionContext?: ToolPermissionContext): Tools
+	getTool?(name: string): Tool | undefined
+	getToolByName?(name: string): Tool | undefined
+	getCoreToolCount?(): number
+}
+
+// ============================================================
+// Progress 消息类型
+// ============================================================
+
+export type ProgressMessage<T = unknown> = {
+	data: T
+	[key: string]: unknown
+}
+
+// ============================================================
+// 内联函数实现（来自 @neptune/engine-product/Tool.js）
+// ============================================================
+
+/**
+ * Checks if a tool matches the given name (primary name or alias).
+ */
+export function toolMatchesName(
+	tool: { name: string; aliases?: string[] },
+	name: string,
+): boolean {
+	return tool.name === name || (tool.aliases?.includes(name) ?? false)
+}
+
+/**
+ * Finds a tool by name or alias from a list of tools.
+ */
+export function findToolByName(tools: Tools, name: string): Tool | undefined {
+	return tools.find(t => toolMatchesName(t, name))
+}
+
+/**
+ * Filters progress messages to only tool progress (excludes hook_progress).
+ */
+export function filterToolProgressMessages(
+	progressMessagesForMessage: ProgressMessage[],
+): ProgressMessage<ToolProgressData>[] {
+	return progressMessagesForMessage.filter(
+		(msg): msg is ProgressMessage<ToolProgressData> =>
+			(msg.data as { type?: string })?.type !== 'hook_progress',
+	)
+}
+
+export function buildTool<I = Record<string, unknown>, O = unknown, P = unknown>(
+	tool: Tool<I, O, P>,
+): Tool<I, O, P> {
+	return tool
+}
+
+// ============================================================
+// getEmptyToolPermissionContext — zero-dep factory
+// ============================================================
+
+export const getEmptyToolPermissionContext: () => ToolPermissionContext = () => ({
+	mode: 'default',
+	additionalWorkingDirectories: new Map(),
+	alwaysAllowRules: {},
+	alwaysDenyRules: {},
+	alwaysAskRules: {},
+	isBypassPermissionsModeAvailable: false,
+})

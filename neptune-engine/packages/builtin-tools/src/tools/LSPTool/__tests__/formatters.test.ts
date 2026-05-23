@@ -1,19 +1,4 @@
-import {mock, describe, expect, test} from "bun:test";
-
-mock.module("src/utils/debug.js", () => ({
-	logForDebugging: () => {
-	},
-	isDebugMode: () => false,
-}));
-
-mock.module("src/utils/errors.js", () => ({
-	errorMessage: (e: unknown) => String(e),
-}));
-
-mock.module("src/utils/stringUtils.js", () => ({
-	plural: (n: number, singular: string, plural?: string) =>
-		n === 1 ? singular : (plural ?? singular + "s"),
-}));
+import {describe, expect, test} from "bun:test";
 
 const {
 	formatGoToDefinitionResult,

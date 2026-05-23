@@ -13,46 +13,33 @@
  */
 
 import type {ProviderAdapter, ProviderQueryParams, ProviderMessage} from '../ProviderAdapter.js'
-import type {Options} from '../../../services/api/claude.js'
-import {getEmptyToolPermissionContext} from '../../../Tool.js'
+/** Inlined from @neptune/engine-product/services/api/claude.js — engine-local subset */
+type Options = {
+	model: string
+	getToolPermissionContext: () => Promise<unknown>
+	toolChoice?: unknown
+	isNonInteractiveSession?: boolean
+	extraToolSchemas?: unknown[]
+	maxOutputTokensOverride?: number
+	querySource?: string
+	agents?: unknown[]
+	hasAppendSystemPrompt?: boolean
+	enablePromptCaching?: boolean
+	mcpTools?: unknown[]
+}
+import {getEmptyToolPermissionContext} from '../../types/tool.js'
 import {EngineErrorCode, type EngineErrorCodeType} from '../../errors.js'
 import {APIConnectionError, APIConnectionTimeoutError, APIError} from '@anthropic-ai/sdk'
 import {LogUtil} from '../../log/LogUtil.js'
 import {CircuitBreaker, type CircuitBreakerStateChangedEvent} from '../CircuitBreaker.js'
 import {EventBus} from '../../events/EventBus.js'
+import type {BaseProviderConfig, RetryConfig} from '../types/BaseProviderConfig.js'
 
 // ============================================================
 // 类型定义
 // ============================================================
 
-/**
- * Base Provider 的配置项基础类型
- *
- * 所有 Provider Config 都应至少包含 defaultModel。
- */
-export interface BaseProviderConfig {
-	/** 默认模型（可选） */
-	defaultModel?: string
-	/** 重试配置（可选） */
-	retryConfig?: RetryConfig
-
-	/** 其他配置 */
-	[key: string]: unknown
-}
-
-/**
- * 重试配置
- *
- * 控制 Provider 在遇到可重试错误时的重试行为。
- */
-export interface RetryConfig {
-	/** 最大重试次数（默认 3） */
-	maxRetries: number
-	/** 指数退避基数，单位毫秒（默认 1000） */
-	backoffMs: number
-	/** 可重试的错误码列表（默认包含 RATE_LIMIT 和 NETWORK_ERROR） */
-	retryableErrors: EngineErrorCodeType[]
-}
+export type {BaseProviderConfig, RetryConfig}
 
 // ============================================================
 // BaseProvider 抽象类
@@ -174,6 +161,14 @@ export abstract class BaseProvider<TConfig extends BaseProviderConfig = BaseProv
 			enablePromptCaching: false,
 			mcpTools: [],
 		}
+	}
+
+	protected unsupportedProductRuntimeProvider(): ProviderMessage {
+		return this.createErrorResponse(
+			new Error(
+				`Provider "${this.type}" requires a host runtime adapter. The independent engine kernel does not import product-layer API modules.`,
+			),
+		)
 	}
 
 	/**

@@ -1,8 +1,9 @@
 import {z} from 'zod/v4'
-import type {ToolResultBlockParam} from 'src/Tool.js'
-import {buildTool} from 'src/Tool.js'
-import {lazySchema} from 'src/utils/lazySchema.js'
-import {REPL_TOOL_NAME} from './constants.js'
+import type {ToolResultBlockParam} from '../../tool.js'
+import {buildTool} from '../../tool.js'
+import {lazySchema} from '../../utils/lazySchema.js'
+
+const REPL_TOOL_NAME = 'REPL'
 
 const inputSchema = lazySchema(() =>
 	z.strictObject({

@@ -16,8 +16,8 @@
  */
 
 import type {Langfuse as LangfuseClient} from 'langfuse';
-import type {ITracingProvider} from 'claude-code-best/engine';
-import {SpanStatus, type Span} from 'claude-code-best/engine';
+import type {ITracingProvider} from '@neptune/engine';
+import {SpanStatus, type Span} from '@neptune/engine';
 
 /**
  * Langfuse Span 适配器 — 实现 Engine 的 Span 接口
@@ -98,9 +98,24 @@ export class LangfuseTracingProvider implements ITracingProvider {
     private currentTurnSpan: any = null;
     private currentRoundSpan: any = null;
     private lastGeneration: any = null;
+    private observationMetadata: Record<string, unknown> = {};
 
     constructor(langfuse: LangfuseClient) {
         this.langfuse = langfuse;
+    }
+
+    /**
+     * 设置当前请求的统一观测上下文。
+     *
+     * 同一个 dispatch 内的 trace/span/generation/tool 必须携带同一组关联键，
+     * 否则 Langfuse 上只能看到碎片化 observation，无法稳定回溯一次用户请求。
+     */
+    setObservationMetadata(metadata: Record<string, unknown>): void {
+        this.observationMetadata = {...metadata};
+    }
+
+    private mergeMetadata(metadata?: Record<string, unknown>): Record<string, unknown> {
+        return {...this.observationMetadata, ...(metadata ?? {})};
     }
 
     /**
@@ -112,7 +127,7 @@ export class LangfuseTracingProvider implements ITracingProvider {
             sessionId: params.sessionId,
             userId: params.userId,
             input: params.input,
-            metadata: params.metadata,
+            metadata: this.mergeMetadata(params.metadata),
         });
     }
 
@@ -125,7 +140,7 @@ export class LangfuseTracingProvider implements ITracingProvider {
         if (!this.currentTrace) return;
         this.currentTurnSpan = this.currentTrace.span({
             name,
-            metadata,
+            metadata: this.mergeMetadata(metadata),
         });
     }
 
@@ -147,7 +162,7 @@ export class LangfuseTracingProvider implements ITracingProvider {
         if (!parent) return;
         this.currentRoundSpan = parent.span({
             name,
-            metadata,
+            metadata: this.mergeMetadata(metadata),
         });
     }
 
@@ -166,9 +181,9 @@ export class LangfuseTracingProvider implements ITracingProvider {
     startSpan(name: string, attributes?: Record<string, unknown>): Span {
         const parent = this.currentRoundSpan ?? this.currentTurnSpan ?? this.currentTrace;
         const langfuseSpan = parent
-            ? parent.span({name, metadata: attributes})
+            ? parent.span({name, metadata: this.mergeMetadata(attributes)})
             : null;
-        return new LangfuseSpanAdapter(name, attributes ?? {}, langfuseSpan);
+        return new LangfuseSpanAdapter(name, this.mergeMetadata(attributes), langfuseSpan);
     }
 
     runInSpan<T>(
@@ -216,7 +231,7 @@ export class LangfuseTracingProvider implements ITracingProvider {
             input: params.input,
             output: params.output,
             usage: usageObj,
-            metadata: params.metadata,
+            metadata: this.mergeMetadata(params.metadata),
             modelParameters: params.modelParameters,
             completionStartTime: params.completionStartTime ?? new Date(Date.now() - params.latencyMs),
             version: params.version,
@@ -260,7 +275,7 @@ export class LangfuseTracingProvider implements ITracingProvider {
             name: `tool: ${params.name}`,
             input: params.input,
             output: params.output,
-            metadata: {toolName: params.name},
+            metadata: this.mergeMetadata({toolName: params.name}),
         });
         span.update({
             level: params.status === 'error' ? 'ERROR' : 'DEFAULT',
@@ -285,7 +300,7 @@ export class LangfuseTracingProvider implements ITracingProvider {
             name: `reasoning-${params.turnIndex}`,
             input: {type: 'thinking'},
             output: params.content.substring(0, 3000),
-            metadata: {type: 'reasoning', turnIndex: params.turnIndex},
+            metadata: this.mergeMetadata({type: 'reasoning', turnIndex: params.turnIndex}),
         });
         span.update({
             endTime: new Date(),
@@ -299,7 +314,7 @@ export class LangfuseTracingProvider implements ITracingProvider {
      */
     updateTraceMetadata(metadata: Record<string, unknown>): void {
         if (!this.currentTrace) return;
-        this.currentTrace.update({metadata});
+        this.currentTrace.update({metadata: this.mergeMetadata(metadata)});
     }
 
     /**
@@ -314,6 +329,7 @@ export class LangfuseTracingProvider implements ITracingProvider {
             this.currentTurnSpan = null;
             this.currentRoundSpan = null;
             this.lastGeneration = null;
+            this.observationMetadata = {};
             this.langfuse.flushAsync();
         }
     }

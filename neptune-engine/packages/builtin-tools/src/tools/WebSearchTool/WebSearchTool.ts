@@ -1,16 +1,12 @@
 import type {PermissionResult} from 'src/utils/permissions/PermissionResult.js'
 import {z} from 'zod/v4'
-import {buildTool, type ToolDef} from 'src/Tool.js'
-import {lazySchema} from 'src/utils/lazySchema.js'
-import {jsonStringify} from 'src/utils/slowOperations.js'
+import {jsonStringify} from '../../utils/json.js'
+import {buildTool, type ToolDef, type ToolUseContext} from '../../tool.js'
+import {lazySchema} from '../../utils/lazySchema.js'
 import {createAdapter} from './adapters/index.js'
 import {getWebSearchPrompt, WEB_SEARCH_TOOL_NAME} from './prompt.js'
-import {
-	getToolUseSummary,
-	renderToolResultMessage,
-	renderToolUseMessage,
-	renderToolUseProgressMessage,
-} from './UI.js'
+import {TOOL_SUMMARY_MAX_LENGTH} from '../../constants/toolLimits.js'
+import {truncate} from '../../utils/truncate.js'
 
 const inputSchema = lazySchema(() =>
 	z.strictObject({
@@ -56,6 +52,13 @@ const outputSchema = lazySchema(() =>
 type OutputSchema = ReturnType<typeof outputSchema>
 
 export type Output = z.infer<OutputSchema>
+
+function getToolUseSummary(input: Partial<{query: string}> | undefined): string | null {
+	if (!input?.query) {
+		return null
+	}
+	return truncate(input.query, TOOL_SUMMARY_MAX_LENGTH)
+}
 
 // Re-export WebSearchProgress from centralized types to break import cycles
 export type {WebSearchProgress} from 'src/types/tools.js'
@@ -115,9 +118,6 @@ export const WebSearchTool = buildTool({
 	async prompt() {
 		return getWebSearchPrompt()
 	},
-	renderToolUseMessage,
-	renderToolUseProgressMessage,
-	renderToolResultMessage,
 	extractSearchText() {
 		return ''
 	},
@@ -140,7 +140,7 @@ export const WebSearchTool = buildTool({
 		}
 		return {result: true}
 	},
-	async call(input, context, _canUseTool, _parentMessage, onProgress) {
+	async call(input, context: ToolUseContext, _canUseTool, _parentMessage, onProgress) {
 		const startTime = performance.now()
 		const {query} = input
 

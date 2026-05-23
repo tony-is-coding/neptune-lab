@@ -11,7 +11,7 @@ import type {CanUseToolFn} from '../../../../../src/ui/hooks/useCanUseTool'
 import type {AppState} from 'src/state/AppState.js'
 import {z} from 'zod/v4'
 import {getKairosActive} from 'src/bootstrap/state.js'
-import {TOOL_SUMMARY_MAX_LENGTH} from 'src/constants/toolLimits.js'
+import {TOOL_SUMMARY_MAX_LENGTH} from '../../constants/toolLimits.js'
 import {
 	type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
 	logEvent,
@@ -22,8 +22,8 @@ import type {
 	ToolCallProgress,
 	ToolUseContext,
 	ValidationResult,
-} from 'src/Tool.js'
-import {buildTool, type ToolDef} from 'src/Tool.js'
+} from '../../tool.js'
+import {buildTool, type ToolDef} from '../../tool.js'
 import {
 	backgroundExistingForegroundTask,
 	markTaskNotified,
@@ -40,8 +40,8 @@ import {
 } from 'src/utils/bash/commands.js'
 import {extractClaudeCodeHints} from 'src/utils/claudeCodeHints.js'
 import {detectCodeIndexingFromCommand} from 'src/utils/codeIndexing.js'
-import {isEnvTruthy} from 'src/utils/envUtils.js'
-import {isENOENT, ShellError} from 'src/utils/errors.js'
+import {isEnvTruthy} from '../../utils/env.js'
+import {isENOENT, ShellError} from '../../utils/errors.js'
 import {
 	detectFileEncoding,
 	detectLineEndings,
@@ -52,17 +52,17 @@ import {
 	fileHistoryEnabled,
 	fileHistoryTrackEdit,
 } from 'src/utils/fileHistory.js'
-import {truncate} from 'src/utils/format.js'
+import {truncate} from '../../utils/truncate.js'
 import {getFsImplementation} from 'src/utils/fsOperations.js'
-import {lazySchema} from 'src/utils/lazySchema.js'
+import {lazySchema} from '../../utils/lazySchema.js'
 import {expandPath} from 'src/utils/path.js'
 import type {PermissionResult} from 'src/utils/permissions/PermissionResult.js'
 import {maybeRecordPluginHint} from 'src/utils/plugins/hintRecommendation.js'
 import {exec} from 'src/utils/Shell.js'
 import type {ExecResult} from 'src/utils/ShellCommand.js'
 import {SandboxManager} from 'src/utils/sandbox/sandbox-adapter.js'
-import {semanticBoolean} from 'src/utils/semanticBoolean.js'
-import {semanticNumber} from 'src/utils/semanticNumber.js'
+import {semanticBoolean} from '../../utils/semanticBoolean.js'
+import {semanticNumber} from '../../utils/semanticNumber.js'
 import {EndTruncatingAccumulator} from 'src/utils/stringUtils.js'
 import {getTaskOutputPath} from 'src/utils/task/diskOutput.js'
 import {TaskOutput} from 'src/utils/task/TaskOutput.js'
@@ -75,7 +75,6 @@ import {
 	PREVIEW_SIZE_BYTES,
 } from 'src/utils/toolResultStorage.js'
 import {userFacingName as fileEditUserFacingName} from '../FileEditTool/UI.js'
-import {trackGitOperations} from '../shared/gitOperationTracking.js'
 import {
 	bashToolHasPermission,
 	commandHasAnyCd,
@@ -345,14 +344,14 @@ const fullInputSchema = lazySchema(() =>
 			.optional()
 			.describe(`Clear, concise description of what this command does in active voice. Never use words like "complex" or "risk" in the description - just describe what it does.
 
-For simple commands (git, npm, standard CLI tools), keep it brief (5-10 words):
+For simple commands (npm, node, standard CLI tools), keep it brief (5-10 words):
 - ls → "List files in current directory"
-- git status → "Show working tree status"
+- node --version → "Show Node.js version"
 - npm install → "Install package dependencies"
 
 For commands that are harder to parse at a glance (piped commands, obscure flags, etc.), add enough context to clarify what it does:
 - find . -name "*.tmp" -exec rm {} \\; → "Find and delete all .tmp files recursively"
-- git reset --hard origin/main → "Discard all local changes and match remote main"
+- find . -name "*.log" -delete → "Delete all .log files recursively"
 - curl -s url | jq '.data[]' → "Fetch JSON from URL and extract data array elements"`),
 		run_in_background: semanticBoolean(z.boolean().optional()).describe(
 			`Set to true to run this command in the background. Use Read to read the output later.`,
@@ -916,8 +915,6 @@ export const BashTool = buildTool({
 			// Get the final result from the generator's return value
 			result = generatorResult.value
 
-			trackGitOperations(input.command, result.code, result.stdout)
-
 			const isInterrupt =
 				result.interrupted && abortController.signal.reason === 'interrupt'
 
@@ -1090,6 +1087,9 @@ export const BashTool = buildTool({
 
 		return {
 			data,
+			execution: {
+				exitCode: result.code,
+			},
 		}
 	},
 	renderToolUseErrorMessage,

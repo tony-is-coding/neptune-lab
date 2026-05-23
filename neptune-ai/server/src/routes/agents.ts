@@ -21,6 +21,7 @@ export async function agentRoutes(fastify: FastifyInstance) {
     fastify.post('/', {
         preHandler: [fastify.authenticate, roleMiddleware('admin')],
     }, async (request, reply) => {
+        if (!request.user || reply.sent) return;
         const {
             name,
             description,
@@ -78,8 +79,9 @@ export async function agentRoutes(fastify: FastifyInstance) {
 
             reply.status(201).send(template);
         } catch (error) {
+            if (reply.sent || reply.raw.headersSent) return;
             log.error('Request failed', {detail: (error as Error).message});
-            reply.status(500).send({
+            return reply.status(500).send({
                 error: 'INTERNAL_ERROR',
                 message: '创建 Agent 模板失败',
             });
@@ -182,6 +184,7 @@ export async function agentRoutes(fastify: FastifyInstance) {
     fastify.put('/:id', {
         preHandler: [fastify.authenticate, roleMiddleware('admin')],
     }, async (request, reply) => {
+        if (!request.user || reply.sent) return;
         const {id} = request.params as { id: string };
         const {
             name,
@@ -236,8 +239,9 @@ export async function agentRoutes(fastify: FastifyInstance) {
 
             reply.send(template);
         } catch (error) {
+            if (reply.sent || reply.raw.headersSent) return;
             log.error('Request failed', {detail: (error as Error).message});
-            reply.status(500).send({
+            return reply.status(500).send({
                 error: 'INTERNAL_ERROR',
                 message: '更新 Agent 模板失败',
             });
@@ -251,6 +255,7 @@ export async function agentRoutes(fastify: FastifyInstance) {
     fastify.patch('/:id/activate', {
         preHandler: [fastify.authenticate, roleMiddleware('admin')],
     }, async (request, reply) => {
+        if (!request.user || reply.sent) return;
         const {id} = request.params as { id: string };
 
         try {
@@ -265,8 +270,9 @@ export async function agentRoutes(fastify: FastifyInstance) {
 
             reply.send(template);
         } catch (error) {
+            if (reply.sent || reply.raw.headersSent) return;
             log.error('Request failed', {detail: (error as Error).message});
-            reply.status(500).send({
+            return reply.status(500).send({
                 error: 'INTERNAL_ERROR',
                 message: '激活 Agent 模板失败',
             });
@@ -280,6 +286,7 @@ export async function agentRoutes(fastify: FastifyInstance) {
     fastify.patch('/:id/deactivate', {
         preHandler: [fastify.authenticate, roleMiddleware('admin')],
     }, async (request, reply) => {
+        if (!request.user || reply.sent) return;
         const {id} = request.params as { id: string };
 
         try {
@@ -294,8 +301,9 @@ export async function agentRoutes(fastify: FastifyInstance) {
 
             reply.send(template);
         } catch (error) {
+            if (reply.sent || reply.raw.headersSent) return;
             log.error('Request failed', {detail: (error as Error).message});
-            reply.status(500).send({
+            return reply.status(500).send({
                 error: 'INTERNAL_ERROR',
                 message: '停用 Agent 模板失败',
             });
@@ -309,6 +317,7 @@ export async function agentRoutes(fastify: FastifyInstance) {
     fastify.delete('/:id', {
         preHandler: [fastify.authenticate, roleMiddleware('admin')],
     }, async (request, reply) => {
+        if (!request.user || reply.sent) return;
         const {id} = request.params as { id: string };
 
         try {
@@ -323,8 +332,9 @@ export async function agentRoutes(fastify: FastifyInstance) {
 
             reply.status(204).send();
         } catch (error) {
+            if (reply.sent || reply.raw.headersSent) return;
             log.error('Request failed', {detail: (error as Error).message});
-            reply.status(500).send({
+            return reply.status(500).send({
                 error: 'INTERNAL_ERROR',
                 message: '删除 Agent 模板失败',
             });
@@ -516,6 +526,7 @@ export async function agentRoutes(fastify: FastifyInstance) {
     fastify.delete('/:id/documents/:docId', {
         preHandler: [fastify.authenticate, roleMiddleware('admin')],
     }, async (request, reply) => {
+        if (!request.user || reply.sent) return;
         const {id, docId} = request.params as { id: string; docId: string };
 
         try {
@@ -540,8 +551,9 @@ export async function agentRoutes(fastify: FastifyInstance) {
 
             reply.status(204).send();
         } catch (error) {
+            if (reply.sent || reply.raw.headersSent) return;
             log.error('Request failed', {detail: (error as Error).message});
-            reply.status(500).send({
+            return reply.status(500).send({
                 error: 'INTERNAL_ERROR',
                 message: '删除文档失败',
             });

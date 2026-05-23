@@ -13,24 +13,23 @@
  * V18 优化：消除 value import 穿透，改为依赖注入。
  */
 
-import type {TodoList} from '../utils/todo/types.js'
 import type {Command} from './types/command.js'
 import type {
 	MCPServerConnection,
 	ServerResource,
-} from '../services/mcp/types.js'
-import type {Tool, ToolPermissionContext} from '../Tool.js'
+} from './types/mcp.js'
+import type {Tool} from './types/tool.js'
+import {getEmptyToolPermissionContext} from './types/tool.js'
 import {LogUtil} from './log/index.js'
-import type {TaskState} from '../tasks/types.js'
-import type {AgentDefinitionsResult} from '@claude-code-best/builtin-tools/tools/AgentTool/loadAgentsDir.js'
-import type {AllowedPrompt} from '@claude-code-best/builtin-tools/tools/ExitPlanModeTool/ExitPlanModeV2Tool.js'
 import type {AgentId} from './types/ids.js'
 import type {Message, UserMessage} from './types/message.js'
 import type {LoadedPlugin, PluginError} from './types/plugin.js'
-import type {PermissionMode} from './types/permissions.js'
-import type {AttributionState} from '../utils/commitAttribution.js'
-import type {FileHistoryState} from '../utils/fileHistory.js'
-import type {SessionHooksState} from '../utils/hooks/sessionHooks.js'
+import type {ToolPermissionContext} from './types/permissions.js'
+import type {
+	AttributionState,
+	FileHistoryState,
+	SessionHooksState,
+} from './types/CoreAppState.js'
 import {EventBus} from './events/EventBus.js'
 
 /**
@@ -43,6 +42,53 @@ export type GetEmptyToolPermissionContextFn = () => ToolPermissionContext
  */
 export type CreateEmptyAttributionStateFn = () => AttributionState
 
+export type TodoItem = {
+	content: string
+	status: 'pending' | 'in_progress' | 'completed'
+	activeForm: string
+	[key: string]: unknown
+}
+
+export type TodoList = TodoItem[]
+
+export type TaskState = {
+	id?: string
+	status?: string
+	isBackgrounded?: boolean
+	[key: string]: unknown
+}
+
+/**
+ * Agent 定义在 runtime kernel 中只作为状态负载保存。
+ * 具体加载、校验和 UI 展示由 product / builtin tool 层负责。
+ */
+export type AgentDefinitionRecord = {
+	agentType: string
+	whenToUse?: string
+	source?: string
+	tools?: string[]
+	disallowedTools?: string[]
+	skills?: string[]
+	model?: string
+	[key: string]: unknown
+}
+
+export type AgentDefinitionsResult = {
+	activeAgents: AgentDefinitionRecord[]
+	allAgents: AgentDefinitionRecord[]
+	failedFiles?: Array<{path: string; error: string}>
+	allowedAgentTypes?: string[]
+}
+
+/**
+ * Prompt-based permission request carried by plan-mode exit messages.
+ * Runtime kernel treats this as serializable data, not as a concrete tool implementation.
+ */
+export type AllowedPrompt = {
+	tool: string
+	prompt: string
+}
+
 /**
  * EngineState 配置选项
  *
@@ -51,12 +97,12 @@ export type CreateEmptyAttributionStateFn = () => AttributionState
 export interface EngineStateOptions {
 	/**
 	 * 创建空的 ToolPermissionContext 的函数
-	 * 如果不提供，使用默认实现（动态导入）
+	 * 如果不提供，使用 engine-local 默认实现。
 	 */
 	getEmptyToolPermissionContext?: GetEmptyToolPermissionContextFn
 	/**
 	 * 创建空的 AttributionState 的函数
-	 * 如果不提供，使用默认实现（动态导入）
+	 * 如果不提供，使用 engine-local 默认实现。
 	 */
 	createEmptyAttributionState?: CreateEmptyAttributionStateFn
 }
@@ -382,7 +428,7 @@ export class EngineState {
 	// ============================================================
 
 	/**
-	 * 获取工厂函数（延迟导入，消除 value import 穿透）
+	 * 获取工厂函数。
 	 */
 	private _getFactoryFunctions(): {
 		getEmptyToolPermissionContext: GetEmptyToolPermissionContextFn
@@ -396,18 +442,11 @@ export class EngineState {
 			}
 		}
 
-		// 否则使用动态导入（仅在首次调用时）
-		// 这样可以保持模块的 value import 自由
-		const {getEmptyToolPermissionContext: getEmptyPermissions} = require('../Tool.js') as {
-			getEmptyToolPermissionContext: GetEmptyToolPermissionContextFn
-		}
-		const {createEmptyAttributionState: createAttributionState} = require('../utils/commitAttribution.js') as {
-			createEmptyAttributionState: CreateEmptyAttributionStateFn
-		}
-
 		return {
-			getEmptyToolPermissionContext: this._options.getEmptyToolPermissionContext ?? getEmptyPermissions,
-			createEmptyAttributionState: this._options.createEmptyAttributionState ?? createAttributionState,
+			getEmptyToolPermissionContext:
+				this._options.getEmptyToolPermissionContext ?? getEmptyToolPermissionContext,
+			createEmptyAttributionState:
+				this._options.createEmptyAttributionState ?? (() => ({})),
 		}
 	}
 

@@ -11,8 +11,8 @@
  * - 未来可支持直接调用 Anthropic API / Bedrock / Vertex 等
  */
 
-import type {Message} from '../../types/message.js'
-import type {Tools} from '../../Tool.js'
+import type {Message} from '../types/message.js'
+import type {Tools} from '../types/tool.js'
 
 // ============================================================
 // 类型定义

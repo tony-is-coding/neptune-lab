@@ -147,7 +147,7 @@ export async function waitForResultWithTimeout(
 		const iterator = messages[Symbol.asyncIterator]()
 		if (typeof iterator.return === 'function') {
 			try {
-				await iterator.return()
+				await iterator.return(undefined)
 			} catch {
 				// 忽略 cleanup 中的错误
 			}

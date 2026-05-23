@@ -48,6 +48,7 @@ export function useChatMessages() {
       }
     } catch (err) {
       console.error('Failed to load thread history:', err);
+      throw err;
     }
   }, []);
 
@@ -114,11 +115,11 @@ export function useChatMessages() {
     // Real SSE call
     const controller = sendThreadMessage(agentId, threadId, content, {
       onEvent: (event) => {
-        const { type, data } = event;
+        const { type } = event;
 
         if (type === 'text') {
           // 处理文本事件：支持增量追加实现逐字打印效果
-          const { content: textContent = '', isDelta } = data as { content?: string; isDelta?: boolean };
+          const { content: textContent = '', isDelta } = event;
           if (isDelta) {
             // 增量内容：追加到最后一个 text block
             setBlocks(prev => {
@@ -148,7 +149,7 @@ export function useChatMessages() {
             });
           }
         } else if (type === 'tool_use') {
-          const { id: toolId, name, input } = data as { id: string; name: string; input: Record<string, unknown> };
+          const { id: toolId, name, input } = event;
 
           // TodoWrite 特殊处理 — 转为 plan block
           if (name === 'TodoWrite' && input.todos) {
@@ -156,7 +157,7 @@ export function useChatMessages() {
             setBlocks(prev => {
               // 更新已有的 plan block，或创建新的
               const existingIdx = prev.findIndex(b => b.type === 'plan');
-              const planBlock = { type: 'plan' as const, id: toolId, todos: todos.map(t => ({ content: t.content, status: t.status as 'pending' | 'in_progress' | 'completed', activeForm: t.activeForm })) };
+              const planBlock = { type: 'plan' as const, id: toolId, todos: todos.map(t => ({ content: t.content, status: t.status as PlanTask['status'], activeForm: t.activeForm })) };
               if (existingIdx >= 0) {
                 return [...prev.slice(0, existingIdx), planBlock, ...prev.slice(existingIdx + 1)];
               }
@@ -178,24 +179,20 @@ export function useChatMessages() {
             return [...prev, { type: 'tool_use', id: toolId, name, input, status: 'running' as const }];
           });
         } else if (type === 'artifact') {
-          const { id: artId, title, fileType, content: artContent } = data as { id: string; title: string; fileType: string; content: string };
+          const { id: artId, title, fileType, content: artContent } = event;
           setBlocks(prev => [...prev, { type: 'artifact', id: artId, title, fileType, content: artContent }]);
         } else if (type === 'tool_status') {
-          const { id: toolId, status: toolStatus } = data as { id: string; status: string };
+          const { id: toolId, status: toolStatus } = event;
           setBlocks(prev => prev.map(b =>
             b.type === 'tool_use' && b.id === toolId
-              ? { ...b, status: (toolStatus === 'completed' ? 'completed' : 'running') as 'running' | 'completed' }
+              ? { ...b, status: toolStatus }
               : b
           ));
         } else if (type === 'tool_result') {
-          const { toolUseId, output } = data as { toolUseId: string; output: unknown };
+          const { toolUseId, output } = event;
           setBlocks(prev => [...prev, { type: 'tool_result', toolUseId, output: output as Record<string, unknown> }]);
-        } else if (type === 'error') {
-          const { message: errorMsg } = data as { message?: string };
-          setBlocks(prev => [...prev, { type: 'text', content: `Error: ${errorMsg || 'Unknown error occurred'}` }]);
-          setStatus('complete');
         } else if (type === 'thinking') {
-          const { content: thinkingContent = '', isDelta } = data as { content?: string; isDelta?: boolean };
+          const { content: thinkingContent = '', isDelta } = event;
           if (isDelta) {
             // 增量思考：追加到最后一个 thinking block
             setBlocks(prev => {
@@ -246,15 +243,14 @@ export function useChatMessages() {
             });
           }
         } else if (type === 'ask_user') {
-          const { id: askId, questions } = data as { id: string; questions: Array<{ question: string; header?: string; options: Array<{ label: string; description?: string }>; multiSelect?: boolean }> };
+          const { id: askId, questions } = event;
           setBlocks(prev => [...prev, { type: 'ask_user', id: askId, questions, answered: false }]);
         } else if (type === 'plan_created') {
           // Plan 创建：初始化任务列表
-          const { planId, title } = data as { planId: string; title: string };
           setPlanTasksByThread(prev => ({ ...prev, [threadId]: [] }));
         } else if (type === 'plan_step') {
           // Plan 步骤更新
-          const step = data as { planId: string; stepId: string; stepNumber: number; subject: string; status: string; activeForm?: string };
+          const step = event;
           setPlanTasksByThread(prev => {
             const tasks = [...(prev[threadId] || [])];
             const existingIdx = tasks.findIndex(t => t.id === step.stepId);
@@ -263,7 +259,7 @@ export function useChatMessages() {
               subject: step.subject,
               description: '',
               activeForm: step.activeForm,
-              status: step.status as 'pending' | 'in_progress' | 'completed',
+              status: step.status,
               blocks: [],
               blockedBy: [],
             };
@@ -286,7 +282,10 @@ export function useChatMessages() {
       },
       onError: (error) => {
         console.error('SSE error:', error);
-        setBlocks([{ type: 'text', content: `Connection error: ${error.message}` }]);
+        setBlocks(prev => {
+          const filtered = prev.filter(b => !(b.type === 'thinking' && b.content === '思考中...'));
+          return [...filtered, { type: 'text', content: error.message }];
+        });
         setStatus('complete');
       },
       onDone: () => {

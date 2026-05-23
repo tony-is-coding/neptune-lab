@@ -1,6 +1,5 @@
 import {dirname, isAbsolute, sep} from 'path'
 import {logEvent} from 'src/services/analytics/index.js'
-import {getFeatureValue_CACHED_MAY_BE_STALE} from 'src/services/analytics/growthbook.js'
 import {diagnosticTracker} from 'src/services/diagnosticTracking.js'
 import {clearDeliveredDiagnosticsForFile} from 'src/services/lsp/LSPDiagnosticRegistry.js'
 import {getLspServerManager} from 'src/services/lsp/manager.js'
@@ -11,13 +10,13 @@ import {
 	addSkillDirectories,
 	discoverSkillDirsForPaths,
 } from 'src/skills/loadSkillsDir.js'
-import type {ToolUseContext} from 'src/Tool.js'
-import {buildTool, type ToolDef} from 'src/Tool.js'
+import type {ToolUseContext} from '../../tool.js'
+import {buildTool, type ToolDef} from '../../tool.js'
 import {getCwd} from 'src/utils/cwd.js'
 import {logForDebugging} from 'src/utils/debug.js'
 import {countLinesChanged} from 'src/utils/diff.js'
-import {isEnvTruthy} from 'src/utils/envUtils.js'
-import {isENOENT} from 'src/utils/errors.js'
+import {isEnvTruthy} from '../../utils/env.js'
+import {isENOENT} from '../../utils/errors.js'
 import {
 	FILE_NOT_FOUND_CWD_NOTE,
 	findSimilarFile,
@@ -34,12 +33,8 @@ import {
 	type LineEndingType,
 	readFileSyncWithMetadata,
 } from 'src/utils/fileRead.js'
-import {formatFileSize} from 'src/utils/format.js'
+import {formatFileSize} from '../../utils/format.js'
 import {getFsImplementation} from 'src/utils/fsOperations.js'
-import {
-	fetchSingleFileGitDiff,
-	type ToolUseDiff,
-} from 'src/utils/gitDiff.js'
 import {logError} from 'src/utils/log.js'
 import {expandPath} from 'src/utils/path.js'
 import {
@@ -543,21 +538,6 @@ export const FileEditTool = buildTool({
 			replaceAll: replace_all,
 		})
 
-		let gitDiff: ToolUseDiff | undefined
-		if (
-			isEnvTruthy(process.env.CLAUDE_CODE_REMOTE) &&
-			getFeatureValue_CACHED_MAY_BE_STALE('tengu_quartz_lantern', false)
-		) {
-			const startTime = Date.now()
-			const diff = await fetchSingleFileGitDiff(absoluteFilePath)
-			if (diff) gitDiff = diff
-			logEvent('tengu_tool_use_diff_computed', {
-				isEditTool: true,
-				durationMs: Date.now() - startTime,
-				hasDiff: !!diff,
-			})
-		}
-
 		// 8. Yield result
 		const data = {
 			filePath: file_path,
@@ -567,7 +547,6 @@ export const FileEditTool = buildTool({
 			structuredPatch: patch,
 			userModified: userModified ?? false,
 			replaceAll: replace_all,
-			...(gitDiff && {gitDiff}),
 		}
 		return {
 			data,

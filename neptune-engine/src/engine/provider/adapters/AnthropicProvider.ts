@@ -14,10 +14,9 @@
  */
 
 import type {ProviderQueryParams, ProviderMessage} from '../ProviderAdapter.js'
-import {queryModelWithStreaming} from '../../../services/api/claude.js'
-import type {Message} from '../../../types/message.js'
-import {asSystemPrompt} from '../../../utils/systemPromptType.js'
-import type {SystemPrompt} from '../../../utils/systemPromptType.js'
+import type {Message} from '../../types/message.js'
+import {asSystemPrompt} from '../../types/system-prompt.js'
+import type {SystemPrompt} from '../../types/system-prompt.js'
 import {BaseProvider, type BaseProviderConfig} from './BaseProvider.js'
 import type {AnthropicProviderConfig} from '../types/ProviderConfigs.js'
 
@@ -57,36 +56,8 @@ export class AnthropicProvider extends BaseProvider<AnthropicProviderConfig> {
 		this.applyConfig()
 
 		try {
-			// 1. 参数转换：ProviderQueryParams → CC 所需格式
-			const systemPrompt = this.buildSystemPrompt(params.systemPrompt)
-			const messages = this.normalizeMessages(params.messages)
-			const model = params.model || this.config.defaultModel || 'claude-sonnet-4-20250514'
-
-			// 2. 构建 queryModelWithStreaming 所需的 Options
-			const options = this.buildOptions({...params, model})
-
-			// 3. 调用 CC 的 queryModelWithStreaming
-			const stream = queryModelWithStreaming({
-				messages,
-				systemPrompt,
-				thinkingConfig: {type: 'disabled'},
-				tools: params.tools ?? [],
-				signal: params.signal || new AbortController().signal,
-				options,
-			})
-
-			// 4. 转换流式响应：CC 格式 → ProviderMessage
-			try {
-				for await (const event of stream) {
-					yield this.convertToProviderMessage(event)
-				}
-			} finally {
-				// 确保在提前退出/中断/超时场景下清理 stream
-				const iterator = stream[Symbol.asyncIterator]()
-				if (typeof iterator.return === 'function') {
-					await iterator.return()
-				}
-			}
+			void params
+			yield this.unsupportedProductRuntimeProvider()
 		} catch (error) {
 			yield this.createErrorResponse(error)
 		} finally {

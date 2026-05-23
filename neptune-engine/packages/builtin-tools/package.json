@@ -1,5 +1,5 @@
 {
-  "name": "@claude-code-best/builtin-tools",
+  "name": "@neptune/builtin-tools",
   "version": "1.0.0",
   "private": true,
   "type": "module",
@@ -7,10 +7,12 @@
   "types": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
+    "./tools/*.js": "./src/tools/*.ts",
     "./tools/*": "./src/tools/*",
     "./utils": "./src/utils.ts"
   },
   "dependencies": {
-    "@claude-code-best/agent-tools": "workspace:*"
+    "@neptune/engine-tools": "workspace:*",
+    "axios": "^1.14.0"
   }
 }

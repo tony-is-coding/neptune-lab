@@ -6,6 +6,7 @@
 
 import {createApp} from '../src/index';
 import type {FastifyInstance} from 'fastify';
+import {db, tenants} from '../src/db';
 
 /**
  * 测试配置
@@ -92,14 +93,28 @@ export async function createTestUser(
     app: FastifyInstance,
     role: 'admin' | 'user' = 'user'
 ): Promise<{ user: Record<string, unknown>; token: string }> {
-    const userData = role === 'admin' ? TEST_USERS.admin : TEST_USERS.user;
+    const baseUserData = role === 'admin' ? TEST_USERS.admin : TEST_USERS.user;
+    const suffix = Math.random().toString(36).slice(2, 10);
+    const userData = {
+        ...baseUserData,
+        name: `${baseUserData.name} ${suffix}`,
+        email: `${role}-${suffix}@test.com`,
+    };
+
+    const tenantPayload = role === 'admin'
+        ? {tenantName: `${TEST_TENANT.name} ${suffix}`}
+        : {
+            tenantId: (await db.insert(tenants)
+                .values({name: `${TEST_TENANT.name} ${suffix}`})
+                .returning())[0].id,
+        };
 
     // 先尝试注册用户
     const registerResponse = await app.inject({
         method: 'POST',
         url: '/api/v1/auth/register',
         payload: {
-            tenantName: TEST_TENANT.name,
+            ...tenantPayload,
             ...userData,
         },
     });

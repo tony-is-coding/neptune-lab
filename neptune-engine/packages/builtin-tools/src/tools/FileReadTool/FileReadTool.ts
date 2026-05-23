@@ -25,11 +25,12 @@ import {
 	addSkillDirectories,
 	discoverSkillDirsForPaths,
 } from 'src/skills/loadSkillsDir.js'
-import type {ToolUseContext} from 'src/Tool.js'
-import {buildTool, type ToolDef} from 'src/Tool.js'
+import type {ToolUseContext} from '../../tool.js'
+import {buildTool, type ToolDef} from '../../tool.js'
 import {getCwd} from 'src/utils/cwd.js'
-import {getClaudeConfigHomeDir, isEnvTruthy} from 'src/utils/envUtils.js'
-import {getErrnoCode, isENOENT} from 'src/utils/errors.js'
+import {getClaudeConfigHomeDir} from '../../utils/featureFlags.js'
+import {isEnvTruthy} from '../../utils/env.js'
+import {getErrnoCode, isENOENT} from '../../utils/errors.js'
 import {
 	addLineNumbers,
 	FILE_NOT_FOUND_CWD_NOTE,
@@ -38,7 +39,7 @@ import {
 	suggestPathUnderCwd,
 } from 'src/utils/file.js'
 import {logFileOperation} from 'src/utils/fileOperationAnalytics.js'
-import {formatFileSize} from 'src/utils/format.js'
+import {formatFileSize} from '../../utils/format.js'
 import {getFsImplementation} from 'src/utils/fsOperations.js'
 import {
 	compressImageBufferWithTokenLimit,
@@ -48,7 +49,7 @@ import {
 	ImageResizeError,
 	maybeResizeAndDownsampleImageBuffer,
 } from 'src/utils/imageResizer.js'
-import {lazySchema} from 'src/utils/lazySchema.js'
+import {lazySchema} from '../../utils/lazySchema.js'
 import {logError} from 'src/utils/log.js'
 import {isAutoMemFile} from 'src/utils/memoryFileDetection.js'
 import {createUserMessage} from 'src/utils/messages.js'
@@ -71,8 +72,8 @@ import {
 import type {PermissionDecision} from 'src/utils/permissions/PermissionResult.js'
 import {matchWildcardPattern} from 'src/utils/permissions/shellRuleMatching.js'
 import {readFileInRange} from 'src/utils/readFileInRange.js'
-import {semanticNumber} from 'src/utils/semanticNumber.js'
-import {jsonStringify} from 'src/utils/slowOperations.js'
+import {semanticNumber} from '../../utils/semanticNumber.js'
+import {jsonStringify} from '../../utils/json.js'
 import {BASH_TOOL_NAME} from '../BashTool/toolName.js'
 import {getDefaultFileReadingLimits} from './limits.js'
 import {

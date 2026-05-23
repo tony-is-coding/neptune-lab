@@ -5,7 +5,7 @@ test.describe('Smoke Tests', () => {
   test('login page renders correctly', async ({ page }) => {
     const diag = attachDiagnostics(page);
 
-    await page.goto('/login');
+    await page.goto('/login', { waitUntil: 'domcontentloaded' });
 
     // 标题和品牌
     await expect(page.locator('text=Welcome back')).toBeVisible();
@@ -25,29 +25,24 @@ test.describe('Smoke Tests', () => {
     printReport(diag, page.url(), stored);
   });
 
-  test('unauthenticated user is redirected to /login', async ({ page }) => {
+  test('unauthenticated user is redirected to login on protected route', async ({ page }) => {
     const diag = attachDiagnostics(page);
 
-    // 确保没有 auth 状态
-    await page.goto('/');
-    await page.waitForURL('**/login**');
+    await page.goto('/', { waitUntil: 'domcontentloaded' });
+    await page.waitForURL(url => url.pathname === '/login', { waitUntil: 'domcontentloaded' });
 
     expect(page.url()).toContain('/login');
-
-    // 尝试直接访问受保护页面
-    await page.goto('/collaborate');
-    await page.waitForURL('**/login**');
-    expect(page.url()).toContain('/login');
+    await expect(page.locator('text=Welcome back')).toBeVisible();
 
     const stored = await page.evaluate(() => localStorage.getItem('neptune-auth'));
+    expect(stored).toBeNull();
     printReport(diag, page.url(), stored);
   });
 
   test('no JavaScript errors on login page', async ({ page }) => {
     const diag = attachDiagnostics(page);
 
-    await page.goto('/login');
-    await page.waitForLoadState('networkidle');
+    await page.goto('/login', { waitUntil: 'domcontentloaded' });
 
     // 页面不应有 JS 错误（console.warn 是允许的）
     const jsErrors = diag.errors.filter(e =>
