@@ -20,3 +20,17 @@ export type {AccumulatorOutput} from './sse/ContentBlockAccumulator.js'
 export {accumulatorOutputToParsedEvent} from './sse/ContentBlockAccumulator.js'
 export type {RawSSEEvent} from './sse/sseEvents.js'
 export {mapSdkUsage, mapStopReason, partialMessageFromStart} from './sse/sseEvents.js'
+
+// Batch 8: MessageSerializer + Streaming Provider
+export {MessageSerializer} from './message/MessageSerializer.js'
+export type {SerializedRequestParams, SerializeInput} from './message/MessageSerializer.js'
+export {
+	normalizeContentBlock,
+	normalizeContentBlocks,
+	findThinkingBlocksMissingSignature,
+} from './message/ContentBlockNormalizer.js'
+export type {
+	StreamingProviderAdapter,
+	StreamingQueryParams,
+} from './provider/StreamingProviderAdapter.js'
+export {AnthropicStreamingProvider} from './provider/AnthropicStreamingProvider.js'
