@@ -1,9 +1,37 @@
 import { useState, useCallback, useRef } from 'react';
 import { sendThreadMessage, getThreadHistory } from '../api/threads';
 import type { ChatMessage, MessageBlock, PlanTask, BackgroundTask } from '../types/chat';
+import type { ChatErrorEvent } from '@shared/neptune-ai';
 
 let msgIdCounter = 0;
 const genId = () => `msg-${++msgIdCounter}-${Date.now()}`;
+
+function formatChatErrorMessage(error: Error, event?: ChatErrorEvent): string {
+  if (event?.error === 'QUOTA_EXCEEDED') {
+    return [
+      event.message || '租户配额不足',
+      '',
+      '本次运行未启动，系统已写入配额策略拒绝和审计事件。',
+      '',
+      '查看成本概览：/governance?tab=costs',
+      '查看策略决策：/governance?tab=policy',
+      event.requestId ? `请求编号：${event.requestId}` : '',
+    ].filter(Boolean).join('\n');
+  }
+
+  if (event?.error === 'POLICY_DENIED') {
+    return [
+      event.message || '本次操作被策略拒绝。',
+      '',
+      '本次运行未启动，请在治理台查看策略决策原因。',
+      '',
+      '查看策略决策：/governance?tab=policy',
+      event.requestId ? `请求编号：${event.requestId}` : '',
+    ].filter(Boolean).join('\n');
+  }
+
+  return event?.message || error.message;
+}
 
 export function useChatMessages() {
   const [messagesByThread, setMessagesByThread] = useState<Record<string, ChatMessage[]>>({});
@@ -280,11 +308,11 @@ export function useChatMessages() {
           });
         }
       },
-      onError: (error) => {
+      onError: (error, event) => {
         console.error('SSE error:', error);
         setBlocks(prev => {
           const filtered = prev.filter(b => !(b.type === 'thinking' && b.content === '思考中...'));
-          return [...filtered, { type: 'text', content: error.message }];
+          return [...filtered, { type: 'text', content: formatChatErrorMessage(error, event) }];
         });
         setStatus('complete');
       },

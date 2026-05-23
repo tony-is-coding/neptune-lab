@@ -1,6 +1,81 @@
 import { getStoredToken, useAuthStore } from '../stores/auth';
+import type { ApiErrorEnvelope } from '@shared/neptune-ai';
 
 export const API_BASE = '/api/v1';
+
+export class ApiClientError extends Error {
+  readonly status: number;
+  readonly error: string;
+  readonly requestId: string;
+  readonly details: Record<string, unknown>;
+  readonly envelope: Required<ApiErrorEnvelope>;
+
+  constructor(status: number, envelope: ApiErrorEnvelope) {
+    const normalized = normalizeApiErrorEnvelope(envelope);
+    super(normalized.message);
+    this.name = 'ApiClientError';
+    this.status = status;
+    this.error = normalized.error;
+    this.requestId = normalized.requestId;
+    this.details = normalized.details;
+    this.envelope = normalized;
+  }
+}
+
+export function normalizeApiErrorEnvelope(envelope: ApiErrorEnvelope): Required<ApiErrorEnvelope> {
+  return {
+    error: envelope.error || 'UNKNOWN_ERROR',
+    message: envelope.message || '请求失败',
+    requestId: envelope.requestId || '',
+    details: envelope.details || {},
+  };
+}
+
+export async function readApiErrorEnvelope(
+  response: Response,
+  fallback?: Partial<ApiErrorEnvelope>,
+): Promise<Required<ApiErrorEnvelope>> {
+  let payload: Partial<ApiErrorEnvelope> = {};
+  try {
+    const parsed = await response.json();
+    if (parsed && typeof parsed === 'object') {
+      payload = parsed as Partial<ApiErrorEnvelope>;
+    }
+  } catch {
+    payload = {};
+  }
+
+  return normalizeApiErrorEnvelope({
+    error: typeof payload.error === 'string' ? payload.error : fallback?.error || `HTTP_${response.status}`,
+    message: typeof payload.message === 'string' ? payload.message : fallback?.message || `请求失败：${response.status}`,
+    requestId: typeof payload.requestId === 'string'
+      ? payload.requestId
+      : response.headers.get('x-request-id') || fallback?.requestId || '',
+    details: payload.details && typeof payload.details === 'object'
+      ? payload.details as Record<string, unknown>
+      : fallback?.details || {},
+  });
+}
+
+export async function throwApiClientError(
+  response: Response,
+  fallback?: Partial<ApiErrorEnvelope>,
+): Promise<never> {
+  const envelope = await readApiErrorEnvelope(response, fallback);
+  throw new ApiClientError(response.status, envelope);
+}
+
+export function formatApiErrorForDisplay(error: unknown, fallback = '未知错误'): string {
+  if (error instanceof ApiClientError) {
+    return [
+      error.message,
+      error.requestId ? `请求编号：${error.requestId}` : '',
+    ].filter(Boolean).join('\n');
+  }
+
+  if (error instanceof Error) return error.message;
+  return fallback;
+}
 
 export function getAuthHeaders(): Record<string, string> {
   const token = getStoredToken();

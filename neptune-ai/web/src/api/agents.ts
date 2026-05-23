@@ -1,4 +1,5 @@
 import type { AgentTemplate, AgentWithSummary } from '../types/chat'
+import type {AgentDocumentCategory, AgentDocumentDto} from '@shared/neptune-ai'
 import { API_BASE, getAuthHeaders, handleUnauthorized, fetchWithTimeout } from './client'
 
 export interface ListAgentsResponse<T = AgentTemplate> {
@@ -135,18 +136,18 @@ export async function getAgentStats(id: string): Promise<AgentStats> {
 
 // === Agent Documents ===
 
-export interface AgentDocument {
-  id: string
-  name: string
-  type: string
-  size?: number
-  path?: string
-  uploadedAt: string
-}
+export type AgentDocument = AgentDocumentDto
 
 /** 获取 Agent 文档列表 */
-export async function listAgentDocuments(id: string): Promise<AgentDocument[]> {
-  const res = await fetch(`${API_BASE}/agents/${id}/documents`, {
+export async function listAgentDocuments(
+  id: string,
+  params?: { category?: AgentDocumentCategory },
+): Promise<AgentDocument[]> {
+  const searchParams = new URLSearchParams()
+  if (params?.category) searchParams.set('category', params.category)
+  const qs = searchParams.toString() ? `?${searchParams.toString()}` : ''
+
+  const res = await fetch(`${API_BASE}/agents/${id}/documents${qs}`, {
     headers: getAuthHeaders(),
   })
   if (res.status === 401) { handleUnauthorized(res); throw new Error('Unauthorized'); }
@@ -159,6 +160,7 @@ export async function listAgentDocuments(id: string): Promise<AgentDocument[]> {
 export async function uploadAgentDocument(
   id: string,
   file: File,
+  category: AgentDocumentCategory = 'document',
 ): Promise<AgentDocument> {
   // 将文件转为 base64
   const arrayBuffer = await file.arrayBuffer()
@@ -174,6 +176,7 @@ export async function uploadAgentDocument(
       type: file.type || file.name.split('.').pop()?.toUpperCase() || 'FILE',
       size: file.size,
       content: base64,
+      category,
     }),
   })
   if (res.status === 401) { handleUnauthorized(res); throw new Error('Unauthorized'); }

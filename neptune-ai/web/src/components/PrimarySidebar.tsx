@@ -41,16 +41,18 @@ export function PrimarySidebar() {
   };
 
   const links = [
-    { to: '/', icon: 'home', label: 'Home' },
-    { to: '/agents', icon: 'smart_toy', label: 'Agents' },
-    { to: '/skills', icon: 'psychology', label: 'Skills' },
-    { to: '/collaborate', icon: 'groups', label: 'Collaborate' },
+    { to: '/delivery', icon: 'home', label: '交付台', testId: 'home' },
+    { to: '/agents', icon: 'smart_toy', label: '智能体模板', testId: 'agents' },
+    { to: '/skills', icon: 'psychology', label: '技能目录', testId: 'skills' },
+    { to: '/collaborate', icon: 'groups', label: '运行调试', testId: 'collaborate' },
+    { to: '/governance', icon: 'policy', label: '治理台', testId: 'governance' },
+    { to: '/close', icon: 'assignment_turned_in', label: '关账工作台', testId: 'close' },
   ];
 
   return (
     <nav
       data-testid="primary-sidebar"
-      className="fixed left-0 top-0 h-full w-[48px] bg-white flex flex-col items-center pt-5 pb-4 z-50 shrink-0"
+      className="fixed left-0 top-0 h-full w-[48px] bg-ivory flex flex-col items-center pt-5 pb-4 z-50 shrink-0"
     >
       {/* Logo */}
       <Link to="/" className="mb-8 flex items-center justify-center w-7 h-7 rounded-md" style={{ backgroundColor: '#1a1a1a' }}>
@@ -59,15 +61,16 @@ export function PrimarySidebar() {
 
       {/* Nav icons */}
       <div className="flex flex-col items-center gap-5 flex-1">
-        {links.map(({ to, icon, label }) => {
-          const isActive = location.pathname === to || (to !== '/' && location.pathname.startsWith(`${to}`));
-          const trulyActive = to === '/' ? location.pathname === '/' : isActive;
+        {links.map(({ to, icon, label, testId }) => {
+          const isDelivery = to === '/delivery' && location.pathname === '/';
+          const isActive = location.pathname === to || location.pathname.startsWith(`${to}`) || isDelivery;
+          const trulyActive = isActive;
 
           return (
             <Link
               key={to}
               to={to}
-              data-testid={`nav-${label.toLowerCase()}`}
+              data-testid={`nav-${testId}`}
               title={label}
               className="group relative flex items-center justify-center w-8 h-8"
             >
@@ -75,14 +78,14 @@ export function PrimarySidebar() {
                 className="material-symbols-outlined text-[20px] transition-colors"
                 style={{
                   fontVariationSettings: trulyActive ? "'FILL' 1" : "'FILL' 0",
-                  color: trulyActive ? '#1a1a1a' : '#a3a3a3',
+                  color: trulyActive ? '#141413' : '#87867f',
                 }}
               >
                 {icon}
               </span>
               {/* Active dot indicator */}
               {trulyActive && (
-                <span className="absolute -left-[2px] top-1/2 -translate-y-1/2 w-[3px] h-3 rounded-full bg-[#1a1a1a]" />
+                <span className="absolute -left-[2px] top-1/2 -translate-y-1/2 w-[3px] h-3 rounded-full bg-charcoal" />
               )}
             </Link>
           );
@@ -91,10 +94,10 @@ export function PrimarySidebar() {
 
       {/* Bottom icons */}
       <div className="flex flex-col items-center gap-4 mt-auto">
-        <button title="Alerts" className="flex items-center justify-center w-8 h-8 text-[#a3a3a3] hover:text-[#1a1a1a] transition-colors">
+        <button title="通知" className="flex items-center justify-center w-8 h-8 text-stone hover:text-charcoal transition-colors">
           <span className="material-symbols-outlined text-[20px]">notifications</span>
         </button>
-        <button title="Settings" className="flex items-center justify-center w-8 h-8 text-[#a3a3a3] hover:text-[#1a1a1a] transition-colors">
+        <button title="设置" className="flex items-center justify-center w-8 h-8 text-stone hover:text-charcoal transition-colors">
           <span className="material-symbols-outlined text-[20px]">settings</span>
         </button>
 
@@ -104,8 +107,8 @@ export function PrimarySidebar() {
             onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
             className="flex items-center justify-center w-7 h-7 rounded-full text-[10px] font-semibold transition-colors"
             style={{
-              backgroundColor: isUserMenuOpen ? '#1a1a1a' : '#e5e5e5',
-              color: isUserMenuOpen ? '#fff' : '#525252',
+              backgroundColor: isUserMenuOpen ? '#141413' : '#e8e6dc',
+              color: isUserMenuOpen ? '#faf9f5' : '#4d4c48',
             }}
             data-testid="user-avatar-button"
           >
@@ -116,15 +119,15 @@ export function PrimarySidebar() {
 
           {/* User menu popup */}
           {isUserMenuOpen && (
-            <div className="absolute bottom-0 left-full ml-3 w-[220px] bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden z-[60]">
-              <div className="p-3 border-b border-gray-100">
+            <div className="absolute bottom-0 left-full ml-3 w-[220px] bg-ivory border border-border-cream rounded-xl shadow-whisper overflow-hidden z-[60]">
+              <div className="p-3 border-b border-border-cream">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-semibold" style={{ backgroundColor: '#1a1a1a', color: '#fff' }}>
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-semibold" style={{ backgroundColor: '#141413', color: '#faf9f5' }}>
                     {user ? getUserInitials() : 'U'}
                   </div>
                   <div className="overflow-hidden">
-                    <p className="text-[13px] font-semibold text-[#1a1a1a] truncate">{user?.name || 'Guest'}</p>
-                    <p className="text-[11px] text-[#a3a3a3] truncate">{user?.email || 'Not logged in'}</p>
+                    <p className="text-[13px] font-semibold text-charcoal truncate">{user?.name || '访客'}</p>
+                    <p className="text-[11px] text-stone truncate">{user?.email || '未登录'}</p>
                   </div>
                 </div>
               </div>
@@ -132,18 +135,18 @@ export function PrimarySidebar() {
                 <Link
                   to="/settings"
                   onClick={() => setIsUserMenuOpen(false)}
-                  className="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[13px] text-[#1a1a1a] hover:bg-gray-50 transition-colors"
+                  className="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[13px] text-charcoal hover:bg-surface-container-high transition-colors"
                 >
                   <span className="material-symbols-outlined text-[18px]">settings</span>
-                  <span>Settings</span>
+                  <span>设置</span>
                 </Link>
                 <button
                   onClick={handleLogout}
-                  className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[13px] text-red-600 hover:bg-red-50 transition-colors"
+                  className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[13px] text-error hover:bg-surface-container-high transition-colors"
                   data-testid="logout-button"
                 >
                   <span className="material-symbols-outlined text-[18px]">logout</span>
-                  <span>Log out</span>
+                  <span>退出登录</span>
                 </button>
               </div>
             </div>

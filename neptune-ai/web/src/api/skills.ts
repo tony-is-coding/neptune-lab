@@ -135,6 +135,44 @@ export async function updateSkill(id: string, data: UpdateSkillData): Promise<Sk
   return res.json();
 }
 
+export async function publishSkill(id: string): Promise<Skill> {
+  const res = await fetch(`${API_BASE}/skills/${id}/publish`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+  });
+
+  if (res.status === 401) {
+    handleUnauthorized(res);
+    throw new Error('Unauthorized');
+  }
+
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ message: 'Unknown error' }));
+    throw new Error(error.message || `publishSkill failed: ${res.status}`);
+  }
+
+  return res.json();
+}
+
+export async function unpublishSkill(id: string): Promise<Skill> {
+  const res = await fetch(`${API_BASE}/skills/${id}/unpublish`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+  });
+
+  if (res.status === 401) {
+    handleUnauthorized(res);
+    throw new Error('Unauthorized');
+  }
+
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ message: 'Unknown error' }));
+    throw new Error(error.message || `unpublishSkill failed: ${res.status}`);
+  }
+
+  return res.json();
+}
+
 export async function deleteSkill(id: string): Promise<void> {
   const res = await fetch(`${API_BASE}/skills/${id}`, {
     method: 'DELETE',
