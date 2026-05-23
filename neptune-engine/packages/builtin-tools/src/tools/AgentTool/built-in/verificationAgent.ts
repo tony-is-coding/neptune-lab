@@ -1,5 +1,5 @@
 import {BASH_TOOL_NAME} from '@neptune/builtin-tools/tools/BashTool/toolName.js'
-import {EXIT_PLAN_MODE_TOOL_NAME} from '@neptune/builtin-tools/tools/ExitPlanModeTool/constants.js'
+import {EXIT_PLAN_MODE_TOOL_NAME} from '@neptune/builtin-tools/constants/toolNames.js'
 import {FILE_EDIT_TOOL_NAME} from '@neptune/builtin-tools/tools/FileEditTool/constants.js'
 import {FILE_WRITE_TOOL_NAME} from '@neptune/builtin-tools/tools/FileWriteTool/prompt.js'
 import {NOTEBOOK_EDIT_TOOL_NAME} from '@neptune/builtin-tools/tools/NotebookEditTool/constants.js'
