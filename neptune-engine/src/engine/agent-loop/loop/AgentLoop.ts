@@ -84,6 +84,8 @@ export interface AgentLoopParams {
 	cachePolicy?: import('../caching/CacheControlPolicy.js').CacheControlPolicy
 	/** History compaction policy（默认无；注入 MicroCompaction 即可启用）。 */
 	compactionPolicy?: import('../compaction/CompactionPolicy.js').CompactionPolicy
+	/** Budget tracker（默认无；注入 DefaultBudgetTracker 即可启用 token 上限保护）。 */
+	budgetTracker?: import('../budget/BudgetTracker.js').BudgetTracker
 }
 
 // ============================================================
@@ -317,6 +319,15 @@ export class AgentLoop {
 				params.usageTracker.recordTurn(turnCount, params.model, collected.finalUsage)
 			}
 
+			// Budget check（统计；超出则在 emit 后退出）
+			let budgetExceeded = false
+			if (params.budgetTracker) {
+				params.budgetTracker.recordUsage(collected.finalUsage)
+				if (params.budgetTracker.check().shouldStop) {
+					budgetExceeded = true
+				}
+			}
+
 			// 构造 AssistantMessage 并 emit
 			const assistantMessage = buildAssistantMessage(collected)
 			messages.push(assistantMessage)
@@ -334,6 +345,17 @@ export class AgentLoop {
 			}
 
 			lastStopReason = collected.stopReason
+
+			// Budget exceeded → 在 assistantMessage emit 后退出
+			if (budgetExceeded) {
+				return {
+					reason: 'budget_exceeded',
+					apiStopReason: collected.stopReason,
+					cumulativeUsage,
+					finalMessages: messages,
+					turnCount,
+				}
+			}
 
 			// 决策 stop_reason
 			if (

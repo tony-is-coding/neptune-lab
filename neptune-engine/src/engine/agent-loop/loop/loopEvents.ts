@@ -38,6 +38,7 @@ export interface LoopResult {
 		| 'aborted'
 		| 'error'
 		| 'max_turns'
+		| 'budget_exceeded'
 	/** 最终的 stop_reason（来自 API）。aborted/error/max_turns 时为 null。 */
 	apiStopReason: StopReason | null
 	/** 累计 usage。 */

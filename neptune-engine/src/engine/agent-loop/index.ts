@@ -108,3 +108,13 @@ export type {
 	CompactionResult,
 	MicroCompactionOptions,
 } from './compaction/CompactionPolicy.js'
+
+// Batch 16: Budget + CircuitBreaker
+export {DefaultBudgetTracker, NoOpBudgetTracker} from './budget/BudgetTracker.js'
+export type {
+	BudgetTracker,
+	BudgetDecision,
+	DefaultBudgetOptions,
+} from './budget/BudgetTracker.js'
+export {CircuitBreaker} from './budget/CircuitBreaker.js'
+export type {CircuitState, CircuitBreakerOptions} from './budget/CircuitBreaker.js'
