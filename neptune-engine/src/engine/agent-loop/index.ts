@@ -68,3 +68,20 @@ export type {
 } from './hook/HookSurface.js'
 export {CancellationToken} from './cancellation/CancellationToken.js'
 export type {CancellationReason, CancellationInfo} from './cancellation/CancellationToken.js'
+
+// Batch 12: Retry / Fallback
+export {classifyError, isRetryable} from './retry/ErrorClassifier.js'
+export type {ErrorClass, ErrorClassification} from './retry/ErrorClassifier.js'
+export {DefaultRetryPolicy} from './retry/RetryPolicy.js'
+export type {
+	RetryPolicy,
+	RetryDecision,
+	RetryContext,
+	DefaultRetryPolicyOptions,
+} from './retry/RetryPolicy.js'
+export {withRetry} from './retry/withRetry.js'
+export type {WithRetryOptions} from './retry/withRetry.js'
+export {RetryingProvider} from './retry/RetryingProvider.js'
+export type {RetryingProviderOptions} from './retry/RetryingProvider.js'
+export {FallbackProvider} from './fallback/ModelFallback.js'
+export type {ModelFallbackOptions} from './fallback/ModelFallback.js'
