@@ -85,3 +85,8 @@ export {RetryingProvider} from './retry/RetryingProvider.js'
 export type {RetryingProviderOptions} from './retry/RetryingProvider.js'
 export {FallbackProvider} from './fallback/ModelFallback.js'
 export type {ModelFallbackOptions} from './fallback/ModelFallback.js'
+
+// Batch 13: Watchdog
+export {withStreamWatchdog} from './watchdog/StreamWatchdog.js'
+export type {StreamWatchdogOptions} from './watchdog/StreamWatchdog.js'
+export {WatchdogProvider} from './watchdog/WatchdogProvider.js'
