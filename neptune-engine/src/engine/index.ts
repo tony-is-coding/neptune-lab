@@ -232,3 +232,64 @@ export type {ToolExtension, PermissionConfig} from './bridge/OriginalQueryEngine
 // SessionManager / Session / Bridge
 // SessionContextStorage / TokenBudgetManager / TranscriptParser
 // 以上为内部实现，不对外暴露
+
+// =============================================================================
+// Runtime Kernel Protocols (Phase A — see docs/strategy/neptune-engine-runtime-kernel-design.md)
+//
+// Skill / Todo / TaskQueue / ToolRegistry / Memory — per-session protocol
+// surfaces that builtin tools and product hosts both program against.
+// Each module ships a default in-memory implementation; product hosts can
+// substitute persistent or distributed implementations of the same interfaces.
+// =============================================================================
+
+export type {
+	RegisteredSkill,
+	SkillManifest,
+	SkillRegistry,
+	SkillSource,
+} from './skill/index.js'
+export {
+	parseSkillMarkdown,
+	serializeSkillToMarkdown,
+	validateSkillManifest,
+	SkillFormatError,
+	InMemorySkillRegistry,
+} from './skill/index.js'
+
+export type {
+	TodoEvent,
+	TodoItem,
+	TodoState,
+	TodoStatus,
+} from './todo/index.js'
+export {InMemoryTodoState} from './todo/index.js'
+
+export type {
+	AgentRef,
+	Task,
+	TaskEvent,
+	TaskFilter,
+	TaskInput,
+	TaskOutput,
+	TaskPatch,
+	TaskQueue,
+	TaskStatus,
+} from './task-queue/index.js'
+export {InMemoryTaskQueue} from './task-queue/index.js'
+
+export type {
+	ToolFilter,
+	ToolRegistry as KernelToolRegistry,
+	ToolSearchResult,
+} from './tool-registry/index.js'
+export {InMemoryToolRegistry} from './tool-registry/index.js'
+
+export type {
+	MemoryEntry,
+	MemoryEntryInput,
+	MemoryQuery,
+	MemoryRef,
+	MemorySource,
+	MemoryStore,
+} from './memory/index.js'
+export {InMemoryMemoryStore} from './memory/index.js'

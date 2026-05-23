@@ -335,6 +335,7 @@
       "name": "@neptune/builtin-tools",
       "version": "1.0.0",
       "dependencies": {
+        "@neptune/engine": "workspace:*",
         "@neptune/engine-tools": "workspace:*",
         "axios": "^1.14.0",
       },

@@ -41,5 +41,41 @@ export {REPLTool} from './tools/REPLTool/REPLTool.js'
 export {SendMessageTool} from './tools/SendMessageTool/SendMessageTool.js'
 export {SleepTool} from './tools/SleepTool/SleepTool.js'
 
+// =============================================================================
+// Runtime Kernel Protocol-backed tools
+// (See docs/strategy/neptune-engine-runtime-kernel-design.md §10.2 — Phase B)
+// These tools are thin shells over the Phase A protocols. Hosts inject the
+// concrete protocol implementations via ctx.kernel; without injection, calls
+// fail closed with a clear error. Default in-memory implementations live in
+// `@neptune/engine` and are sufficient for SDK-style single-process agents.
+// =============================================================================
+export {
+	DiscoverSkillsTool,
+	DISCOVER_SKILLS_TOOL_NAME,
+	MemoryRecallTool,
+	MEMORY_RECALL_TOOL_NAME,
+	MemoryWriteTool,
+	MEMORY_WRITE_TOOL_NAME,
+	TaskCreateTool,
+	TASK_CREATE_TOOL_NAME,
+	TaskGetTool,
+	TASK_GET_TOOL_NAME,
+	TaskListTool,
+	TASK_LIST_TOOL_NAME,
+	TaskOutputTool,
+	TASK_OUTPUT_TOOL_NAME,
+	TaskStopTool,
+	TASK_STOP_TOOL_NAME,
+	TaskUpdateTool,
+	TASK_UPDATE_TOOL_NAME,
+	TodoWriteTool,
+	TODO_WRITE_TOOL_NAME,
+	ToolSearchTool,
+	TOOL_SEARCH_TOOL_NAME,
+} from './tools/kernel/index.js'
+
+export type {KernelProtocols, KernelToolContext} from './kernel-context.js'
+export {KERNEL_CONTEXT_KEY, requireProtocol} from './kernel-context.js'
+
 // Shared utilities
 export {tagMessagesWithToolUseID, getToolUseIDFromParentMessage} from './tools/utils.js'
