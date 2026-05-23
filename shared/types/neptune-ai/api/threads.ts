@@ -1,5 +1,6 @@
 import type {IsoDateString, ListResponse} from './common';
 import type {ChatMessage, PlanTask} from '../chat/view';
+import type {RunListResponse} from './platform-facts';
 
 export type ThreadStatus = 'created' | 'running' | 'idle' | 'completed' | 'error';
 
@@ -18,6 +19,7 @@ export interface ThreadDto {
 }
 
 export type ListThreadsResponse = ListResponse<ThreadDto>;
+export type ThreadRunListResponse = RunListResponse;
 
 export interface CreateThreadRequest {
   title?: string;
