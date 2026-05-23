@@ -25,7 +25,7 @@ import {TASK_UPDATE_TOOL_NAME} from '@neptune/builtin-tools/tools/TaskUpdateTool
 import {TOOL_SEARCH_TOOL_NAME} from '@neptune/builtin-tools/tools/ToolSearchTool/prompt.js'
 import {
 	SYNTHETIC_OUTPUT_TOOL_NAME
-} from '@neptune/builtin-tools/tools/SyntheticOutputTool/SyntheticOutputTool.js'
+} from '../product-tools/synthetic-output/SyntheticOutputTool.js'
 import {
 	ENTER_WORKTREE_TOOL_NAME,
 	EXIT_WORKTREE_TOOL_NAME,

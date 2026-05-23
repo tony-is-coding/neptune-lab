@@ -21,7 +21,7 @@ import type {AgentToolResult} from '@neptune/builtin-tools/tools/AgentTool/agent
 import type {AgentDefinition} from '@neptune/builtin-tools/tools/AgentTool/loadAgentsDir.js'
 import {
 	SYNTHETIC_OUTPUT_TOOL_NAME
-} from '@neptune/builtin-tools/tools/SyntheticOutputTool/SyntheticOutputTool.js'
+} from '../../product-tools/synthetic-output/SyntheticOutputTool.js'
 import {asAgentId} from '../../types/ids.js'
 import type {Message} from '../../types/message.js'
 import {

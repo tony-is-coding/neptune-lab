@@ -7,7 +7,7 @@ import type {ToolUseContext} from '../../Tool.js'
 import {type Tool, toolMatchesName} from '../../Tool.js'
 import {
 	SYNTHETIC_OUTPUT_TOOL_NAME
-} from '@neptune/builtin-tools/tools/SyntheticOutputTool/SyntheticOutputTool.js'
+} from '../../product-tools/synthetic-output/SyntheticOutputTool.js'
 import {ALL_AGENT_DISALLOWED_TOOLS} from '../../tools.js'
 import {asAgentId} from '../../types/ids.js'
 import type {Message} from '../../types/message.js'

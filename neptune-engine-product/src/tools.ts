@@ -57,9 +57,9 @@ import {TaskOutputTool} from '@neptune/builtin-tools/tools/TaskOutputTool/TaskOu
 import {WebSearchTool} from '@neptune/builtin-tools/tools/WebSearchTool/WebSearchTool.js'
 import {TodoWriteTool} from '@neptune/builtin-tools/tools/TodoWriteTool/TodoWriteTool.js'
 import {ExitPlanModeV2Tool} from '@neptune/builtin-tools/tools/ExitPlanModeTool/ExitPlanModeV2Tool.js'
-import {TestingPermissionTool} from '@neptune/builtin-tools/tools/testing/TestingPermissionTool.js'
+import {TestingPermissionTool} from './product-tools/testing/TestingPermissionTool.js'
 import {GrepTool} from '@neptune/builtin-tools/tools/GrepTool/GrepTool.js'
-import {TungstenTool} from '@neptune/builtin-tools/tools/TungstenTool/TungstenTool.js'
+import {TungstenTool} from './product-tools/tungsten/TungstenTool.js'
 // Lazy require to break circular dependency: tools.ts -> TeamCreateTool/TeamDeleteTool -> ... -> tools.ts
 /* eslint-disable @typescript-eslint/no-require-imports */
 const getTeamCreateTool = () =>
@@ -104,7 +104,7 @@ const VerifyPlanExecutionTool =
 /* eslint-enable custom-rules/no-process-env-top-level, @typescript-eslint/no-require-imports */
 import {
 	SYNTHETIC_OUTPUT_TOOL_NAME
-} from '@neptune/builtin-tools/tools/SyntheticOutputTool/SyntheticOutputTool.js'
+} from './product-tools/synthetic-output/SyntheticOutputTool.js'
 
 export {
 	ALL_AGENT_DISALLOWED_TOOLS,
@@ -116,7 +116,7 @@ import {feature} from 'bun:bundle'
 // Dead code elimination: conditional import for OVERFLOW_TEST_TOOL
 /* eslint-disable custom-rules/no-process-env-top-level, @typescript-eslint/no-require-imports */
 const OverflowTestTool = feature('OVERFLOW_TEST_TOOL')
-	? require('@neptune/builtin-tools/tools/OverflowTestTool/OverflowTestTool.js').OverflowTestTool
+	? require('./product-tools/overflow-test/OverflowTestTool.js').OverflowTestTool
 	: null
 const CtxInspectTool = feature('CONTEXT_COLLAPSE')
 	? require('@neptune/builtin-tools/tools/CtxInspectTool/CtxInspectTool.js').CtxInspectTool

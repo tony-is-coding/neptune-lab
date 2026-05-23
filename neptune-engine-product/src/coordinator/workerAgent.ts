@@ -14,7 +14,7 @@ import {ASYNC_AGENT_ALLOWED_TOOLS} from '../constants/tools.js'
 import {SEND_MESSAGE_TOOL_NAME} from '@neptune/builtin-tools/tools/SendMessageTool/constants.js'
 import {
 	SYNTHETIC_OUTPUT_TOOL_NAME
-} from '@neptune/builtin-tools/tools/SyntheticOutputTool/SyntheticOutputTool.js'
+} from '../product-tools/synthetic-output/SyntheticOutputTool.js'
 import {TEAM_CREATE_TOOL_NAME} from '@neptune/builtin-tools/tools/TeamCreateTool/constants.js'
 import {TEAM_DELETE_TOOL_NAME} from '@neptune/builtin-tools/tools/TeamDeleteTool/constants.js'
 import type {BuiltInAgentDefinition} from '@neptune/builtin-tools/tools/AgentTool/loadAgentsDir.js'

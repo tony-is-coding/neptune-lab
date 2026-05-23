@@ -3,7 +3,7 @@ import type {Tool} from '../../Tool.js'
 import {
 	SYNTHETIC_OUTPUT_TOOL_NAME,
 	SyntheticOutputTool,
-} from '@neptune/builtin-tools/tools/SyntheticOutputTool/SyntheticOutputTool.js'
+} from '../../product-tools/synthetic-output/SyntheticOutputTool.js'
 import {substituteArguments} from '../argumentSubstitution.js'
 import {lazySchema} from '../lazySchema.js'
 import type {SetAppState} from '../messageQueueManager.js'

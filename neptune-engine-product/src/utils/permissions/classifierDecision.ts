@@ -31,7 +31,7 @@ const TERMINAL_CAPTURE_TOOL_NAME = feature('TERMINAL_PANEL')
 	: null
 const OVERFLOW_TEST_TOOL_NAME = feature('OVERFLOW_TEST_TOOL')
 	? (
-		require('@neptune/builtin-tools/tools/OverflowTestTool/OverflowTestTool.js') as typeof import('@neptune/builtin-tools/tools/OverflowTestTool/OverflowTestTool.js')
+		require('../../product-tools/overflow-test/OverflowTestTool.js') as typeof import('../../product-tools/overflow-test/OverflowTestTool.js')
 	).OVERFLOW_TEST_TOOL_NAME
 	: null
 const VERIFY_PLAN_EXECUTION_TOOL_NAME =

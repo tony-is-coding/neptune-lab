@@ -1,10 +1,12 @@
 /**
- * This testing-only tool will always pop up a permission dialog when called by
- * the model.
+ * Test-only tool that always asks for permission. Used in NODE_ENV=test
+ * end-to-end runs to exercise the permission dialog. Intentionally
+ * product-side — it has no business in any independent runtime kernel.
  */
 import {z} from 'zod/v4'
-import type {Tool} from '../../tool.js'
-import {buildTool, type ToolDef} from '../../tool.js'
+import type {Tool} from '../../Tool.js'
+import {buildTool, type ToolDef} from '../../Tool.js'
+import type {PermissionResult} from '../../utils/permissions/PermissionResult.js'
 import {lazySchema} from '../../utils/lazySchema.js'
 
 const NAME = 'TestingPermission'
@@ -36,10 +38,10 @@ export const TestingPermissionTool: Tool<InputSchema, string> = buildTool({
 	isReadOnly() {
 		return true
 	},
-	async checkPermissions() {
+	async checkPermissions(): Promise<PermissionResult> {
 		// This tool always requires permission
 		return {
-			behavior: 'ask' as const,
+			behavior: 'ask',
 			message: `Run test?`,
 		}
 	},
