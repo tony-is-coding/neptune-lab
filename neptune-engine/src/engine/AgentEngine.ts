@@ -443,12 +443,9 @@ export class AgentEngine {
 
 		// 生命周期事件：Session 创建成功
 		this.eventBus.emit('session:created', {sessionId, workspace})
-		this.metricsProvider.counter('session.created').increment()
 
 		// Metrics: session.created
-		if (this.metricsProvider) {
-			this.metricsProvider.counter('session.created').increment()
-		}
+		this.metricsProvider.counter('session.created').increment()
 
 		return sessionId
 	}
@@ -538,15 +535,12 @@ export class AgentEngine {
 
 		await this.sessionManager.destroySession(sessionId)
 
-		// Metrics: session.destroyed
-		if (this.metricsProvider) {
-			this.metricsProvider.counter('session.destroyed').increment()
-		}
-
 		// 生命周期事件：Session 销毁成功
 		if (workspace) {
 			this.eventBus.emit('session:destroyed', {sessionId, workspace})
 		}
+
+		// Metrics: session.destroyed
 		this.metricsProvider.counter('session.destroyed').increment()
 	}
 
@@ -670,12 +664,9 @@ export class AgentEngine {
 
 		// 标记 session 为活跃状态
 		this.activeQueries.set(sessionId, true)
-		this.metricsProvider.counter('query.started').increment()
 
 		// Metrics: query.started
-		if (this.metricsProvider) {
-			this.metricsProvider.counter('query.started').increment()
-		}
+		this.metricsProvider.counter('query.started').increment()
 
 		try {
 			// 1. 验证 session 存在且可用
@@ -760,6 +751,7 @@ export class AgentEngine {
 
 			// 使用 runWithCwd 确保所有 getCwd/pwd() 调用返回正确的 workspace 路径
 			// 注意：runWithCwd 的返回值需要通过 yield* 传播
+			let sawErrorEvent = false
 			yield* ccRuntime.runWithCwd(workspace, () =>
 				runInSessionContextAsync(sessionCtx, async function* () {
 					try {
@@ -777,6 +769,10 @@ export class AgentEngine {
 								// emit 异常不影响 yield，确保消息流继续
 								LogUtil.debug('EventBus emit 异常', {sessionId, error: String(emitError)})
 							}
+							const messageType = (message as { type?: string }).type
+							if (messageType === 'error' || messageType === 'assistant_error') {
+								sawErrorEvent = true
+							}
 							yield message
 						}
 					} catch (error: any) {
@@ -791,6 +787,10 @@ export class AgentEngine {
 					}
 				}),
 			)
+			if (sawErrorEvent) {
+				// query 通过事件流报告失败：补记 query.failed 计数
+				this.metricsProvider.counter('query.failed').increment()
+			}
 		} catch (error) {
 			this.metricsProvider.counter('query.failed').increment()
 			throw error

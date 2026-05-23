@@ -5,6 +5,24 @@ cd "$(dirname "$0")/.."
 
 status=0
 
+# Pick the best available recursive grep tool. Prefer ripgrep when present;
+# fall back to BSD/GNU grep so the check still runs on stock macOS without rg.
+# Without this fallback the script would silently report "passed" because the
+# `|| true` guard swallows `rg: command not found`.
+if command -v rg >/dev/null 2>&1; then
+  search() {
+    local pattern="$1"
+    shift
+    rg -n --no-messages "$pattern" "$@" || true
+  }
+else
+  search() {
+    local pattern="$1"
+    shift
+    grep -rEn --binary-files=without-match "$pattern" "$@" 2>/dev/null || true
+  }
+fi
+
 check_max_count() {
   local label="$1"
   local pattern="$2"
@@ -12,7 +30,7 @@ check_max_count() {
   shift 3
 
   local matches
-  matches=$(rg -n "$pattern" "$@" || true)
+  matches=$(search "$pattern" "$@")
   local count=0
   if [[ -n "$matches" ]]; then
     count=$(printf '%s\n' "$matches" | wc -l | tr -d ' ')
@@ -31,7 +49,7 @@ check_empty() {
   shift 2
 
   local matches
-  matches=$(rg -n "$pattern" "$@" || true)
+  matches=$(search "$pattern" "$@")
   if [[ -n "$matches" ]]; then
     echo "Boundary check failed: $label" >&2
     echo "$matches" >&2
@@ -41,7 +59,7 @@ check_empty() {
 
 check_empty \
   "engine kernel must not import product, builtin-tools, or product src/* paths" \
-  "^\\s*(import|export).*(@neptune/engine-product|@neptune/builtin-tools|from ['\"]src/)|\\b(require|import)\\(['\"](@neptune/engine-product|@neptune/builtin-tools|src/)" \
+  "^[[:space:]]*(import|export).*(@neptune/engine-product|@neptune/builtin-tools|from ['\"]src/)|\\b(require|import)\\(['\"](@neptune/engine-product|@neptune/builtin-tools|src/)" \
   src \
   package.json \
   tsconfig.json \
