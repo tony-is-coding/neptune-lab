@@ -1,16 +1,22 @@
-// builtin-tools — All tool implementations for Claude Code
-// This barrel file re-exports the main tool constants and utilities.
-// For specific submodules, use deep imports: 'builtin-tools/tools/XTool/XTool.js'
+// builtin-tools — Tool implementations that belong to the Agent Runtime Kernel.
+//
+// This barrel file re-exports the runtime-side tools that remain in the
+// engine workspace after the product-tool extraction (see
+// docs/strategy/neptune-engine-decoupling-handover.md). Product-only tools
+// (Task*, Team*, Schedule*, Send*, Verify*, Monitor, Snip, CtxInspect,
+// ToolSearch, Config, ListPeers, PushNotification, TerminalCapture,
+// TodoWrite, DiscoverSkills, etc.) now live under
+// neptune-engine-product/src/product-tools/<domain>/.
+//
+// For specific submodules use deep imports:
+//   '@neptune/builtin-tools/tools/XTool/XTool.js'
 
 // =============================================================================
-// Main tool exports (used by src/tools.ts)
+// Runtime-side tools that remain in engine
 // =============================================================================
-
-// Core tools
 export {AgentTool} from './tools/AgentTool/AgentTool.js'
 export {AskUserQuestionTool} from './tools/AskUserQuestionTool/AskUserQuestionTool.js'
 export {BashTool} from './tools/BashTool/BashTool.js'
-export {ConfigTool} from './tools/ConfigTool/ConfigTool.js'
 export {EnterPlanModeTool} from './tools/EnterPlanModeTool/EnterPlanModeTool.js'
 export {ExitPlanModeV2Tool} from './tools/ExitPlanModeTool/ExitPlanModeV2Tool.js'
 export {FileEditTool} from './tools/FileEditTool/FileEditTool.js'
@@ -23,37 +29,15 @@ export {ListMcpResourcesTool} from './tools/ListMcpResourcesTool/ListMcpResource
 export {ReadMcpResourceTool} from './tools/ReadMcpResourceTool/ReadMcpResourceTool.js'
 export {NotebookEditTool} from './tools/NotebookEditTool/NotebookEditTool.js'
 export {SkillTool} from './tools/SkillTool/SkillTool.js'
-export {TaskOutputTool} from './tools/TaskOutputTool/TaskOutputTool.js'
-export {TaskStopTool} from './tools/TaskStopTool/TaskStopTool.js'
-export {TodoWriteTool} from './tools/TodoWriteTool/TodoWriteTool.js'
-export {ToolSearchTool} from './tools/ToolSearchTool/ToolSearchTool.js'
-export {TungstenTool} from './tools/TungstenTool/TungstenTool.js'
 export {WebFetchTool} from './tools/WebFetchTool/WebFetchTool.js'
 export {WebSearchTool} from './tools/WebSearchTool/WebSearchTool.js'
-export {TestingPermissionTool} from './tools/testing/TestingPermissionTool.js'
 
-// Feature-gated tools
-export {OVERFLOW_TEST_TOOL_NAME} from './tools/OverflowTestTool/OverflowTestTool.js'
-export {CtxInspectTool} from './tools/CtxInspectTool/CtxInspectTool.js'
-export {ListPeersTool} from './tools/ListPeersTool/ListPeersTool.js'
-export {MonitorTool} from './tools/MonitorTool/MonitorTool.js'
-export {PushNotificationTool} from './tools/PushNotificationTool/PushNotificationTool.js'
+// Feature-gated runtime tools
 export {REPLTool} from './tools/REPLTool/REPLTool.js'
-export {CronCreateTool} from './tools/ScheduleCronTool/CronCreateTool.js'
-export {CronDeleteTool} from './tools/ScheduleCronTool/CronDeleteTool.js'
-export {CronListTool} from './tools/ScheduleCronTool/CronListTool.js'
 export {SendMessageTool} from './tools/SendMessageTool/SendMessageTool.js'
-export {SendUserFileTool} from './tools/SendUserFileTool/SendUserFileTool.js'
 export {SleepTool} from './tools/SleepTool/SleepTool.js'
-export {SnipTool} from './tools/SnipTool/SnipTool.js'
 export {TeamCreateTool} from './tools/TeamCreateTool/TeamCreateTool.js'
-export {TeamDeleteTool} from './tools/TeamDeleteTool/TeamDeleteTool.js'
-export {TerminalCaptureTool} from './tools/TerminalCaptureTool/TerminalCaptureTool.js'
-export {VerifyPlanExecutionTool} from './tools/VerifyPlanExecutionTool/VerifyPlanExecutionTool.js'
 export {WebBrowserTool} from './tools/WebBrowserTool/WebBrowserTool.js'
-
-// Constants
-export {SYNTHETIC_OUTPUT_TOOL_NAME, createSyntheticOutputTool} from './tools/SyntheticOutputTool/SyntheticOutputTool.js'
 
 // Shared utilities
 export {tagMessagesWithToolUseID, getToolUseIDFromParentMessage} from './tools/utils.js'
