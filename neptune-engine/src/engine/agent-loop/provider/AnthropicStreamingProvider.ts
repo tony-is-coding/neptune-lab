@@ -82,18 +82,32 @@ export class AnthropicStreamingProvider implements StreamingProviderAdapter {
 
 		const client = this.clientFactory(clientOptions)
 
-		// 2. 序列化请求体
+		// 2. 序列化请求体（如果 caller 已用 cachePolicy 准备好了 __cachePlanned，直接用，避免重复序列化）
 		const model = params.model || this.config.defaultModel || DEFAULT_MODEL
+		const cachePlanned = (params.extra?.__cachePlanned ?? undefined) as
+			| {messages?: unknown; system?: unknown; tools?: unknown}
+			| undefined
 		let serialized
 		try {
-			serialized = MessageSerializer.toRequestParams({
-				model,
-				messages: params.messages,
-				systemPrompt: params.systemPrompt,
-				tools: params.resolvedTools,
-				maxTokens: params.maxTokens,
-				extra: params.extra,
-			})
+			if (cachePlanned) {
+				serialized = {
+					model,
+					max_tokens: params.maxTokens ?? 4096,
+					messages: cachePlanned.messages as never,
+					system: cachePlanned.system as never,
+					tools: cachePlanned.tools as never,
+					extra: undefined,
+				}
+			} else {
+				serialized = MessageSerializer.toRequestParams({
+					model,
+					messages: params.messages,
+					systemPrompt: params.systemPrompt,
+					tools: params.resolvedTools,
+					maxTokens: params.maxTokens,
+					extra: params.extra,
+				})
+			}
 		} catch (err) {
 			yield {
 				type: 'error',
@@ -103,14 +117,19 @@ export class AnthropicStreamingProvider implements StreamingProviderAdapter {
 			return
 		}
 
-		// 3. 构造 SDK params（合并 extra 透传字段）
+		// 3. 构造 SDK params（合并 extra 透传字段，但剔除 engine 内部约定的 __cachePlanned）
+		const extraForSdk: Record<string, unknown> = {...(serialized.extra ?? {})}
+		// 防御：caller 直接传 extra 时也可能带这字段
+		const callerExtra = {...(params.extra ?? {})}
+		delete callerExtra.__cachePlanned
+		Object.assign(extraForSdk, callerExtra)
 		const sdkParams = {
 			model: serialized.model,
 			max_tokens: serialized.max_tokens,
 			messages: serialized.messages,
 			...(serialized.system !== undefined && {system: serialized.system}),
 			...(serialized.tools && {tools: serialized.tools}),
-			...(serialized.extra ?? {}),
+			...extraForSdk,
 			stream: true as const,
 		}
 

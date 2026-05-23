@@ -90,3 +90,12 @@ export type {ModelFallbackOptions} from './fallback/ModelFallback.js'
 export {withStreamWatchdog} from './watchdog/StreamWatchdog.js'
 export type {StreamWatchdogOptions} from './watchdog/StreamWatchdog.js'
 export {WatchdogProvider} from './watchdog/WatchdogProvider.js'
+
+// Batch 14: Prompt Caching
+export {DefaultCachePolicy, NoOpCachePolicy} from './caching/CacheControlPolicy.js'
+export type {
+	CacheControlPolicy,
+	CacheControl,
+	CachePlanInput,
+	CachePlanOutput,
+} from './caching/CacheControlPolicy.js'

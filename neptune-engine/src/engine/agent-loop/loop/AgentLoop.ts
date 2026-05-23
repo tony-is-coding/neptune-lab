@@ -80,6 +80,8 @@ export interface AgentLoopParams {
 	hooks?: HookSurface
 	/** Usage tracker（默认无；上层可注入跨 turn 累计）。 */
 	usageTracker?: UsageTracker
+	/** Prompt caching policy（默认无 caching；注入 DefaultCachePolicy 即可启用）。 */
+	cachePolicy?: import('../caching/CacheControlPolicy.js').CacheControlPolicy
 }
 
 // ============================================================
@@ -236,19 +238,44 @@ export class AgentLoop {
 				await params.hooks.runPreStream({turn: turnCount, messageCount: messages.length})
 			}
 
-			// 调 provider，收集流
+			// 调 provider，收集流。如果有 cachePolicy，先序列化 messages 然后让 policy 改写 cache_control。
 			let collected: CollectedAssistant
 			try {
-				collected = await collectAssistantMessage(
-					params.provider.queryStream({
+				const queryParams = {
+					model: params.model,
+					messages,
+					systemPrompt: params.systemPrompt,
+					resolvedTools,
+					maxTokens: params.maxTokens,
+					signal: params.signal ?? params.context.abortController.signal,
+					extra: params.extra,
+				}
+				// 把 cache_control 注入 extra（让 provider 透传给 SDK）
+				if (params.cachePolicy) {
+					const serialized = MessageSerializer.toRequestParams({
 						model: params.model,
 						messages,
 						systemPrompt: params.systemPrompt,
-						resolvedTools,
+						tools: resolvedTools,
 						maxTokens: params.maxTokens,
-						signal: params.signal ?? params.context.abortController.signal,
-						extra: params.extra,
-					}),
+					})
+					const planned = params.cachePolicy.plan({
+						messages: serialized.messages,
+						system: serialized.system,
+						tools: serialized.tools,
+					})
+					// 把 planned 后的字段塞进 extra，让 AnthropicStreamingProvider 直接用
+					queryParams.extra = {
+						...(queryParams.extra ?? {}),
+						__cachePlanned: {
+							messages: planned.messages,
+							system: planned.system,
+							tools: planned.tools,
+						},
+					}
+				}
+				collected = await collectAssistantMessage(
+					params.provider.queryStream(queryParams),
 				)
 			} catch (err) {
 				const error = err instanceof Error ? err : new Error(String(err))
