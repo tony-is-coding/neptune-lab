@@ -1,5 +1,6 @@
 import type {FastifyInstance} from 'fastify';
 import {costAggregator} from '../services/cost.js';
+import {replyApiError, replyUnknownError} from '../utils/api-error';
 import {createLogger} from '../utils/logger';
 
 const log = createLogger('routes:billing');
@@ -26,7 +27,7 @@ export async function billingRoutes(fastify: FastifyInstance) {
             user.role !== 'platform_admin' &&
             !(user.role === 'tenant_admin' && user.tenantId === tenantId)
         ) {
-            return reply.status(403).send({error: 'FORBIDDEN', message: '无权查看该租户的账单'});
+            return replyApiError(request, reply, 'FORBIDDEN', '无权查看该租户的账单');
         }
 
         try {
@@ -41,8 +42,8 @@ export async function billingRoutes(fastify: FastifyInstance) {
                 realtime: quotaCounter,
             };
         } catch (error) {
-            log.error('Request failed', {detail: (error as Error).message});
-            return reply.status(500).send({error: 'INTERNAL_ERROR', message: '获取账单失败'});
+            log.error('Request failed', {requestId: request.requestId, detail: (error as Error).message});
+            return replyUnknownError(request, reply, error, '获取账单失败');
         }
     });
 }

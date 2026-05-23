@@ -7,6 +7,8 @@ import { Skills } from './pages/Skills';
 import { Collaborate } from './pages/Collaborate';
 import { CreateAgent } from './pages/CreateAgent';
 import { AgentConfig } from './pages/AgentConfig';
+import { Governance } from './pages/Governance';
+import { CloseWorkbench } from './pages/CloseWorkbench';
 
 function Layout() {
   return (
@@ -33,11 +35,14 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route element={<ProtectedRoute />}>
           <Route path="/" element={<Home />} />
+          <Route path="/delivery" element={<Home />} />
           <Route path="/skills" element={<Skills />} />
           <Route path="/skills/:id" element={<Skills />} />
           {/* 两个路由都指向同一个 Collaborate 组件 */}
           <Route path="/collaborate" element={<Collaborate />} />
           <Route path="/collaborate/:agentId" element={<Collaborate />} />
+          <Route path="/governance" element={<Governance />} />
+          <Route path="/close" element={<CloseWorkbench />} />
           <Route path="/agents/create" element={<CreateAgent />} />
           <Route path="/agents/:id?" element={<AgentConfig />} />
         </Route>

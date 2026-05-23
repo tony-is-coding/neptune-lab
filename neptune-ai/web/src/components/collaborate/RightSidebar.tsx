@@ -2,11 +2,15 @@ import { useState } from 'react';
 import type { PlanTask, PlanTodo, MessageBlock } from '../../types/chat';
 import type { ArtifactInfo } from '../../hooks/useArtifacts';
 import { ArtifactContent } from '../artifact/ArtifactPanel';
+import type { RunDto } from '@shared/neptune-ai';
 
 interface RightSidebarProps {
   planTasks: PlanTask[];
   planTodos: PlanTodo[];
   artifacts: ArtifactInfo[];
+  runs: RunDto[];
+  runsLoading: boolean;
+  runsError: string | null;
   onCollapse: () => void;
 }
 
@@ -45,7 +49,43 @@ function getTypeLabel(fileType: string): string {
   return ft.replace('.', '').toUpperCase();
 }
 
-export function RightSidebar({ planTasks, planTodos, artifacts, onCollapse }: RightSidebarProps) {
+function getRunStatusLabel(status: RunDto['status']): string {
+  switch (status) {
+    case 'running': return '运行中';
+    case 'completed': return '已完成';
+    case 'failed': return '失败';
+    case 'cancelled': return '已取消';
+  }
+}
+
+function getRunStatusClass(status: RunDto['status']): string {
+  switch (status) {
+    case 'running': return 'bg-secondary-container text-on-secondary-container';
+    case 'completed': return 'bg-success/10 text-success';
+    case 'failed': return 'bg-error-container text-on-error-container';
+    case 'cancelled': return 'bg-surface-container-highest text-stone';
+  }
+}
+
+function formatTokens(run: RunDto): string {
+  const total = run.inputTokens + run.outputTokens;
+  if (total === 0) return 'Token 未记录';
+  return `${total} tokens`;
+}
+
+function shortRunId(id: string): string {
+  return id.slice(0, 8);
+}
+
+export function RightSidebar({
+  planTasks,
+  planTodos,
+  artifacts,
+  runs,
+  runsLoading,
+  runsError,
+  onCollapse,
+}: RightSidebarProps) {
   // View state: 'overview' or viewing a specific artifact
   const [activeArtifactId, setActiveArtifactId] = useState<string | null>(null);
 
@@ -188,6 +228,69 @@ export function RightSidebar({ planTasks, planTodos, artifacts, onCollapse }: Ri
           </div>
         )}
 
+        {/* Thread Runs Card */}
+        <div className="p-4 border-b border-surface-container-highest">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-[12px] font-bold text-stone uppercase tracking-wider">关联运行</h3>
+            <span className="text-[12px] text-stone">{runsLoading ? '读取中' : `受控运行 ${runs.length} 次`}</span>
+          </div>
+
+          {runsLoading ? (
+            <div className="flex items-center gap-2 py-3 text-[12px] text-stone">
+              <span className="w-[14px] h-[14px] rounded-full border-[1.5px] border-stone/30 border-t-charcoal animate-spin shrink-0" />
+              <span>正在读取关联运行</span>
+            </div>
+          ) : runsError ? (
+            <div className="rounded-lg border border-error-container bg-error-container/20 px-3 py-2">
+              <p className="text-[12px] font-medium text-on-error-container">关联运行加载失败</p>
+              <p className="text-[11px] text-stone mt-1 truncate">{runsError}</p>
+            </div>
+          ) : runs.length === 0 ? (
+            <div className="flex items-center gap-2 py-3 text-[12px] text-stone">
+              <span className="material-symbols-outlined text-[17px] text-stone/50">timeline</span>
+              <span>暂无关联受控运行</span>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {runs.map((run) => (
+                <div
+                  key={run.id}
+                  className="rounded-lg border border-surface-container-highest bg-ivory/60 p-3"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${getRunStatusClass(run.status)}`}>
+                      {getRunStatusLabel(run.status)}
+                    </span>
+                    <span className="font-mono text-[11px] text-stone">#{shortRunId(run.id)}</span>
+                  </div>
+                  <div className="mt-2 space-y-1 text-[11px] text-stone">
+                    <p className="truncate">{run.model || '模型未记录'}</p>
+                    <p>
+                      {formatTokens(run)}
+                      <span className="mx-1.5 text-stone/50">·</span>
+                      {formatTime(run.completedAt || run.startedAt)}
+                    </p>
+                  </div>
+                  <div className="mt-3 flex items-center gap-3">
+                    <a
+                      href={`/governance?tab=runs&runId=${run.id}`}
+                      className="text-[12px] font-medium text-charcoal hover:text-brand transition-colors"
+                    >
+                      查看运行详情
+                    </a>
+                    <a
+                      href={`/governance?tab=audit&resourceType=run&resourceId=${run.id}`}
+                      className="text-[12px] font-medium text-charcoal hover:text-brand transition-colors"
+                    >
+                      查看审计链
+                    </a>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
         {/* Artifacts Card */}
         {artifacts.length > 0 && (
           <div className="p-4">
@@ -222,7 +325,7 @@ export function RightSidebar({ planTasks, planTodos, artifacts, onCollapse }: Ri
         )}
 
         {/* Empty state */}
-        {!hasTaskData && artifacts.length === 0 && (
+        {!hasTaskData && artifacts.length === 0 && !runsLoading && runs.length === 0 && runsError === null && (
           <div className="flex flex-col items-center justify-center py-16 px-6">
             <span className="material-symbols-outlined text-[32px] text-stone/30 mb-3">dashboard</span>
             <p className="text-[12px] text-stone/50 text-center">

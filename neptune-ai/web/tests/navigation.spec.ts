@@ -9,11 +9,21 @@ test.describe('Navigation', () => {
   test('home page loads agent list from API', async ({ page }) => {
     const diag = attachDiagnostics(page);
 
-    await page.goto('/');
+    await page.goto('/delivery');
     await page.waitForLoadState('networkidle');
 
     // 页面应显示侧边栏
     await expect(page.locator('[data-testid="primary-sidebar"]')).toBeVisible();
+    await expect(page.getByRole('heading', { name: '交付台' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '客户项目' })).toBeVisible();
+    await expect(page.locator('[data-testid="nav-home"]')).toHaveAttribute('title', '交付台');
+    await expect(page.locator('[data-testid="nav-agents"]')).toHaveAttribute('title', '智能体模板');
+    await expect(page.locator('[data-testid="nav-skills"]')).toHaveAttribute('title', '技能目录');
+    await expect(page.locator('[data-testid="nav-collaborate"]')).toHaveAttribute('title', '运行调试');
+    await expect(page.locator('[data-testid="nav-governance"]')).toHaveAttribute('title', '治理台');
+    await expect(page.locator('[data-testid="nav-close"]')).toHaveAttribute('title', '关账工作台');
+    await expect(page.getByText('Good Morning')).toHaveCount(0);
+    await expect(page.getByText('Select an agent')).toHaveCount(0);
 
     const stored = await page.evaluate(() => localStorage.getItem('neptune-auth'));
     printReport(diag, page.url(), stored);
@@ -22,7 +32,7 @@ test.describe('Navigation', () => {
   test('sidebar navigation switches pages', async ({ page }) => {
     const diag = attachDiagnostics(page);
 
-    await page.goto('/');
+    await page.goto('/delivery');
     await page.waitForLoadState('networkidle');
 
     // 点击 Skills 导航
@@ -32,8 +42,8 @@ test.describe('Navigation', () => {
 
     // 点击 Home 导航
     await page.click('[data-testid="nav-home"]');
-    await page.waitForURL('**/');
-    expect(page.url()).toMatch(/localhost:\d+\/$/);
+    await page.waitForURL('**/delivery');
+    expect(page.url()).toContain('/delivery');
 
     // 点击 Collaborate 导航
     await page.click('[data-testid="nav-collaborate"]');
@@ -48,7 +58,7 @@ test.describe('Navigation', () => {
   test('sidebar highlights active page with dot indicator', async ({ page }) => {
     const diag = attachDiagnostics(page);
 
-    await page.goto('/');
+    await page.goto('/delivery');
     await page.waitForLoadState('networkidle');
 
     // Home 应该有 active dot indicator（一个小圆点）

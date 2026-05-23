@@ -5,6 +5,16 @@ import { listAgents, getAgent, updateAgent, deleteAgent, uploadAgentDocument, de
 import { listThreads, createThread } from '../api/threads';
 import type { AgentTemplate } from '../types/chat';
 
+type ManagedDocumentItem = {
+  id: string;
+  name: string;
+  type: string;
+  size?: string;
+  date: string;
+  icon: string;
+  color: string;
+};
+
 export function AgentConfig() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -36,8 +46,8 @@ export function AgentConfig() {
     systemPrompt: ""
   });
 
-  const [memories, setMemories] = useState<Array<{ id: string; name: string; type: string; size?: string; date: string; icon: string; color: string }>>([]);
-  const [knowledge, setKnowledge] = useState<Array<{ id: string; name: string; type: string; size?: string; date: string; icon: string; color: string }>>([]);
+  const [memories, setMemories] = useState<ManagedDocumentItem[]>([]);
+  const [knowledge, setKnowledge] = useState<ManagedDocumentItem[]>([]);
 
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteInputText, setDeleteInputText] = useState("");
@@ -53,7 +63,7 @@ export function AgentConfig() {
   const [skillsLoading, setSkillsLoading] = useState(false);
   const [assigningSkillId, setAssigningSkillId] = useState<string | null>(null);
 
-  // Load agents list
+  // 加载智能体列表
   useEffect(() => {
     let cancelled = false;
     setAgentsLoading(true);
@@ -65,12 +75,12 @@ export function AgentConfig() {
 
         // 如果 URL 有 id，确保 id 在列表中
         if (id && !res.data.some(a => a.id === id)) {
-          setLoadError(`Agent ${id} not found`);
+          setLoadError(`智能体 ${id} 不存在`);
         }
       })
       .catch(err => {
-        console.error('Failed to load agents:', err);
-        if (!cancelled) setLoadError('Failed to load agents. Please check if the server is running.');
+        console.error('加载智能体列表失败:', err);
+        if (!cancelled) setLoadError('加载智能体失败，请检查服务是否运行。');
       })
       .finally(() => {
         if (!cancelled) setAgentsLoading(false);
@@ -79,7 +89,7 @@ export function AgentConfig() {
     return () => { cancelled = true; };
   }, []);
 
-  // Load active agent
+  // 加载当前智能体
   useEffect(() => {
     if (!id) {
       setActiveAgent(null);
@@ -110,7 +120,7 @@ export function AgentConfig() {
           systemPrompt: agentData.systemPrompt
         });
 
-        // Agent 加载成功后，并行加载 stats 和文档列表（失败不影响主体内容）
+        // 智能体加载成功后，并行加载 stats 和分类文档列表（失败不影响主体内容）
         const statsPromise = getAgentStats(activeAgentId)
           .then(statsData => {
             setStats(statsData);
@@ -122,43 +132,34 @@ export function AgentConfig() {
             setStatsLoading(false);
           });
 
-        const docsPromise = listAgentDocuments(activeAgentId)
-          .then(docs => {
-            const formatted = docs.map(doc => ({
-              id: doc.id,
-              name: doc.name,
-              type: doc.type,
-              date: doc.uploadedAt
-                ? new Date(doc.uploadedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-                : '',
-              icon: getFileIcon(doc.type),
-              size: doc.size ? formatFileSize(doc.size) : undefined,
-              color: 'text-brand',
-            }));
-            // 后端没有 category 字段，暂将所有文档视为 memory
-            setMemories(formatted);
-            setKnowledge([]);
+        const docsPromise = Promise.all([
+          listAgentDocuments(activeAgentId, {category: 'memory'}),
+          listAgentDocuments(activeAgentId, {category: 'knowledge'}),
+        ])
+          .then(([memoryDocs, knowledgeDocs]) => {
+            setMemories(formatManagedDocuments(memoryDocs));
+            setKnowledge(formatManagedDocuments(knowledgeDocs));
           })
           .catch(err => {
-            console.warn('Failed to load documents:', err);
+            console.warn('加载智能体文档失败:', err);
           });
 
         return Promise.all([statsPromise, docsPromise]);
       })
       .catch(err => {
-        console.error('Failed to load agent:', err);
+        console.error('加载智能体失败:', err);
         if (err instanceof Error) {
           if (err.message === 'Request timeout') {
-            setLoadError('Request timeout. Please check if the server is running.');
+            setLoadError('请求超时，请检查服务是否运行。');
           } else if (err.message === 'Agent not found') {
-            setLoadError('Agent not found');
+            setLoadError('智能体不存在');
           } else if (err.message.includes('401') || err.message === 'Unauthorized') {
             stableNavigate('/login');
           } else {
-            setLoadError('Failed to load agent details. Please check if the server is running.');
+            setLoadError('加载智能体详情失败，请检查服务是否运行。');
           }
         } else {
-          setLoadError('Failed to load agent details. Please check if the server is running.');
+          setLoadError('加载智能体详情失败，请检查服务是否运行。');
         }
       })
       .finally(() => {
@@ -181,11 +182,10 @@ export function AgentConfig() {
       setActiveAgent(updated);
       setIsEditingProfile(false);
 
-      // Update agents list
       setAgents(prev => prev.map(a => a.id === updated.id ? updated : a));
     } catch (err) {
-      console.error('Failed to update agent:', err);
-      setSaveError(err instanceof Error ? err.message : 'Failed to save');
+      console.error('更新智能体失败:', err);
+      setSaveError(err instanceof Error ? err.message : '保存失败');
     } finally {
       setIsSaving(false);
     }
@@ -208,11 +208,10 @@ export function AgentConfig() {
       setActiveAgent(updated);
       setIsEditingCore(false);
 
-      // Update agents list
       setAgents(prev => prev.map(a => a.id === updated.id ? updated : a));
     } catch (err) {
-      console.error('Failed to update agent:', err);
-      setSaveError(err instanceof Error ? err.message : 'Failed to save');
+      console.error('更新智能体核心配置失败:', err);
+      setSaveError(err instanceof Error ? err.message : '保存失败');
     } finally {
       setIsSaving(false);
     }
@@ -232,7 +231,7 @@ export function AgentConfig() {
       navigate('/agents');
     } catch (err) {
       console.error('Failed to delete agent:', err);
-      alert('Failed to delete agent');
+      alert('删除智能体失败');
       setIsDeleting(false);
     }
   };
@@ -256,8 +255,8 @@ export function AgentConfig() {
 
       navigate(`/collaborate/${activeAgent.id}`, { state: { threadId } });
     } catch (err) {
-      console.error('Failed to start collaborate:', err);
-      // 降级：直接导航到 collaborate 页面
+      console.error('启动运行调试失败:', err);
+      // 降级：直接导航到运行调试页面
       navigate(`/collaborate/${activeAgent.id}`);
     }
   };
@@ -270,12 +269,12 @@ export function AgentConfig() {
     if (!file || !activeAgent) return;
 
     try {
-      const doc = await uploadAgentDocument(activeAgent.id, file);
+      const doc = await uploadAgentDocument(activeAgent.id, file, target);
       const newItem = {
         id: doc.id,
         name: doc.name,
         type: doc.type,
-        date: new Date(doc.uploadedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+        date: formatDate(doc.uploadedAt),
         icon: getFileIcon(doc.type),
         size: doc.size ? formatFileSize(doc.size) : undefined,
         color: "text-brand"
@@ -287,8 +286,8 @@ export function AgentConfig() {
         setKnowledge(prev => [newItem, ...prev]);
       }
     } catch (err) {
-      console.error('Failed to upload document:', err);
-      alert('Failed to upload document');
+      console.error('上传文档失败:', err);
+      alert('上传文档失败');
     }
 
     // Reset file input
@@ -302,8 +301,8 @@ export function AgentConfig() {
       await deleteAgentDocument(activeAgent.id, memoryId);
       setMemories(prev => prev.filter(m => m.id !== memoryId));
     } catch (err) {
-      console.error('Failed to delete document:', err);
-      alert('Failed to delete document');
+      console.error('删除记忆材料失败:', err);
+      alert('删除记忆材料失败');
     }
   };
 
@@ -314,8 +313,8 @@ export function AgentConfig() {
       await deleteAgentDocument(activeAgent.id, knowledgeId);
       setKnowledge(prev => prev.filter(k => k.id !== knowledgeId));
     } catch (err) {
-      console.error('Failed to delete document:', err);
-      alert('Failed to delete document');
+      console.error('删除知识材料失败:', err);
+      alert('删除知识材料失败');
     }
   };
 
@@ -331,6 +330,22 @@ export function AgentConfig() {
     return 'description';
   }
 
+  function formatDate(date: string): string {
+    return date ? new Date(date).toLocaleDateString('zh-CN', {year: 'numeric', month: 'short', day: 'numeric'}) : '';
+  }
+
+  function formatManagedDocuments(docs: Array<{ id: string; name: string; type: string; uploadedAt: string; size?: number }>): ManagedDocumentItem[] {
+    return docs.map(doc => ({
+      id: doc.id,
+      name: doc.name,
+      type: doc.type,
+      date: formatDate(doc.uploadedAt),
+      icon: getFileIcon(doc.type),
+      size: doc.size ? formatFileSize(doc.size) : undefined,
+      color: 'text-brand',
+    }));
+  }
+
   // 格式化文件大小
   function formatFileSize(bytes: number): string {
     if (bytes < 1024) return `${bytes} B`;
@@ -338,7 +353,7 @@ export function AgentConfig() {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   }
 
-  // 打开 Skill Catalog 弹窗
+  // 打开技能目录弹窗
   const handleBrowseSkills = async () => {
     if (!activeAgent) return;
     setShowSkillModal(true);
@@ -347,20 +362,19 @@ export function AgentConfig() {
       const skills = await listSkills();
       setAllSkills(skills);
     } catch (err) {
-      console.error('Failed to load skills:', err);
+      console.error('加载技能目录失败:', err);
       setAllSkills([]);
     } finally {
       setSkillsLoading(false);
     }
   };
 
-  // 分配 Skill 给当前 Agent
+  // 分配技能给当前智能体
   const handleAssignSkill = async (skill: Skill) => {
     if (!activeAgent) return;
     setAssigningSkillId(skill.id);
     try {
       await assignSkillToAgent(skill.id, activeAgent.id);
-      // 更新 agent 的 skills 列表
       const updated = {
         ...activeAgent,
         skills: [...activeAgent.skills, { id: skill.id, name: skill.name, version: 'v1.0' }],
@@ -368,14 +382,14 @@ export function AgentConfig() {
       setActiveAgent(updated);
       setAgents(prev => prev.map(a => a.id === updated.id ? updated : a));
     } catch (err) {
-      console.error('Failed to assign skill:', err);
-      alert('Failed to assign skill');
+      console.error('绑定技能失败:', err);
+      alert('绑定技能失败。草稿技能需要先上架，且只能绑定同租户智能体。');
     } finally {
       setAssigningSkillId(null);
     }
   };
 
-  // 从当前 Agent 移除 Skill
+  // 从当前智能体移除技能
   const handleRemoveSkill = async (skillId: string) => {
     if (!activeAgent) return;
     try {
@@ -387,8 +401,8 @@ export function AgentConfig() {
       setActiveAgent(updated);
       setAgents(prev => prev.map(a => a.id === updated.id ? updated : a));
     } catch (err) {
-      console.error('Failed to remove skill:', err);
-      alert('Failed to remove skill');
+      console.error('移除技能失败:', err);
+      alert('移除技能失败');
     }
   };
 
@@ -407,9 +421,9 @@ export function AgentConfig() {
       <div className="flex h-full bg-surface-container-low items-center justify-center">
         <div className="text-center">
           <span className="material-symbols-outlined text-[40px] text-stone/40 block mb-3">error_outline</span>
-          <p className="text-sm text-stone mb-2">{loadError || 'Agent not found'}</p>
+          <p className="text-sm text-stone mb-2">{loadError || '智能体不存在'}</p>
           <Link to="/agents" className="text-sm text-charcoal font-medium hover:underline">
-            &larr; Back to Agents
+            &larr; 返回智能体模板
           </Link>
         </div>
       </div>
@@ -418,27 +432,27 @@ export function AgentConfig() {
 
   return (
     <div className="flex h-full bg-surface-container-low">
-      {/* Secondary Drawer (Agents List) */}
+      {/* 智能体列表 */}
       <div
         className="h-full bg-surface-container border-r border-surface-container-highest flex flex-col shrink-0 relative"
         style={{ width: sidebarWidth }}
       >
         <div className="p-6 pb-4 border-b border-surface-container-highest">
-          <h2 className="text-[12px] font-bold text-stone mb-3 uppercase tracking-widest">Agents</h2>
+          <h2 className="text-[12px] font-bold text-stone mb-3 tracking-widest">智能体模板</h2>
           <div className="relative">
             <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-stone text-[18px]">search</span>
-            <input className="w-full pl-9 pr-3 py-2 bg-ivory border border-transparent rounded-lg text-sm focus:border-border-cream focus:ring-1 focus:ring-border-cream transition-all placeholder:text-stone/60" placeholder="Search agents..." type="text"/>
+            <input className="w-full pl-9 pr-3 py-2 bg-ivory border border-transparent rounded-lg text-sm focus:border-border-cream focus:ring-1 focus:ring-border-cream transition-all placeholder:text-stone/60" placeholder="搜索智能体..." type="text"/>
           </div>
         </div>
 
         <div className="flex-grow overflow-y-auto p-3 space-y-1 custom-scrollbar">
           <div className="px-3 py-2 mt-2">
-            <span className="text-[10px] font-bold text-stone uppercase tracking-widest">All Agents</span>
+            <span className="text-[10px] font-bold text-stone tracking-widest">全部智能体</span>
           </div>
 
           {agentsLoading ? (
             <div className="flex items-center justify-center h-32">
-              <span className="text-[11px] text-stone">Loading agents...</span>
+              <span className="text-[11px] text-stone">正在加载智能体...</span>
             </div>
           ) : agents.map(agent => (
             <Link
@@ -451,7 +465,7 @@ export function AgentConfig() {
               </div>
               <div className="overflow-hidden">
                 <p className={`text-sm truncate ${activeAgent?.id === agent.id ? 'font-semibold' : ''}`}>{agent.name}</p>
-                <p className="text-[11px] text-stone truncate">{agent.isActive ? 'Active' : 'Inactive'}</p>
+                <p className="text-[11px] text-stone truncate">{agent.isActive ? '已启用' : '已停用'}</p>
               </div>
             </Link>
           ))}
@@ -460,7 +474,7 @@ export function AgentConfig() {
         <div className="mt-auto p-4 border-t border-surface-container-highest">
           <Link to="/agents/create" className="w-full flex items-center justify-center gap-2 bg-primary-container text-white text-sm font-semibold py-2.5 rounded-lg hover:bg-charcoal transition-colors">
             <span className="material-symbols-outlined text-[18px]">add</span>
-            Create Agent
+            创建智能体
           </Link>
         </div>
 
@@ -477,14 +491,14 @@ export function AgentConfig() {
         {!activeAgent ? (
           <div className="flex-1 flex flex-col items-center justify-center text-stone">
             <span className="material-symbols-outlined text-[48px] text-stone/30">smart_toy</span>
-            <p className="text-sm mt-3">Select an agent to view configuration</p>
+            <p className="text-sm mt-3">选择一个智能体查看配置</p>
           </div>
         ) : (
         <>
         {/* TopAppBar */}
         <header className="bg-ivory/80 backdrop-blur-md sticky top-0 w-full border-b border-border-cream shadow-sm flex items-center px-6 py-4 z-30 shrink-0">
           <div className="flex items-center gap-2 text-sm">
-            <Link to="/agents" className="text-stone hover:text-brand transition-colors">Agents</Link>
+            <Link to="/agents" className="text-stone hover:text-brand transition-colors">智能体模板</Link>
             <span className="material-symbols-outlined text-stone text-[16px]">chevron_right</span>
             <span className="font-bold text-charcoal">{activeAgent.name}</span>
           </div>
@@ -494,10 +508,10 @@ export function AgentConfig() {
         <div className="flex-1 overflow-y-auto p-6 md:p-10 custom-scrollbar">
           <div className="max-w-[1200px] mx-auto flex flex-col gap-8">
 
-            {/* Agent Profile Section */}
+            {/* 智能体档案 */}
             <section className="bg-ivory border border-border-cream rounded-xl p-6 shadow-whisper">
               <div className="flex justify-between items-center mb-6 border-b border-border-cream pb-4">
-                <h2 className="font-serif text-[20px] text-charcoal">Agent Profile</h2>
+                <h2 className="font-serif text-[20px] text-charcoal">智能体档案</h2>
                 <div className="flex items-center gap-3">
                   {/* Starting Collaborate Button */}
                   <button
@@ -505,23 +519,23 @@ export function AgentConfig() {
                     className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm bg-brand text-white hover:bg-brand/90 transition-colors shadow-sm"
                   >
                     <span className="material-symbols-outlined text-[18px]">forum</span>
-                    Start Collaborate
+                    开始运行调试
                   </button>
 
                   {isEditingProfile ? (
                     <div className="flex items-center gap-2">
                       <button onClick={() => setIsEditingProfile(false)} className="px-4 py-1.5 rounded-lg text-sm font-semibold text-stone hover:bg-surface-container transition-colors">
-                        Cancel
+                        取消
                       </button>
                       <button onClick={handleSaveProfile} disabled={isSaving} className="flex items-center gap-2 text-sm font-semibold text-white bg-brand hover:bg-brand/90 transition-colors px-4 py-1.5 rounded-lg shadow-sm disabled:opacity-50">
                         <span className="material-symbols-outlined text-[18px]">save</span>
-                        Save Profile
+                        保存档案
                       </button>
                     </div>
                   ) : (
                     <button onClick={() => setIsEditingProfile(true)} className="flex items-center gap-2 text-sm font-semibold text-stone hover:text-brand transition-colors px-3 py-1.5 rounded-lg hover:bg-surface-container">
                       <span className="material-symbols-outlined text-[18px]">edit</span>
-                      Edit
+                      编辑
                     </button>
                   )}
                 </div>
@@ -535,12 +549,12 @@ export function AgentConfig() {
                       <span className="material-symbols-outlined text-white">edit</span>
                     </div>
                   </div>
-                  {isEditingProfile && <button className="text-xs font-semibold text-stone hover:text-charcoal transition-colors">Change Avatar</button>}
+                  {isEditingProfile && <button className="text-xs font-semibold text-stone hover:text-charcoal transition-colors">更换头像</button>}
                 </div>
 
                 <div className="flex-1 flex flex-col gap-4 w-full">
                   <div>
-                    <label className="block text-xs font-bold tracking-widest uppercase text-stone mb-1.5">Agent Name</label>
+                    <label className="block text-xs font-bold tracking-widest text-stone mb-1.5">智能体名称</label>
                     {isEditingProfile ? (
                       <input type="text" value={profileData.name} onChange={(e) => setProfileData({...profileData, name: e.target.value})} className="w-full bg-surface-container-lowest border border-border-cream rounded-lg px-4 py-2.5 text-sm text-charcoal focus:border-charcoal focus:ring-1 focus:ring-charcoal outline-none transition-all shadow-sm" />
                     ) : (
@@ -548,7 +562,7 @@ export function AgentConfig() {
                     )}
                   </div>
                   <div>
-                    <label className="block text-xs font-bold tracking-widest uppercase text-stone mb-1.5">Description</label>
+                    <label className="block text-xs font-bold tracking-widest text-stone mb-1.5">描述</label>
                     {isEditingProfile ? (
                       <textarea value={profileData.description} onChange={(e) => setProfileData({...profileData, description: e.target.value})} rows={2} className="w-full bg-surface-container-lowest border border-border-cream rounded-lg px-4 py-2.5 text-sm text-charcoal focus:border-charcoal focus:ring-1 focus:ring-charcoal outline-none transition-all shadow-sm resize-none" />
                     ) : (
@@ -559,7 +573,7 @@ export function AgentConfig() {
 
                 <div className="flex flex-col items-end gap-3 lg:pl-6 lg:border-l border-border-cream w-full lg:w-auto">
                   <div className="flex items-center gap-3 mb-2">
-                    <span className="text-sm font-medium text-stone">Status</span>
+                    <span className="text-sm font-medium text-stone">状态</span>
                     {isEditingProfile ? (
                       <>
                         <label className="relative inline-flex items-center cursor-pointer">
@@ -568,9 +582,9 @@ export function AgentConfig() {
                         </label>
                       </>
                     ) : (
-                      <div className={`w-2 h-2 rounded-full ${profileData.status === 'Active' ? 'bg-emerald-500' : 'bg-stone'}`}></div>
+                      <div className={`w-2 h-2 rounded-full ${profileData.status === 'Active' ? 'bg-brand' : 'bg-stone'}`}></div>
                     )}
-                    <span className="font-semibold text-sm text-primary-container">{profileData.status}</span>
+                    <span className="font-semibold text-sm text-primary-container">{profileData.status === 'Active' ? '已启用' : '已停用'}</span>
                   </div>
                   <p className="text-xs text-stone">ID: {activeAgent.id}</p>
                 </div>
@@ -583,31 +597,31 @@ export function AgentConfig() {
               {/* Left Column (Spans 2) */}
               <div className="lg:col-span-2 flex flex-col gap-6">
 
-                {/* Core Configuration Section */}
+                {/* 核心配置 */}
                 <section className="bg-ivory border border-border-cream rounded-xl p-6 shadow-whisper">
                   <div className="flex justify-between items-center mb-6">
-                    <h2 className="font-serif text-[24px] text-charcoal">Core Configuration</h2>
+                    <h2 className="font-serif text-[24px] text-charcoal">核心配置</h2>
                     {isEditingCore ? (
                       <div className="flex items-center gap-2">
                         <button onClick={() => setIsEditingCore(false)} className="px-4 py-1.5 rounded-lg text-sm font-semibold text-stone hover:bg-surface-container transition-colors">
-                          Cancel
+                          取消
                         </button>
                         <button onClick={handleSaveCore} disabled={isSaving} className="flex items-center gap-2 text-sm font-semibold text-white bg-brand hover:bg-brand/90 transition-colors px-4 py-1.5 rounded-lg shadow-sm disabled:opacity-50">
                           <span className="material-symbols-outlined text-[18px]">save</span>
-                          Save config
+                          保存配置
                         </button>
                       </div>
                     ) : (
                       <button onClick={() => setIsEditingCore(true)} className="flex items-center gap-2 text-sm font-semibold text-stone hover:text-brand transition-colors px-3 py-1.5 rounded-lg hover:bg-surface-container">
                         <span className="material-symbols-outlined text-[18px]">edit</span>
-                        Edit
+                        编辑
                       </button>
                     )}
                   </div>
 
                   <div className="flex flex-col gap-6">
                     <div>
-                      <label className="block text-[12px] font-bold tracking-widest uppercase text-stone mb-2">Base Model</label>
+                      <label className="block text-[12px] font-bold tracking-widest text-stone mb-2">基础模型</label>
                       {isEditingCore ? (
                         <select
                           value={coreConfig.model}
@@ -626,7 +640,7 @@ export function AgentConfig() {
                       )}
                     </div>
                     <div>
-                      <label className="block text-[12px] font-bold tracking-widest uppercase text-stone mb-2">System Prompt</label>
+                      <label className="block text-[12px] font-bold tracking-widest text-stone mb-2">系统提示词</label>
                       {isEditingCore ? (
                         <textarea
                           value={coreConfig.systemPrompt}
@@ -642,20 +656,21 @@ export function AgentConfig() {
                   </div>
                 </section>
 
-                {/* Memories Section */}
+                {/* 记忆管理 */}
                 <section className="bg-ivory border border-border-cream rounded-xl p-6 shadow-whisper">
                   <div className="flex justify-between items-center mb-6">
-                    <h2 className="font-serif text-[24px] text-charcoal">Memories</h2>
+                    <h2 className="font-serif text-[24px] text-charcoal">记忆管理</h2>
                     <div>
                       <input
                         type="file"
                         ref={fileInputRef}
+                        aria-label="上传记忆材料"
                         onChange={(e) => handleFileUpload(e, 'memory')}
                         className="hidden"
                       />
                       <button onClick={() => fileInputRef.current?.click()} className="flex items-center gap-2 font-semibold text-sm text-charcoal bg-sand hover:bg-[#d5c4ad] transition-colors px-4 py-2 rounded-lg border border-border-cream cursor-pointer">
                         <span className="material-symbols-outlined text-[18px]">upload_file</span>
-                        Upload Document
+                        上传记忆材料
                       </button>
                     </div>
                   </div>
@@ -664,16 +679,16 @@ export function AgentConfig() {
                     <table className="w-full text-left border-collapse">
                       <thead>
                         <tr className="bg-surface-container-low border-b border-border-cream">
-                          <th className="text-[12px] font-bold tracking-widest uppercase text-stone py-3 px-4">File Name</th>
-                          <th className="text-[12px] font-bold tracking-widest uppercase text-stone py-3 px-4">Type</th>
-                          <th className="text-[12px] font-bold tracking-widest uppercase text-stone py-3 px-4">Uploaded</th>
+                          <th className="text-[12px] font-bold tracking-widest text-stone py-3 px-4">文件名</th>
+                          <th className="text-[12px] font-bold tracking-widest text-stone py-3 px-4">类型</th>
+                          <th className="text-[12px] font-bold tracking-widest text-stone py-3 px-4">上传时间</th>
                           <th className="py-3 px-4"></th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-border-cream bg-ivory">
                         {memories.length === 0 ? (
                           <tr>
-                            <td colSpan={4} className="py-6 text-center text-sm text-stone">No memories uploaded yet.</td>
+                            <td colSpan={4} className="py-6 text-center text-sm text-stone">暂无记忆材料</td>
                           </tr>
                         ) : memories.map(memory => (
                           <tr key={memory.id} className="hover:bg-surface-container/50 transition-colors group">
@@ -686,8 +701,8 @@ export function AgentConfig() {
                             <td className="py-3 px-4 text-right">
                               <button
                                 onClick={() => handleDeleteMemory(memory.id)}
-                                className="text-stone hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
-                                title="Delete"
+                                className="text-stone hover:text-error transition-colors opacity-0 group-hover:opacity-100"
+                                title="删除"
                               >
                                 <span className="material-symbols-outlined text-[20px]">delete</span>
                               </button>
@@ -704,22 +719,22 @@ export function AgentConfig() {
               {/* Right Column */}
               <div className="flex flex-col gap-6">
 
-                {/* Cost Control Section */}
+                {/* 成本与配额 */}
                 <section className="bg-ivory border border-border-cream rounded-xl p-6 shadow-whisper">
-                  <h2 className="font-serif text-[24px] text-charcoal mb-6">Cost Control</h2>
+                  <h2 className="font-serif text-[24px] text-charcoal mb-6">成本与配额</h2>
                   <div className="flex flex-col gap-4">
                     {statsLoading ? (
                       <div className="bg-surface-container-low rounded-xl p-5 border border-border-cream">
-                        <span className="text-[12px] font-bold tracking-widest uppercase text-stone mb-1 block">MTD Token Cost</span>
+                        <span className="text-[12px] font-bold tracking-widest text-stone mb-1 block">本月 token 成本</span>
                         <div className="w-full h-8 bg-surface-container-highest rounded animate-pulse" />
                       </div>
                     ) : stats ? (
                       <>
                         <div className="bg-surface-container-low rounded-xl p-5 border border-border-cream">
-                          <span className="text-[12px] font-bold tracking-widest uppercase text-stone mb-1 block">MTD Token Cost</span>
+                          <span className="text-[12px] font-bold tracking-widest text-stone mb-1 block">本月 token 成本</span>
                           <div className="flex items-baseline gap-2">
                             <span className="font-serif text-[30px] text-charcoal font-medium">${(stats.mtdTokenCost ?? stats.mtdCost ?? 0).toFixed(2)}</span>
-                            <span className="text-sm text-stone">/ ${stats.mtdTokenLimit ?? stats.budgetLimit ?? 0} limit</span>
+                            <span className="text-sm text-stone">/ ${stats.mtdTokenLimit ?? stats.budgetLimit ?? 0} 上限</span>
                           </div>
                           <div className="w-full bg-[#e6e1e0] h-1.5 rounded-full mt-4 overflow-hidden">
                             <div className="bg-charcoal h-full rounded-full" style={{ width: `${((stats.mtdTokenCost ?? stats.mtdCost ?? 0) / (stats.mtdTokenLimit ?? stats.budgetLimit ?? 1)) * 100}%` }}></div>
@@ -728,28 +743,28 @@ export function AgentConfig() {
 
                         <div className="grid grid-cols-2 gap-4">
                           <div className="bg-surface-container-low border border-border-cream rounded-xl p-4">
-                            <span className="text-[12px] font-bold tracking-widest uppercase text-stone mb-2 block">30-Day Sessions</span>
+                            <span className="text-[12px] font-bold tracking-widest text-stone mb-2 block">30 天会话数</span>
                             <span className="font-serif text-[24px] text-charcoal">{(stats.sessions30Days ?? stats.thirtyDaySessions ?? 0).toLocaleString()}</span>
                           </div>
                           <div className="bg-surface-container-low border border-border-cream rounded-xl p-4">
-                            <span className="text-[12px] font-bold tracking-widest uppercase text-stone mb-2 block">Avg Latency</span>
+                            <span className="text-[12px] font-bold tracking-widest text-stone mb-2 block">平均延迟</span>
                             <span className="font-serif text-[24px] text-charcoal">{stats.avgLatency}ms</span>
                           </div>
                         </div>
                       </>
                     ) : (
                       <div className="bg-surface-container-low rounded-xl p-5 border border-border-cream">
-                        <span className="text-[12px] font-bold tracking-widest uppercase text-stone mb-1 block">MTD Token Cost</span>
-                        <p className="text-sm text-stone">Stats not available</p>
+                        <span className="text-[12px] font-bold tracking-widest text-stone mb-1 block">本月 token 成本</span>
+                        <p className="text-sm text-stone">统计暂不可用</p>
                       </div>
                     )}
                   </div>
                 </section>
 
-                {/* Assigned Skills Section */}
+                {/* 已绑定技能 */}
                 <section className="bg-ivory border border-border-cream rounded-xl p-6 shadow-whisper flex-1">
                   <div className="flex justify-between items-center mb-6">
-                    <h2 className="font-serif text-[24px] text-charcoal">Assigned Skills</h2>
+                    <h2 className="font-serif text-[24px] text-charcoal">已绑定技能</h2>
                     <button className="text-charcoal hover:text-brand transition-colors">
                       <span className="material-symbols-outlined">add_circle</span>
                     </button>
@@ -757,7 +772,7 @@ export function AgentConfig() {
 
                   <div className="flex flex-col gap-3">
                     {activeAgent.skills.map(skill => (
-                      <div key={skill.id} className="flex items-center gap-4 p-3 rounded-xl border border-border-cream bg-white hover:bg-surface-container-lowest transition-colors shadow-sm group">
+                      <div key={skill.id} className="flex items-center gap-4 p-3 rounded-xl border border-border-cream bg-ivory hover:bg-surface-container-lowest transition-colors shadow-sm group">
                         <div className="h-10 w-10 rounded bg-[#e3e2e4] flex items-center justify-center text-[#1a1c1d]">
                           <span className="material-symbols-outlined text-[20px]">extension</span>
                         </div>
@@ -767,12 +782,12 @@ export function AgentConfig() {
                         </div>
                         <div className="flex items-center gap-2">
                           <div className="px-2.5 py-1 bg-surface-container-low rounded-full border border-border-cream">
-                            <span className="text-[10px] font-bold tracking-widest uppercase text-stone">Active</span>
+                            <span className="text-[10px] font-bold tracking-widest text-stone">已启用</span>
                           </div>
                           <button
                             onClick={() => handleRemoveSkill(skill.id)}
-                            className="text-stone hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
-                            title="Remove skill"
+                            className="text-stone hover:text-error transition-colors opacity-0 group-hover:opacity-100"
+                            title="移除技能"
                           >
                             <span className="material-symbols-outlined text-[20px]">close</span>
                           </button>
@@ -781,14 +796,14 @@ export function AgentConfig() {
                     ))}
 
                     {activeAgent.skills.length === 0 && (
-                      <p className="text-sm text-stone text-center py-4">No skills assigned</p>
+                      <p className="text-sm text-stone text-center py-4">暂无绑定技能</p>
                     )}
 
                     <button
                       onClick={handleBrowseSkills}
                       className="w-full flex items-center gap-3 p-3 rounded-xl border border-border-cream border-dashed bg-surface-container-low hover:bg-surface-container transition-colors justify-center mt-2"
                     >
-                      <span className="font-semibold text-sm text-stone">Browse Skill Catalog</span>
+                      <span className="font-semibold text-sm text-stone">浏览技能目录</span>
                     </button>
                   </div>
                 </section>
@@ -796,23 +811,24 @@ export function AgentConfig() {
               </div>
             </div>
 
-            {/* Knowledge Base Section */}
+            {/* 知识库 */}
             <section className="bg-ivory border border-border-cream rounded-xl p-6 shadow-whisper">
               <div className="flex justify-between items-center mb-6">
                 <div>
-                  <h2 className="font-serif text-[24px] text-charcoal">Knowledge Base</h2>
-                  <p className="text-sm text-stone mt-1">Manage domain-specific documents (PDF, Markdown, Word, Excel)</p>
+                  <h2 className="font-serif text-[24px] text-charcoal">知识库</h2>
+                  <p className="text-sm text-stone mt-1">管理领域材料（PDF、Markdown、Word、Excel）</p>
                 </div>
                 <div>
                   <input
                     type="file"
                     ref={knowledgeInputRef}
+                    aria-label="上传知识材料"
                     onChange={(e) => handleFileUpload(e, 'knowledge')}
                     className="hidden"
                   />
                   <button onClick={() => knowledgeInputRef.current?.click()} className="flex items-center gap-2 font-semibold text-sm text-charcoal bg-sand hover:bg-[#d5c4ad] transition-colors px-4 py-2 rounded-lg border border-border-cream">
                     <span className="material-symbols-outlined text-[18px]">upload_file</span>
-                    Upload Knowledge
+                    上传知识材料
                   </button>
                 </div>
               </div>
@@ -821,17 +837,17 @@ export function AgentConfig() {
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="bg-surface-container-low border-b border-border-cream">
-                      <th className="text-[12px] font-bold tracking-widest uppercase text-stone py-3 px-4">File Name</th>
-                      <th className="text-[12px] font-bold tracking-widest uppercase text-stone py-3 px-4">Type</th>
-                      <th className="text-[12px] font-bold tracking-widest uppercase text-stone py-3 px-4">Size</th>
-                      <th className="text-[12px] font-bold tracking-widest uppercase text-stone py-3 px-4">Uploaded</th>
+                      <th className="text-[12px] font-bold tracking-widest text-stone py-3 px-4">文件名</th>
+                      <th className="text-[12px] font-bold tracking-widest text-stone py-3 px-4">类型</th>
+                      <th className="text-[12px] font-bold tracking-widest text-stone py-3 px-4">大小</th>
+                      <th className="text-[12px] font-bold tracking-widest text-stone py-3 px-4">上传时间</th>
                       <th className="py-3 px-4"></th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border-cream bg-ivory">
                     {knowledge.length === 0 ? (
                       <tr>
-                        <td colSpan={5} className="py-6 text-center text-sm text-stone">No knowledge bases uploaded yet.</td>
+                        <td colSpan={5} className="py-6 text-center text-sm text-stone">暂无知识材料</td>
                       </tr>
                     ) : knowledge.map(item => (
                       <tr key={item.id} className="hover:bg-surface-container/50 transition-colors group">
@@ -845,8 +861,8 @@ export function AgentConfig() {
                         <td className="py-3 px-4 text-right">
                           <button
                             onClick={() => handleDeleteKnowledge(item.id)}
-                            className="text-stone hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
-                            title="Delete"
+                            className="text-stone hover:text-error transition-colors opacity-0 group-hover:opacity-100"
+                            title="删除"
                           >
                             <span className="material-symbols-outlined text-[20px]">delete</span>
                           </button>
@@ -862,37 +878,37 @@ export function AgentConfig() {
             <section className="mt-8 border-t border-border-cream pt-8">
               <button
                 onClick={handleDeleteClick}
-                className="w-full flex items-center justify-center gap-2 font-semibold text-base text-white bg-red-700 hover:bg-red-800 transition-colors px-6 py-3.5 rounded-xl shadow-sm"
+                className="w-full flex items-center justify-center gap-2 font-semibold text-base text-error bg-ivory hover:bg-surface-container-low transition-colors px-6 py-3.5 rounded-xl border border-border-cream shadow-sm"
               >
                 <span className="material-symbols-outlined text-[20px]">delete_forever</span>
-                Delete Agent
+                删除智能体
               </button>
             </section>
 
             {/* Delete Modal */}
             {isDeleting && (
               <div className="fixed inset-0 bg-charcoal/40 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setIsDeleting(false)}>
-                <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden border border-border-cream" onClick={e => e.stopPropagation()}>
-                  <div className="p-6 border-b border-border-cream bg-red-50/50">
-                    <h3 className="text-xl font-serif text-red-700 flex items-center gap-2">
+                <div className="bg-ivory rounded-xl shadow-whisper w-full max-w-lg overflow-hidden border border-border-cream" onClick={e => e.stopPropagation()}>
+                  <div className="p-6 border-b border-border-cream bg-surface-container-low">
+                    <h3 className="text-xl font-serif text-error flex items-center gap-2">
                       <span className="material-symbols-outlined">warning</span>
-                      Delete "{profileData.name}"?
+                      删除“{profileData.name}”？
                     </h3>
                   </div>
                   <div className="p-6 flex flex-col gap-5">
                     <p className="text-sm text-charcoal leading-relaxed">
-                      This action <strong>cannot</strong> be undone. This will permanently delete the <strong>{profileData.name}</strong> agent, including all associated memories, knowledge bases, and core configurations.
+                      此操作<strong>无法撤销</strong>。系统会永久删除 <strong>{profileData.name}</strong> 智能体及其记忆、知识库和核心配置。
                     </p>
 
                     <div className="bg-surface-container-lowest p-4 rounded-lg border border-border-cream shadow-inner">
                       <label className="text-sm font-semibold text-charcoal">
-                        Please type <span className="font-mono bg-red-100 text-red-700 px-1.5 py-0.5 rounded select-all selection:bg-red-200">{expectedDeleteCode}</span> to confirm.
+                        请输入 <span className="font-mono bg-surface-container text-error px-1.5 py-0.5 rounded select-all">{expectedDeleteCode}</span> 确认删除。
                       </label>
                       <input
                         type="text"
                         value={deleteInputText}
                         onChange={(e) => setDeleteInputText(e.target.value)}
-                        className="w-full bg-white border border-border-cream rounded-lg px-4 py-2.5 text-sm font-mono text-charcoal focus:border-red-500 focus:ring-1 focus:ring-red-500 outline-none transition-all mt-3"
+                        className="w-full bg-ivory border border-border-cream rounded-lg px-4 py-2.5 text-sm font-mono text-charcoal focus:border-brand focus:ring-1 focus:ring-brand outline-none transition-all mt-3"
                         placeholder={expectedDeleteCode}
                       />
                     </div>
@@ -902,15 +918,15 @@ export function AgentConfig() {
                       onClick={() => setIsDeleting(false)}
                       className="px-5 py-2.5 rounded-lg text-sm font-semibold text-stone hover:bg-surface-container-highest transition-colors"
                     >
-                      Cancel
+                      取消
                     </button>
                     <button
                       onClick={confirmDelete}
                       disabled={deleteInputText !== expectedDeleteCode}
-                      className="flex items-center gap-2 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 disabled:bg-red-300 disabled:border-red-300 disabled:text-white/70 disabled:cursor-not-allowed transition-colors px-6 py-2.5 rounded-lg shadow-sm border border-red-600"
+                      className="flex items-center gap-2 text-sm font-semibold text-white bg-error hover:bg-error/90 disabled:bg-surface-container-highest disabled:border-border-cream disabled:text-stone disabled:cursor-not-allowed transition-colors px-6 py-2.5 rounded-lg shadow-sm border border-error"
                     >
                       <span className="material-symbols-outlined text-[18px]">delete_forever</span>
-                      I understand, delete this agent
+                      确认删除智能体
                     </button>
                   </div>
                 </div>
@@ -920,13 +936,13 @@ export function AgentConfig() {
             {/* Skill Catalog Modal */}
             {showSkillModal && activeAgent && (
               <div className="fixed inset-0 bg-charcoal/40 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowSkillModal(false)}>
-                <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden border border-border-cream max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
+                <div className="bg-ivory rounded-xl shadow-whisper w-full max-w-lg overflow-hidden border border-border-cream max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
                   <div className="p-6 border-b border-border-cream">
                     <h3 className="text-xl font-serif text-charcoal flex items-center gap-2">
                       <span className="material-symbols-outlined">extension</span>
-                      Skill Catalog
+                      技能目录
                     </h3>
-                    <p className="text-sm text-stone mt-1">Select skills to assign to {activeAgent.name}</p>
+                    <p className="text-sm text-stone mt-1">选择要绑定到 {activeAgent.name} 的已上架技能</p>
                   </div>
                   <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
                     {skillsLoading ? (
@@ -934,7 +950,7 @@ export function AgentConfig() {
                         <div className="w-6 h-6 border-2 border-stone/30 border-t-charcoal rounded-full animate-spin" />
                       </div>
                     ) : allSkills.length === 0 ? (
-                      <p className="text-sm text-stone text-center py-8">No skills available. Create skills first.</p>
+                      <p className="text-sm text-stone text-center py-8">暂无可用技能，请先创建并上架技能。</p>
                     ) : (
                       <div className="flex flex-col gap-2">
                         {allSkills.map(skill => {
@@ -947,11 +963,11 @@ export function AgentConfig() {
                               </div>
                               <div className="flex-1 min-w-0">
                                 <h4 className="text-sm font-medium text-charcoal truncate">{skill.name}</h4>
-                                <p className="text-xs text-stone truncate">{skill.description || 'No description'}</p>
+                                <p className="text-xs text-stone truncate">{skill.description || '暂无描述'}</p>
                               </div>
                               <div className="shrink-0">
                                 {isAssigned ? (
-                                  <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">Assigned</span>
+                                  <span className="text-xs font-semibold text-stone bg-surface-container px-2.5 py-1 rounded-full border border-border-cream">已绑定</span>
                                 ) : isAssigning ? (
                                   <div className="w-5 h-5 border-2 border-stone/30 border-t-charcoal rounded-full animate-spin" />
                                 ) : (
@@ -959,7 +975,7 @@ export function AgentConfig() {
                                     onClick={() => handleAssignSkill(skill)}
                                     className="text-xs font-semibold text-white bg-brand hover:bg-brand/90 px-3 py-1.5 rounded-lg transition-colors"
                                   >
-                                    Add
+                                    添加
                                   </button>
                                 )}
                               </div>
@@ -974,7 +990,7 @@ export function AgentConfig() {
                       onClick={() => setShowSkillModal(false)}
                       className="px-5 py-2 rounded-lg text-sm font-semibold text-stone hover:bg-surface-container-highest transition-colors"
                     >
-                      Done
+                      完成
                     </button>
                   </div>
                 </div>

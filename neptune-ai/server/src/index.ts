@@ -15,6 +15,7 @@ if (process.env.NEPTUNE_LLM_BASE_URL) {
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import bcrypt from 'bcrypt';
+import {randomUUID} from 'crypto';
 import {eq} from 'drizzle-orm';
 import {config} from './config';
 import {db} from './db';
@@ -27,8 +28,13 @@ import {sessionRoutes} from './routes/sessions';
 import {threadRoutes} from './routes/threads';
 import {billingRoutes} from './routes/billing';
 import {skillRoutes} from './routes/skills';
+import {projectRoutes} from './routes/projects';
+import {runRoutes} from './routes/runs';
+import {platformFactRoutes} from './routes/platform-facts';
+import {closingRoutes} from './routes/closing';
 import {authMiddleware} from './middleware/auth';
 import {initLogger, createLogger} from './utils/logger';
+import {sendApiError, toApiErrorEnvelope} from './utils/api-error';
 import {initObservability, shutdownObservability} from './services/observability';
 
 // 初始化全局日志
@@ -51,6 +57,12 @@ async function createApp() {
     // HTTP 请求/响应日志 hook
     app.addHook('onRequest', (request, reply, done) => {
         (request as any)._startTime = performance.now();
+        const requestIdHeader = request.headers['x-request-id'];
+        const requestId = Array.isArray(requestIdHeader)
+            ? requestIdHeader[0]
+            : requestIdHeader;
+        request.requestId = requestId || randomUUID();
+        reply.header('X-Request-Id', request.requestId);
         done();
     });
 
@@ -59,6 +71,9 @@ async function createApp() {
         const statusCode = reply.statusCode;
         const level = statusCode >= 400 ? 'warn' : 'info';
         log[level](`${request.method} ${request.url} ${statusCode}`, {
+            requestId: request.requestId,
+            tenantId: request.user?.tenantId,
+            userId: request.user?.userId,
             durationMs,
             remoteAddress: request.ip,
         });
@@ -73,6 +88,50 @@ async function createApp() {
 
     // 注册认证装饰器
     app.decorate('authenticate', authMiddleware);
+
+    // 全局未捕获错误兜底：保证任何 throw / Fastify schema 校验失败 / 路由抛出
+    // 都会以标准错误信封 + requestId 返回，并写入审计可追溯的日志。
+    app.setErrorHandler((error: unknown, request, reply) => {
+        const fastifyValidationError = (error as {validation?: unknown}).validation;
+        if (fastifyValidationError) {
+            log.warn('Fastify schema 校验失败', {
+                requestId: request.requestId,
+                url: request.url,
+                method: request.method,
+                detail: error instanceof Error ? error.message : String(error),
+            });
+            return sendApiError(reply, 400, {
+                error: 'VALIDATION_FAILED',
+                message: 'Schema 校验失败：' + (error instanceof Error ? error.message : String(error)),
+                requestId: request.requestId,
+                details: {validation: fastifyValidationError},
+            });
+        }
+
+        log.error('未捕获的路由异常', {
+            requestId: request.requestId,
+            url: request.url,
+            method: request.method,
+            detail: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+        });
+
+        const {statusCode, envelope} = toApiErrorEnvelope(error, {
+            error: 'INTERNAL_ERROR',
+            message: '服务器内部错误',
+            requestId: request.requestId,
+        });
+        return sendApiError(reply, statusCode, envelope);
+    });
+
+    // 全局 404 兜底：路由未匹配也走标准错误信封。
+    app.setNotFoundHandler((request, reply) => {
+        return sendApiError(reply, 404, {
+            error: 'RESOURCE_NOT_FOUND',
+            message: `路由不存在：${request.method} ${request.url}`,
+            requestId: request.requestId,
+        });
+    });
 
     // 健康检查端点
     app.get('/health', async () => {
@@ -125,6 +184,21 @@ async function createApp() {
 
         // Skills 路由
         await app.register(skillRoutes, {prefix: '/skills'});
+
+        // CustomerProject 路由
+        await app.register(projectRoutes, {prefix: '/projects'});
+
+        // RunControl 正式运行控制路由
+        await app.register(runRoutes);
+
+        // AgentOps 平台事实查询路由（旧路径兼容：/runs、/audit-events、/agents/:id/versions）
+        await app.register(platformFactRoutes);
+
+        // AgentOps 平台事实查询路由（产品路径：/platform-facts/...）
+        await app.register(platformFactRoutes, {prefix: '/platform-facts'});
+
+        // 中国 ERP 财务月结关账 Solution Pack
+        await app.register(closingRoutes, {prefix: '/closing'});
     }, {prefix: '/api/v1'});
 
     return app;

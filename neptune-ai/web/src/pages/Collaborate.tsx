@@ -5,7 +5,7 @@ import { useChatMessages } from '../hooks/useChatMessages';
 import { useThreads } from '../hooks/useThreads';
 import { useArtifacts } from '../hooks/useArtifacts';
 import { listAgentsWithSummary } from '../api/agents';
-import { replyToQuestion } from '../api/threads';
+import { listThreadRuns, replyToQuestion } from '../api/threads';
 import { UserMessage } from '../components/chat/UserMessage';
 import { AssistantMessage } from '../components/chat/AssistantMessage';
 import { ChatInput } from '../components/chat/ChatInput';
@@ -18,6 +18,7 @@ import {
   RightSidebar,
 } from '../components/collaborate';
 import type { AgentWithSummary, MessageBlock } from '../types/chat';
+import type { RunDto } from '@shared/neptune-ai';
 
 export function Collaborate() {
   const { agentId } = useParams<{ agentId: string }>();
@@ -73,6 +74,9 @@ export function Collaborate() {
   const [agentRemoved, setAgentRemoved] = useState(false);
   const [threadLoadError, setThreadLoadError] = useState<string | null>(null);
   const [isSwitchingThread, setIsSwitchingThread] = useState(false);
+  const [threadRuns, setThreadRuns] = useState<RunDto[]>([]);
+  const [threadRunsLoading, setThreadRunsLoading] = useState(false);
+  const [threadRunsError, setThreadRunsError] = useState<string | null>(null);
 
   const initialMessageProcessed = useRef(false);
   const lastThreadRef = useRef<string | null>(null);
@@ -143,6 +147,32 @@ export function Collaborate() {
       loadHistory(agentId, activeThreadId);
     }
   }, [agentId, activeThreadId, getMessages, loadHistory]);
+
+  useEffect(() => {
+    if (!agentId || !activeThreadId) {
+      setThreadRuns([]);
+      setThreadRunsError(null);
+      return;
+    }
+
+    let cancelled = false;
+    setThreadRunsLoading(true);
+    setThreadRunsError(null);
+    listThreadRuns(agentId, activeThreadId, {limit: 20})
+      .then(res => {
+        if (!cancelled) setThreadRuns(res.data);
+      })
+      .catch(error => {
+        if (!cancelled) setThreadRunsError(error instanceof Error ? error.message : '获取关联运行失败');
+      })
+      .finally(() => {
+        if (!cancelled) setThreadRunsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [agentId, activeThreadId]);
 
   // Process initial message from navigation state
   useEffect(() => {
@@ -574,12 +604,15 @@ export function Collaborate() {
 
             {/* Right Sidebar — always rendered when not collapsed */}
             {!isRightPanelCollapsed && (
-              <RightSidebar
-                planTasks={planTasks}
-                planTodos={currentPlanTodos}
-                artifacts={artifacts}
-                onCollapse={() => setIsRightPanelCollapsed(true)}
-              />
+                  <RightSidebar
+                    planTasks={planTasks}
+                    planTodos={currentPlanTodos}
+                    artifacts={artifacts}
+                    runs={threadRuns}
+                    runsLoading={threadRunsLoading}
+                    runsError={threadRunsError}
+                    onCollapse={() => setIsRightPanelCollapsed(true)}
+                  />
             )}
           </>
         )}

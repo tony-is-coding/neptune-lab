@@ -9,8 +9,9 @@ import type {
   ThreadDto as Thread,
   ThreadHistoryResponse,
   ThreadTasksResponse,
+  ThreadRunListResponse,
 } from '@shared/neptune-ai'
-import { API_BASE, getAuthHeaders, handleUnauthorized } from './client'
+import { API_BASE, getAuthHeaders, handleUnauthorized, readApiErrorEnvelope } from './client'
 import { getStoredToken } from '../stores/auth'
 import {parseSSEChunk} from './sse-parser'
 
@@ -138,6 +139,31 @@ export async function getThreadTasks(
   return res.json()
 }
 
+/** 获取 Thread 关联的受控运行 */
+export async function listThreadRuns(
+  agentId: string,
+  threadId: string,
+  filters?: {
+    status?: string
+    limit?: number
+    offset?: number
+  },
+): Promise<ThreadRunListResponse> {
+  const params = new URLSearchParams()
+  if (filters?.status) params.set('status', filters.status)
+  if (filters?.limit) params.set('limit', String(filters.limit))
+  if (filters?.offset) params.set('offset', String(filters.offset))
+  const qs = params.toString() ? `?${params.toString()}` : ''
+
+  const res = await fetch(
+    `${API_BASE}/agents/${agentId}/threads/${threadId}/runs${qs}`,
+    { headers: getAuthHeaders() },
+  )
+  if (res.status === 401) { handleUnauthorized(res); throw new Error('Unauthorized'); }
+  if (!res.ok) throw new Error(`listThreadRuns failed: ${res.status}`)
+  return res.json()
+}
+
 /** 回复 AskUserQuestion（用户选择答案后调用） */
 export async function replyToQuestion(
   agentId: string,
@@ -193,17 +219,19 @@ export function sendThreadMessage(
   })
     .then(async (res) => {
       if (!res.ok) {
-        let envelope: Partial<ApiErrorEnvelope> = {};
-        try {
-          envelope = await res.json();
-        } catch {
-          envelope = {};
-        }
+        const envelope = await readApiErrorEnvelope(res, {
+          error: res.status === 401 ? 'UNAUTHORIZED' : 'INTERNAL_ERROR',
+          message: res.status === 401 ? '登录已过期，请重新登录' : `Chat failed: ${res.status}`,
+        });
+        const event = {
+          type: 'error',
+          ...envelope,
+        } as ChatErrorEvent;
         if (res.status === 401) {
-          callbacks.onError?.(new Error(envelope.message || '登录已过期，请重新登录'))
+          callbacks.onError?.(new Error(envelope.message), event)
           return
         }
-        callbacks.onError?.(new Error(envelope.message || `Chat failed: ${res.status}`))
+        callbacks.onError?.(new Error(envelope.message), event)
         return
       }
 
