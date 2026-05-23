@@ -22,8 +22,9 @@ import {roleMiddleware} from '../middleware/auth';
 import {createLogger} from '../utils/logger';
 import {resolveTranscriptPath, resolveTranscriptPaths} from '../utils/transcript-resolver';
 import type {ChatConnectedEvent, ChatDoneEvent, ChatErrorEvent, ChatRequestContext} from '@shared/neptune-ai';
-import {sendApiError} from '../utils/api-error';
+import {sendApiError, toApiErrorEnvelope} from '../utils/api-error';
 import {agentTemplateService} from '../services/agent-template';
+import {runService} from '../services/run';
 
 const log = createLogger('routes:threads');
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -272,6 +273,50 @@ export async function threadRoutes(fastify: FastifyInstance) {
         }
     });
 
+    // ===== 3b. 获取 Thread 关联的受控运行 =====
+    fastify.get('/:agentId/threads/:threadId/runs', {
+        preHandler: [fastify.authenticate],
+    }, async (request, reply) => {
+        if (!request.user || reply.sent) return;
+        const {agentId, threadId} = request.params as {
+            agentId: string;
+            threadId: string;
+        };
+        const {status, limit, offset} = request.query as {
+            status?: string;
+            limit?: string;
+            offset?: string;
+        };
+        const user = request.user;
+
+        try {
+            const thread = await getOwnedThread(agentId, threadId, user.tenantId);
+            if (!thread) {
+                return reply.status(404).send({
+                    error: 'NOT_FOUND',
+                    message: 'Thread 不存在',
+                });
+            }
+
+            const parsedLimit = limit ? Number.parseInt(limit, 10) : 20;
+            const parsedOffset = offset ? Number.parseInt(offset, 10) : 0;
+            const result = await runService.listByTenant(user.tenantId, {
+                threadId,
+                status,
+                limit: Number.isFinite(parsedLimit) ? Math.min(Math.max(parsedLimit, 1), 100) : 20,
+                offset: Number.isFinite(parsedOffset) ? Math.max(parsedOffset, 0) : 0,
+            });
+
+            return reply.send(result);
+        } catch (error) {
+            log.error('Request failed', {detail: (error as Error).message});
+            return reply.status(500).send({
+                error: 'INTERNAL_ERROR',
+                message: '获取 Thread 关联运行失败',
+            });
+        }
+    });
+
     // ===== 4. 更新 Thread =====
     fastify.patch('/:agentId/threads/:threadId', {
         preHandler: [fastify.authenticate, roleMiddleware('admin')],
@@ -359,7 +404,7 @@ export async function threadRoutes(fastify: FastifyInstance) {
         };
         const {content} = request.body as { content?: string };
         const user = request.user;
-        const requestId = randomUUID();
+        const requestId = request.requestId || randomUUID();
         reply.header('X-Request-Id', requestId);
 
         // 验证 content
@@ -589,11 +634,17 @@ export async function threadRoutes(fastify: FastifyInstance) {
             }
         } catch (error) {
             if (!abortController.signal.aborted) {
+                const envelope = toApiErrorEnvelope(error, {
+                    error: 'QUERY_ERROR',
+                    message: error instanceof Error ? error.message : '运行失败',
+                    requestId,
+                });
                 const errorEvent: ChatErrorEvent = {
                     type: 'error',
-                    error: 'QUERY_ERROR',
-                    message: String(error),
-                    requestId,
+                    error: envelope.error,
+                    message: envelope.message,
+                    requestId: envelope.requestId || requestId,
+                    details: envelope.details,
                 };
                 reply.raw.write(`event: error\ndata: ${JSON.stringify(errorEvent)}\n\n`);
                 // Note: X-Accel-Buffering: no + Cache-Control: no-cache ensures real-time delivery

@@ -6,6 +6,8 @@
 
 import type {FastifyInstance} from 'fastify';
 import {skillService} from '../services/skill';
+import {agentTemplateService} from '../services/agent-template';
+import {auditEventService} from '../services/audit';
 import {roleMiddleware} from '../middleware/auth';
 import {createLogger} from '../utils/logger';
 
@@ -58,6 +60,19 @@ export async function skillRoutes(fastify: FastifyInstance) {
                 description,
                 content,
                 status,
+            });
+
+            await auditEventService.record({
+                tenantId,
+                userId: request.user!.userId,
+                requestId: request.requestId,
+                action: 'skill.created',
+                resourceType: 'skill',
+                resourceId: skill.id,
+                metadata: {
+                    name: skill.name,
+                    status: skill.status,
+                },
             });
 
             reply.status(201).send(skill);
@@ -194,12 +209,129 @@ export async function skillRoutes(fastify: FastifyInstance) {
                 });
             }
 
+            await auditEventService.record({
+                tenantId,
+                userId: request.user!.userId,
+                requestId: request.requestId,
+                action: 'skill.updated',
+                resourceType: 'skill',
+                resourceId: skill.id,
+                metadata: {
+                    changedFields: Object.entries({name, description, content, status})
+                        .filter(([, value]) => value !== undefined)
+                        .map(([key]) => key),
+                    status: skill.status,
+                },
+            });
+
             reply.send(skill);
         } catch (error) {
             log.error('Request failed', {detail: (error as Error).message});
             reply.status(500).send({
                 error: 'INTERNAL_ERROR',
                 message: '更新 Skill 失败',
+            });
+        }
+    });
+
+    /**
+     * POST /api/v1/skills/:id/publish
+     * 显式上架 Skill（仅管理员）
+     */
+    fastify.post('/:id/publish', {
+        preHandler: [fastify.authenticate, roleMiddleware('admin')],
+    }, async (request, reply) => {
+        const {id} = request.params as { id: string };
+        const tenantId = request.user!.tenantId;
+
+        try {
+            const existing = await skillService.getSkill(id);
+            if (!existing || existing.tenantId !== tenantId) {
+                return reply.status(404).send({
+                    error: 'NOT_FOUND',
+                    message: 'Skill 不存在',
+                });
+            }
+
+            const skill = await skillService.update(id, {status: 'active'});
+            if (!skill) {
+                return reply.status(404).send({
+                    error: 'NOT_FOUND',
+                    message: 'Skill 不存在',
+                });
+            }
+
+            await auditEventService.record({
+                tenantId,
+                userId: request.user!.userId,
+                requestId: request.requestId,
+                action: 'skill.published',
+                resourceType: 'skill',
+                resourceId: skill.id,
+                metadata: {
+                    name: skill.name,
+                    previousStatus: existing.status,
+                    status: skill.status,
+                },
+            });
+
+            reply.send(skill);
+        } catch (error) {
+            log.error('Request failed', {detail: (error as Error).message});
+            reply.status(500).send({
+                error: 'INTERNAL_ERROR',
+                message: '上架 Skill 失败',
+            });
+        }
+    });
+
+    /**
+     * POST /api/v1/skills/:id/unpublish
+     * 显式下架 Skill 为草稿（仅管理员）
+     */
+    fastify.post('/:id/unpublish', {
+        preHandler: [fastify.authenticate, roleMiddleware('admin')],
+    }, async (request, reply) => {
+        const {id} = request.params as { id: string };
+        const tenantId = request.user!.tenantId;
+
+        try {
+            const existing = await skillService.getSkill(id);
+            if (!existing || existing.tenantId !== tenantId) {
+                return reply.status(404).send({
+                    error: 'NOT_FOUND',
+                    message: 'Skill 不存在',
+                });
+            }
+
+            const skill = await skillService.update(id, {status: 'draft'});
+            if (!skill) {
+                return reply.status(404).send({
+                    error: 'NOT_FOUND',
+                    message: 'Skill 不存在',
+                });
+            }
+
+            await auditEventService.record({
+                tenantId,
+                userId: request.user!.userId,
+                requestId: request.requestId,
+                action: 'skill.unpublished',
+                resourceType: 'skill',
+                resourceId: skill.id,
+                metadata: {
+                    name: skill.name,
+                    previousStatus: existing.status,
+                    status: skill.status,
+                },
+            });
+
+            reply.send(skill);
+        } catch (error) {
+            log.error('Request failed', {detail: (error as Error).message});
+            reply.status(500).send({
+                error: 'INTERNAL_ERROR',
+                message: '下架 Skill 失败',
             });
         }
     });
@@ -233,6 +365,15 @@ export async function skillRoutes(fastify: FastifyInstance) {
                 });
             }
 
+            await auditEventService.record({
+                tenantId,
+                userId: request.user!.userId,
+                requestId: request.requestId,
+                action: 'skill.deleted',
+                resourceType: 'skill',
+                resourceId: id,
+            });
+
             reply.status(204).send();
         } catch (error) {
             log.error('Request failed', {detail: (error as Error).message});
@@ -254,16 +395,48 @@ export async function skillRoutes(fastify: FastifyInstance) {
         const tenantId = request.user!.tenantId;
 
         try {
-            // 检查 Skill 是否属于当前租户
-            const belongsToTenant = await skillService.belongsToTenant(skillId, tenantId);
-            if (!belongsToTenant) {
+            const skill = await skillService.getSkill(skillId);
+            if (!skill || skill.tenantId !== tenantId) {
                 return reply.status(404).send({
                     error: 'NOT_FOUND',
                     message: 'Skill 不存在',
                 });
             }
 
+            if (skill.status !== 'active') {
+                return reply.status(409).send({
+                    error: 'SKILL_NOT_PUBLISHED',
+                    message: '草稿技能不能绑定到智能体，请先上架为可用状态',
+                });
+            }
+
+            const agentBelongsToTenant = await agentTemplateService.belongsToTenant(agentId, tenantId);
+            if (!agentBelongsToTenant) {
+                return reply.status(404).send({
+                    error: 'NOT_FOUND',
+                    message: 'Agent 不存在',
+                });
+            }
+
+            const alreadyAssigned = (await skillService.getAgentSkills(agentId))
+                .some((agentSkill) => agentSkill.id === skillId);
             const result = await skillService.assignToAgent(agentId, skillId);
+
+            if (result && !alreadyAssigned) {
+                await auditEventService.record({
+                    tenantId,
+                    userId: request.user!.userId,
+                    requestId: request.requestId,
+                    action: 'skill.bound_to_agent',
+                    resourceType: 'agent_skill_binding',
+                    resourceId: result.id,
+                    metadata: {
+                        agentId,
+                        skillId,
+                        skillName: skill.name,
+                    },
+                });
+            }
 
             reply.status(201).send(result);
         } catch (error) {
@@ -295,6 +468,14 @@ export async function skillRoutes(fastify: FastifyInstance) {
                 });
             }
 
+            const agentBelongsToTenant = await agentTemplateService.belongsToTenant(agentId, tenantId);
+            if (!agentBelongsToTenant) {
+                return reply.status(404).send({
+                    error: 'NOT_FOUND',
+                    message: 'Agent 不存在',
+                });
+            }
+
             const success = await skillService.removeFromAgent(agentId, skillId);
 
             if (!success) {
@@ -303,6 +484,19 @@ export async function skillRoutes(fastify: FastifyInstance) {
                     message: '关联不存在',
                 });
             }
+
+            await auditEventService.record({
+                tenantId,
+                userId: request.user!.userId,
+                requestId: request.requestId,
+                action: 'skill.unbound_from_agent',
+                resourceType: 'agent_skill_binding',
+                resourceId: `${agentId}:${skillId}`,
+                metadata: {
+                    agentId,
+                    skillId,
+                },
+            });
 
             reply.status(204).send();
         } catch (error) {

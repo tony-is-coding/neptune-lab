@@ -1,5 +1,6 @@
 import type {FastifyInstance} from 'fastify';
 import {agentTemplateService} from '../services/agent-template';
+import {auditEventService} from '../services/audit';
 import {roleMiddleware} from '../middleware/auth';
 import {db, documents} from '../db';
 import {eq, and} from 'drizzle-orm';
@@ -390,8 +391,17 @@ export async function agentRoutes(fastify: FastifyInstance) {
     }, async (request, reply) => {
         const {id} = request.params as { id: string };
         const {category} = request.query as { category?: string };
+        const tenantId = request.user!.tenantId;
 
         try {
+            const belongsToTenant = await agentTemplateService.belongsToTenant(id, tenantId);
+            if (!belongsToTenant) {
+                return reply.status(404).send({
+                    error: 'NOT_FOUND',
+                    message: 'Agent 不存在',
+                });
+            }
+
             const conditions = [eq(documents.templateId, id)];
             if (category) {
                 conditions.push(eq(documents.category, category));
@@ -426,6 +436,14 @@ export async function agentRoutes(fastify: FastifyInstance) {
         const contentType = request.headers['content-type'] || '';
 
         try {
+            const belongsToTenant = await agentTemplateService.belongsToTenant(id, tenantId);
+            if (!belongsToTenant) {
+                return reply.status(404).send({
+                    error: 'NOT_FOUND',
+                    message: 'Agent 不存在',
+                });
+            }
+
             let fileName: string;
             let fileType: string;
             let fileSize: number;
@@ -509,6 +527,22 @@ export async function agentRoutes(fastify: FastifyInstance) {
                 path: filePath,
             }).returning();
 
+            await auditEventService.record({
+                tenantId,
+                userId: request.user!.userId,
+                requestId: request.requestId,
+                action: 'agent_document.uploaded',
+                resourceType: 'agent_document',
+                resourceId: doc.id,
+                metadata: {
+                    agentId: id,
+                    name: doc.name,
+                    type: doc.type,
+                    category: doc.category,
+                    size: doc.size,
+                },
+            });
+
             reply.status(201).send(doc);
         } catch (error) {
             log.error('Request failed', {detail: (error as Error).message});
@@ -528,8 +562,17 @@ export async function agentRoutes(fastify: FastifyInstance) {
     }, async (request, reply) => {
         if (!request.user || reply.sent) return;
         const {id, docId} = request.params as { id: string; docId: string };
+        const tenantId = request.user.tenantId;
 
         try {
+            const belongsToTenant = await agentTemplateService.belongsToTenant(id, tenantId);
+            if (!belongsToTenant) {
+                return reply.status(404).send({
+                    error: 'NOT_FOUND',
+                    message: 'Agent 不存在',
+                });
+            }
+
             const [doc] = await db.select().from(documents).where(
                 and(eq(documents.id, docId), eq(documents.templateId, id))
             ).limit(1);
@@ -548,6 +591,22 @@ export async function agentRoutes(fastify: FastifyInstance) {
 
             // Delete from DB
             await db.delete(documents).where(eq(documents.id, docId));
+
+            await auditEventService.record({
+                tenantId,
+                userId: request.user!.userId,
+                requestId: request.requestId,
+                action: 'agent_document.deleted',
+                resourceType: 'agent_document',
+                resourceId: doc.id,
+                metadata: {
+                    agentId: id,
+                    name: doc.name,
+                    type: doc.type,
+                    category: doc.category,
+                    size: doc.size,
+                },
+            });
 
             reply.status(204).send();
         } catch (error) {
