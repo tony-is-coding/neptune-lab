@@ -5,6 +5,7 @@ export * from './api/agents';
 export * from './api/threads';
 export * from './api/chat-events';
 export * from './api/platform-facts';
+export * from './api/run-events';
 export * from './api/closing';
 export * from './chat/view';
 export * from './observability';

@@ -1,4 +1,4 @@
-import {and, asc, eq, sql} from 'drizzle-orm';
+import {and, asc, eq, gt, sql} from 'drizzle-orm';
 import {randomUUID} from 'crypto';
 import {
     db,
@@ -11,10 +11,12 @@ import {
 import type {
     RunEventDto,
     RunEventListResponse,
+    RunRuntimeEvent,
     ToolInvocationDto,
     ToolInvocationListResponse,
     ToolInvocationStatus,
 } from '@shared/neptune-ai';
+import {runEventBus} from './run-event-bus';
 
 export interface RunFactListFilters {
     limit?: number;
@@ -47,6 +49,8 @@ export class RunFactService {
             requestId: params.requestId,
             payloadSummary: redactSummary(params.payloadSummary ?? {}),
         }).returning();
+
+        runEventBus.publish(toRunRuntimeEvent(event));
 
         return event;
     }
@@ -168,6 +172,31 @@ export class RunFactService {
         };
     }
 
+    /**
+     * 用于 SSE 续传：返回某 sequence 之后的所有运行时事件。
+     *
+     * - 不分页（运行时事件量级可控）
+     * - 包含 sequence 严格大于 lastSequence 的事件
+     * - 使用前必须已经 assert 租户归属（路由层保证）
+     */
+    async listRuntimeEventsAfter(
+        tenantId: string,
+        runId: string,
+        lastSequence: number,
+    ): Promise<RunRuntimeEvent[]> {
+        await this.assertRunInTenant(tenantId, runId);
+        const rows = await db
+            .select()
+            .from(runEvents)
+            .where(and(
+                eq(runEvents.tenantId, tenantId),
+                eq(runEvents.runId, runId),
+                gt(runEvents.sequence, lastSequence),
+            ))
+            .orderBy(asc(runEvents.sequence));
+        return rows.map(toRunRuntimeEvent);
+    }
+
     private async assertRunInTenant(tenantId: string, runId: string): Promise<void> {
         const [run] = await db.select({id: runs.id})
             .from(runs)
@@ -211,6 +240,23 @@ function toRunEventDto(event: RunEvent): RunEventDto {
         runId: event.runId,
         eventType: event.eventType,
         sequence: event.sequence,
+        requestId: event.requestId ?? null,
+        payloadSummary: event.payloadSummary ?? {},
+        occurredAt: toIsoString(event.occurredAt) ?? new Date(0).toISOString(),
+    };
+}
+
+/**
+ * 将 RunEvent 行转换为面向客户端的 RunRuntimeEvent。
+ * 注意：tenantId 不暴露到 SSE 流，避免跨租户 leak；ApiErrorEnvelope 的 requestId
+ * 已存在事件本体中，不再重复。
+ */
+function toRunRuntimeEvent(event: RunEvent): RunRuntimeEvent {
+    return {
+        id: event.id,
+        sequence: event.sequence,
+        runId: event.runId,
+        eventType: event.eventType,
         requestId: event.requestId ?? null,
         payloadSummary: event.payloadSummary ?? {},
         occurredAt: toIsoString(event.occurredAt) ?? new Date(0).toISOString(),

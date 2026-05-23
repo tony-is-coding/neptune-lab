@@ -4,6 +4,10 @@ import { isApiErrorCode } from '@shared/neptune-ai';
 
 export const API_BASE = '/api/v1';
 
+// Re-export for hook consumers (例如 useRunEventStream 需要在 fetch 时
+// 自行设置 Authorization 头)
+export { getStoredToken };
+
 export class ApiClientError extends Error {
   readonly status: number;
   readonly error: ApiErrorCode;

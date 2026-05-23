@@ -31,6 +31,8 @@ import {
 } from '../api/platformFacts';
 import {cancelRun, getRunDetail, retryRun} from '../api/runs';
 import {formatApiErrorForDisplay} from '../api/client';
+import {useRunEventStream} from '../hooks/useRunEventStream';
+import type {RunRuntimeEvent} from '@shared/neptune-ai';
 
 type GovernanceTab = 'runs' | 'audit' | 'versions' | 'policy' | 'costs' | 'reviews';
 type ReviewModalMode = 'create' | 'approve' | 'reject' | 'waive';
@@ -318,6 +320,46 @@ function MetricCard({label, value, helper}: {label: string; value: string; helpe
       <p className="mt-2 font-serif text-[24px] font-medium leading-tight text-charcoal">{value}</p>
       <p className="mt-2 text-[12px] leading-relaxed text-stone">{helper}</p>
     </div>
+  );
+}
+
+function RunStreamStatusBadge({
+  status,
+  endReason,
+}: {
+  status: ReturnType<typeof useRunEventStream>['status'];
+  endReason: ReturnType<typeof useRunEventStream>['endReason'];
+}) {
+  let label: string;
+  let dotClass: string;
+  if (endReason) {
+    label = endReason === 'completed' ? '已完成' : endReason === 'failed' ? '已失败' : '已取消';
+    dotClass = 'bg-stone';
+  } else if (status === 'connecting') {
+    label = '正在连接';
+    dotClass = 'bg-amber-500';
+  } else if (status === 'connected') {
+    label = '实时';
+    dotClass = 'bg-emerald-500 animate-pulse';
+  } else if (status === 'reconnecting') {
+    label = '正在重连';
+    dotClass = 'bg-amber-500';
+  } else if (status === 'failed') {
+    label = '连接失败';
+    dotClass = 'bg-red-500';
+  } else {
+    label = '已断开';
+    dotClass = 'bg-stone';
+  }
+  return (
+    <span
+      className="inline-flex items-center gap-1.5 rounded-full bg-cream px-2 py-0.5 text-[11px] text-charcoal"
+      data-testid="run-stream-status"
+      data-status={status}
+    >
+      <span className={`h-1.5 w-1.5 rounded-full ${dotClass}`} aria-hidden="true" />
+      {label}
+    </span>
   );
 }
 
@@ -873,6 +915,23 @@ export function Governance() {
     [runs, selectedRunId],
   );
 
+  // 实时事件流：仅当选中的 Run 处于 running 状态时启用，避免对终态运行
+  // 维持空闲长连接。useRunEventStream 内部会处理订阅/续传/重连。
+  const runStreamEnabled = Boolean(selectedRunId && selectedRun?.status === 'running');
+  const runStream = useRunEventStream(selectedRunId, {enabled: runStreamEnabled});
+
+  // 历史快照（来自 getRunDetail）+ 实时增量事件合并去重，按 sequence 升序。
+  const mergedRunEvents = useMemo(() => {
+    const map = new Map<number, PlatformRunEvent | RunRuntimeEvent>();
+    for (const ev of runEvents) map.set(ev.sequence, ev);
+    for (const ev of runStream.events) {
+      // RunRuntimeEvent 与 PlatformRunEvent 字段重叠（id/sequence/runId/eventType/
+      // requestId/payloadSummary/occurredAt），渲染层只用这些字段，可直接合并。
+      map.set(ev.sequence, ev as unknown as PlatformRunEvent);
+    }
+    return Array.from(map.values()).sort((a, b) => a.sequence - b.sequence);
+  }, [runEvents, runStream.events]);
+
   function updateSelectedRun(run: PlatformRun) {
     setRuns(prev => prev.map(item => item.id === run.id ? {...item, ...run} : item));
     setSelectedAgentId(run.agentId);
@@ -1222,17 +1281,25 @@ export function Governance() {
             </div>
             <div className="grid gap-5 p-5 lg:grid-cols-[1fr_1fr]">
               <div>
-                <div className="mb-3 flex items-center justify-between">
+                <div className="mb-3 flex items-center justify-between gap-3">
                   <h3 className="text-[14px] font-medium text-charcoal">运行事件时间线</h3>
-                  <span className="text-[12px] text-stone">{runEvents.length} 条</span>
+                  <div className="flex items-center gap-2 text-[12px] text-stone">
+                    {runStreamEnabled && (
+                      <RunStreamStatusBadge
+                        status={runStream.status}
+                        endReason={runStream.endReason}
+                      />
+                    )}
+                    <span>{mergedRunEvents.length} 条</span>
+                  </div>
                 </div>
                 {runFactsError ? <ErrorState message={runFactsError} /> : runFactsLoading ? (
                   <EmptyState icon="progress_activity" title="正在加载运行事实" description="正在读取该运行的事件时间线和工具调用。" />
-                ) : runEvents.length === 0 ? (
+                ) : mergedRunEvents.length === 0 ? (
                   <EmptyState icon="timeline" title="暂无运行事件" description="后续受控运行会在这里沉淀可解释时间线。" />
                 ) : (
                   <div className="divide-y divide-border-cream rounded-lg border border-border-cream">
-                    {runEvents.map(event => (
+                    {mergedRunEvents.map(event => (
                       <div key={event.id} className="grid grid-cols-[72px_1fr] gap-3 px-3 py-3 text-[12px]">
                         <span className="text-stone">#{event.sequence}</span>
                         <div>

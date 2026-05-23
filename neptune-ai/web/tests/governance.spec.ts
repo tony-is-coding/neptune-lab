@@ -516,4 +516,124 @@ test.describe('治理台', () => {
       }),
     }));
   });
+
+  test('运行详情对 running 状态运行启用 SSE 实时事件流并合并增量', async ({page}) => {
+    const runId = 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee';
+    const now = new Date().toISOString();
+
+    // running 状态运行
+    await page.route('**/api/v1/platform-facts/runs?**', route => route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        data: [{
+          id: runId,
+          tenantId: 'tenant-test',
+          userId: 'user-test',
+          agentId: 'agent-test',
+          agentVersionId: null,
+          threadId: 'thread-test',
+          requestId: 'req-running',
+          status: 'running',
+          model: 'mock-model',
+          inputTokens: 0,
+          outputTokens: 0,
+          startedAt: now,
+          completedAt: null,
+          retryOfRunId: null,
+        }],
+        meta: {count: 1, limit: 50, offset: 0},
+      }),
+    }));
+
+    await page.route(`**/api/v1/runs/${runId}`, route => route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        run: {
+          id: runId,
+          tenantId: 'tenant-test',
+          userId: 'user-test',
+          agentId: 'agent-test',
+          agentVersionId: null,
+          threadId: 'thread-test',
+          requestId: 'req-running',
+          status: 'running',
+          model: 'mock-model',
+          inputTokens: 0,
+          outputTokens: 0,
+          startedAt: now,
+          completedAt: null,
+          retryOfRunId: null,
+        },
+        events: {
+          data: [{id: 1, tenantId: 'tenant-test', runId, eventType: 'run.started', sequence: 1, requestId: 'req-running', payloadSummary: {}, occurredAt: now}],
+          meta: {count: 1, limit: 50, offset: 0},
+        },
+        toolInvocations: {data: [], meta: {count: 0, limit: 50, offset: 0}},
+      }),
+    }));
+
+    await page.route(`**/api/v1/platform-facts/runs/${runId}/observability`, route => route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        tenantId: 'tenant-test',
+        runId,
+        requestId: 'req-running',
+        threadId: 'thread-test',
+        agentId: 'agent-test',
+        agentVersionId: null,
+        status: 'running',
+        model: 'mock-model',
+        durationMs: 0,
+        tokenUsage: {inputTokens: 0, outputTokens: 0, totalTokens: 0},
+        factCounts: {events: 1, toolInvocations: 0, artifacts: 0, evidenceArtifacts: 0, policyDecisions: 0, auditEvents: 0},
+        trace: {provider: 'internal', traceId: null, traceUrl: null, message: ''},
+        agentVersion: null,
+        updatedAt: now,
+      }),
+    }));
+    await page.route(`**/api/v1/platform-facts/runs/${runId}/artifacts**`, route => route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({data: [], meta: {count: 0, limit: 100, offset: 0}}),
+    }));
+    await page.route(`**/api/v1/platform-facts/runs/${runId}/evidence-artifacts**`, route => route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({data: [], meta: {count: 0, limit: 100, offset: 0}}),
+    }));
+
+    // SSE 流：模拟两条增量事件 + end
+    await page.route(`**/api/v1/runs/${runId}/events/stream`, route => {
+      const body = [
+        `id: 2\ndata: ${JSON.stringify({type: 'event', event: {id: 2, sequence: 2, runId, eventType: 'tool.invocation.started', requestId: 'req-running', payloadSummary: {toolName: 'BashTool'}, occurredAt: now}})}\n\n`,
+        `id: 3\ndata: ${JSON.stringify({type: 'event', event: {id: 3, sequence: 3, runId, eventType: 'run.completed', requestId: 'req-running', payloadSummary: {}, occurredAt: now}})}\n\n`,
+        `data: ${JSON.stringify({type: 'end', reason: 'completed'})}\n\n`,
+      ].join('');
+      return route.fulfill({
+        status: 200,
+        headers: {
+          'Content-Type': 'text/event-stream; charset=utf-8',
+          'Cache-Control': 'no-cache',
+          'X-Request-Id': 'req-stream',
+        },
+        body,
+      });
+    });
+
+    await page.goto(`/governance?tab=runs&runId=${runId}`, {waitUntil: 'domcontentloaded'});
+    await expect(page.getByRole('heading', {name: '运行详情'})).toBeVisible();
+
+    // 状态徽标在 running 时存在；在 SSE 收到 end:completed 后变为「已完成」
+    const badge = page.getByTestId('run-stream-status');
+    await expect(badge).toBeVisible();
+
+    // 实时合并事件：历史 1 条 + 实时 2 条 = 3 条
+    await expect(page.getByText('3 条')).toBeVisible();
+    // 事件类型中文名（依赖 formatEventType 映射；至少能看到 sequence 标记）
+    await expect(page.getByText('#2')).toBeVisible();
+    await expect(page.getByText('#3')).toBeVisible();
+  });
 });
