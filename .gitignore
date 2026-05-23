@@ -58,3 +58,6 @@ shared/**/dist
 CLAUDE.md
 */.tmp_docs/
 neptune-ai/server/data/
+# Playwright/test artifacts (auto-generated, must not be committed)
+**/test-results/
+**/playwright-report/
