@@ -1,10 +1,10 @@
 import {feature} from 'bun:bundle'
 import {prependBullets} from 'src/constants/prompts.js'
-import {hasEmbeddedSearchTools} from 'src/utils/embeddedTools.js'
-import {isEnvTruthy} from 'src/utils/envUtils.js'
+import {isEnvTruthy} from '../../utils/env.js'
+import {hasEmbeddedSearchTools} from '../../utils/featureFlags.js'
+import {jsonStringify} from '../../utils/json.js'
 import {getClaudeTempDir} from 'src/utils/permissions/filesystem.js'
 import {SandboxManager} from 'src/utils/sandbox/sandbox-adapter.js'
-import {jsonStringify} from '../../utils/json.js'
 import {
 	getDefaultBashTimeoutMs,
 	getMaxBashTimeoutMs,

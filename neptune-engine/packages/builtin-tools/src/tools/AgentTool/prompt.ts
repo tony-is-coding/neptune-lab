@@ -1,6 +1,6 @@
 import {getFeatureValue_CACHED_MAY_BE_STALE} from 'src/services/analytics/growthbook.js'
-import {hasEmbeddedSearchTools} from 'src/utils/embeddedTools.js'
-import {isEnvDefinedFalsy, isEnvTruthy} from 'src/utils/envUtils.js'
+import {hasEmbeddedSearchTools} from '../../utils/featureFlags.js'
+import {isEnvDefinedFalsy, isEnvTruthy} from '../../utils/env.js'
 import {FILE_READ_TOOL_NAME} from '../FileReadTool/prompt.js'
 import {FILE_WRITE_TOOL_NAME} from '../FileWriteTool/prompt.js'
 import {GLOB_TOOL_NAME} from '../GlobTool/prompt.js'

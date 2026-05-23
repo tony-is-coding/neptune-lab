@@ -6,7 +6,7 @@ import {FILE_WRITE_TOOL_NAME} from '@neptune/builtin-tools/tools/FileWriteTool/p
 import {GLOB_TOOL_NAME} from '@neptune/builtin-tools/tools/GlobTool/prompt.js'
 import {GREP_TOOL_NAME} from '@neptune/builtin-tools/tools/GrepTool/prompt.js'
 import {NOTEBOOK_EDIT_TOOL_NAME} from '@neptune/builtin-tools/tools/NotebookEditTool/constants.js'
-import {hasEmbeddedSearchTools} from 'src/utils/embeddedTools.js'
+import {hasEmbeddedSearchTools} from '../../../utils/featureFlags.js'
 import {AGENT_TOOL_NAME} from '../constants.js'
 import type {BuiltInAgentDefinition} from '../loadAgentsDir.js'
 
