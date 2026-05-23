@@ -133,4 +133,112 @@ test.describe('Collaborate', () => {
     const stored = await page.evaluate(() => localStorage.getItem('neptune-auth'));
     printReport(diag, page.url(), stored);
   });
+
+  test('协作 Thread 展示关联运行并跳转治理台事实链', async ({ page }) => {
+    const agentId = '11111111-1111-4111-8111-111111111111';
+    const threadId = '22222222-2222-4222-8222-222222222222';
+    const runId = '33333333-3333-4333-8333-333333333333';
+    const now = new Date().toISOString();
+
+    await page.route('**/api/v1/agents?**', route => route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        data: [{
+          id: agentId,
+          tenantId: 'tenant-test',
+          name: '运行调试智能体',
+          description: '用于验证 Thread 与 Controlled Run 的关系',
+          systemPrompt: 'test',
+          modelConfig: {provider: 'controlled', model: 'neptune-controlled-model'},
+          tools: [],
+          skills: [],
+          mcpServers: [],
+          constraints: {},
+          icon: 'smart_toy',
+          isActive: true,
+          createdAt: now,
+          updatedAt: now,
+          threadSummary: {
+            totalThreads: 1,
+            latestStatus: 'idle',
+            latestThreadTitle: '月结检查调试',
+            lastActiveAt: now,
+          },
+        }],
+        meta: {count: 1, limit: 50, offset: 0},
+      }),
+    }));
+    await page.route(`**/api/v1/agents/${agentId}/threads**`, route => {
+      if (route.request().method() !== 'GET') return route.fallback();
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          data: [{
+            id: threadId,
+            tenantId: 'tenant-test',
+            userId: 'user-test',
+            templateId: agentId,
+            status: 'idle',
+            title: '月结检查调试',
+            summary: null,
+            workspace: 'workspace://thread',
+            lastActiveAt: now,
+            createdAt: now,
+            updatedAt: now,
+          }],
+          meta: {count: 1, limit: 50, offset: 0},
+        }),
+      });
+    });
+    await page.route(`**/api/v1/agents/${agentId}/threads/${threadId}/history`, route => route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({data: [], meta: {}}),
+    }));
+
+    const runQueries: Array<Record<string, string>> = [];
+    await page.route(`**/api/v1/agents/${agentId}/threads/${threadId}/runs**`, route => {
+      const url = new URL(route.request().url());
+      runQueries.push(Object.fromEntries(url.searchParams));
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          data: [{
+            id: runId,
+            tenantId: 'tenant-test',
+            userId: 'user-test',
+            agentId,
+            agentVersionId: 'version-test',
+            threadId,
+            requestId: 'req-thread-run',
+            status: 'completed',
+            model: 'neptune-controlled-model',
+            inputTokens: 12,
+            outputTokens: 34,
+            startedAt: now,
+            completedAt: now,
+            retryOfRunId: null,
+          }],
+          meta: {count: 1, limit: 20, offset: 0},
+        }),
+      });
+    });
+
+    await page.goto(`/collaborate/${agentId}?threadId=${threadId}`, {waitUntil: 'domcontentloaded'});
+
+    await expect(page.getByRole('heading', {name: '关联运行'})).toBeVisible();
+    await expect(page.getByText('受控运行 1 次')).toBeVisible();
+    await expect(page.getByText('已完成')).toBeVisible();
+    expect(runQueries).toContainEqual(expect.objectContaining({limit: '20'}));
+
+    await page.getByRole('link', {name: '查看运行详情'}).click();
+    await expect(page).toHaveURL(new RegExp(`/governance\\?tab=runs.*runId=${runId}`));
+
+    await page.goto(`/collaborate/${agentId}?threadId=${threadId}`, {waitUntil: 'domcontentloaded'});
+    await page.getByRole('link', {name: '查看审计链'}).click();
+    await expect(page).toHaveURL(new RegExp(`/governance\\?tab=audit.*resourceType=run.*resourceId=${runId}`));
+  });
 });

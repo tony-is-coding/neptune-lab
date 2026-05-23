@@ -32,6 +32,11 @@ export default defineConfig({
       dependencies: ['auth'],
     },
     {
+      name: 'projects',
+      testMatch: 'projects.spec.ts',
+      dependencies: ['auth'],
+    },
+    {
       name: 'collaborate',
       testMatch: 'collaborate.spec.ts',
       dependencies: ['auth'],
@@ -60,6 +65,21 @@ export default defineConfig({
       name: 'api-alignment',
       testMatch: 'api-alignment.spec.ts',
       dependencies: ['smoke'],
+    },
+    {
+      name: 'governance',
+      testMatch: 'governance.spec.ts',
+      dependencies: ['auth'],
+    },
+    {
+      name: 'closing-workbench',
+      testMatch: 'closing-workbench.spec.ts',
+      dependencies: ['auth'],
+    },
+    {
+      name: 'skill-memory-governance',
+      testMatch: 'skill-memory-governance.spec.ts',
+      dependencies: ['auth'],
     },
     {
       name: 'auth-401',

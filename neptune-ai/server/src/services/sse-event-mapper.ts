@@ -29,12 +29,14 @@ import type {
     ChatPlanStepEvent,
     ChatStreamEvent,
 } from '@shared/neptune-ai';
+import {toApiErrorEnvelope} from '../utils/api-error.js';
 
 export type SSEPlanCreatedEvent = ChatPlanCreatedEvent;
 export type SSEPlanStepEvent = ChatPlanStepEvent;
 export type SSEPlanDoneEvent = ChatPlanDoneEvent;
 export type SSEPlanEvent = ChatPlanCreatedEvent | ChatPlanStepEvent | ChatPlanDoneEvent;
 export type SSEEvent = ChatStreamEvent;
+export type SSEMappedEvent = ChatMessageEvent | Extract<ChatStreamEvent, {type: 'error'}>;
 
 // ===== 辅助函数 =====
 
@@ -66,6 +68,16 @@ function extractAssistantText(event: Record<string, unknown>): string {
 /**
  * 从 error 事件中提取错误消息
  */
+function extractErrorEnvelope(event: Record<string, unknown>) {
+    const rawError = event.error ?? event.result ?? event;
+    const {envelope} = toApiErrorEnvelope(rawError, {
+        error: 'INTERNAL_ERROR',
+        message: extractErrorMessage(event),
+        requestId: typeof event.requestId === 'string' ? event.requestId : undefined,
+    });
+    return envelope;
+}
+
 function extractErrorMessage(event: Record<string, unknown>): string {
     // event.error 可能是 Error 对象、字符串、或 undefined
     const error = event.error;
@@ -89,7 +101,7 @@ function extractErrorMessage(event: Record<string, unknown>): string {
  * - tool_use -> { type: 'tool_use', ... }
  * - tool_result -> { type: 'tool_result', ... } + { type: 'tool_status', ... }
  */
-export function mapSSEEvent(sdkEvent: Record<string, unknown>): ChatMessageEvent[] {
+export function mapSSEEvent(sdkEvent: Record<string, unknown>): SSEMappedEvent[] {
     const eventType = sdkEvent.type as string;
 
     switch (eventType) {
@@ -228,9 +240,13 @@ export function mapSSEEvent(sdkEvent: Record<string, unknown>): ChatMessageEvent
             // result 事件表示查询完成
             // 成功完成时由路由层发 event: done，这里只处理错误
             if (sdkEvent.is_error || sdkEvent.subtype === 'error') {
+                const envelope = extractErrorEnvelope(sdkEvent);
                 return [{
                     type: 'error',
-                    message: String(sdkEvent.result || sdkEvent.error || 'Query failed'),
+                    error: envelope.error,
+                    message: envelope.message,
+                    requestId: envelope.requestId,
+                    details: envelope.details,
                 }];
             }
             return [];
@@ -238,7 +254,14 @@ export function mapSSEEvent(sdkEvent: Record<string, unknown>): ChatMessageEvent
 
         case 'error':
         case 'assistant_error': {
-            return [{type: 'error', message: extractErrorMessage(sdkEvent)}];
+            const envelope = extractErrorEnvelope(sdkEvent);
+            return [{
+                type: 'error',
+                error: envelope.error,
+                message: envelope.message,
+                requestId: envelope.requestId,
+                details: envelope.details,
+            }];
         }
 
         default:

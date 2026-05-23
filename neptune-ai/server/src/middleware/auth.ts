@@ -1,5 +1,15 @@
-import type {FastifyRequest, FastifyReply} from 'fastify';
+import type {FastifyRequest, FastifyReply, HookHandlerDoneFunction} from 'fastify';
 import {authService, type JwtPayload} from '../services/auth';
+import {sendApiError} from '../utils/api-error';
+import type {ApiErrorEnvelope} from '@shared/neptune-ai';
+
+function sendAndStop(
+    reply: FastifyReply,
+    statusCode: number,
+    envelope: ApiErrorEnvelope,
+): void {
+    sendApiError(reply, statusCode, envelope);
+}
 
 /**
  * 扩展 Fastify Request 类型，添加用户信息和租户上下文
@@ -8,6 +18,7 @@ declare module 'fastify' {
     interface FastifyRequest {
         user?: JwtPayload;
         tenantId?: string;
+        requestId?: string;
     }
 }
 
@@ -15,44 +26,60 @@ declare module 'fastify' {
  * 认证中间件
  * 验证 JWT 令牌并将用户信息附加到请求对象
  */
-export async function authMiddleware(
+export function authMiddleware(
     request: FastifyRequest,
     reply: FastifyReply,
-): Promise<void> {
+    done: HookHandlerDoneFunction,
+): void {
     try {
         // 从 Authorization 头获取令牌
         const authHeader = request.headers.authorization;
 
         if (!authHeader) {
-            return reply.code(401).send({
+            sendAndStop(reply, 401, {
                 error: 'UNAUTHORIZED',
                 message: '缺少认证令牌',
+                requestId: request.requestId,
             });
+            return;
         }
 
         // 提取 Bearer 令牌
         const [, token] = authHeader.split(' ');
 
         if (!token) {
-            return reply.code(401).send({
+            sendAndStop(reply, 401, {
                 error: 'UNAUTHORIZED',
                 message: '无效的认证令牌格式',
+                requestId: request.requestId,
             });
+            return;
         }
 
         // 验证令牌
-        const payload = await authService.verifyAccessToken(token);
+        authService.verifyAccessToken(token)
+            .then((payload) => {
+                // 将用户信息附加到请求对象
+                request.user = payload;
 
-        // 将用户信息附加到请求对象
-        request.user = payload;
-
-        // 注入租户上下文
-        request.tenantId = payload.tenantId;
+                // 注入租户上下文
+                request.tenantId = payload.tenantId;
+                done();
+            })
+            .catch(() => {
+                sendAndStop(reply, 401, {
+                    error: 'UNAUTHORIZED',
+                    message: '认证令牌无效或已过期',
+                    requestId: request.requestId,
+                });
+            });
     } catch (error) {
-        return reply.code(401).send({
+        sendAndStop(reply, 401, {
             error: 'UNAUTHORIZED',
             message: '认证令牌无效或已过期',
+            requestId: request.requestId,
         });
+        return;
     }
 }
 
@@ -96,22 +123,28 @@ export async function optionalAuthMiddleware(
  * @param allowedRoles 允许的角色列表
  */
 export function roleMiddleware(...allowedRoles: string[]) {
-    return async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
+    return (request: FastifyRequest, reply: FastifyReply, done: HookHandlerDoneFunction): void => {
         const user = request.user;
 
         if (!user) {
-            return reply.code(401).send({
+            sendAndStop(reply, 401, {
                 error: 'UNAUTHORIZED',
                 message: '需要认证',
+                requestId: request.requestId,
             });
+            return;
         }
 
         if (!allowedRoles.includes(user.role)) {
-            return reply.code(403).send({
+            sendAndStop(reply, 403, {
                 error: 'FORBIDDEN',
                 message: '权限不足',
+                requestId: request.requestId,
             });
+            return;
         }
+
+        done();
     };
 }
 
@@ -123,14 +156,14 @@ export function roleMiddleware(...allowedRoles: string[]) {
 export async function tenantContextMiddleware(
     request: FastifyRequest,
     reply: FastifyReply,
-): Promise<void> {
+): Promise<void | FastifyReply> {
     // 检查用户是否已认证
     if (!request.user) {
-        reply.code(401).send({
+        return sendApiError(reply, 401, {
             error: 'UNAUTHORIZED',
             message: '需要认证',
+            requestId: request.requestId,
         });
-        return;
     }
 
     // 注入租户上下文

@@ -36,6 +36,55 @@
       "when": 1778161102636,
       "tag": "0004_broken_hitman",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1779423128951,
+      "tag": "0005_curly_hellcat",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1779435260039,
+      "tag": "0006_large_white_tiger",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1779436475642,
+      "tag": "0007_lyrical_blink",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1779437322455,
+      "tag": "0008_far_mojo",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1779438760298,
+      "tag": "0009_polite_maginty",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1779440638671,
+      "tag": "0010_slow_speedball",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1779449176946,
+      "tag": "0011_sleepy_photon",
+      "breakpoints": true
     }
   ]
 }

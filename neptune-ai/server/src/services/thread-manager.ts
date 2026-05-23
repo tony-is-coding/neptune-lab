@@ -29,6 +29,13 @@ import {createLogger} from '../utils/logger.js';
 import {createTracingProviderForRequest} from './observability/index.js';
 import {LangfuseTracingProvider} from './observability/langfuse-tracing-provider.js';
 import {TracingEventProcessor} from './observability/tracing-event-processor.js';
+import {costAggregator} from './cost.js';
+import {agentVersionService} from './agent-version.js';
+import {runService} from './run.js';
+import {runFactService} from './run-facts.js';
+import {policyDecisionService} from './policy-decision.js';
+import {artifactEvidenceService} from './artifact-evidence.js';
+import {runAdmissionService} from './run-admission.js';
 import type {ChatRequestContext} from '@shared/neptune-ai';
 
 const log = createLogger('thread-manager');
@@ -117,7 +124,7 @@ export type ThreadDispatchEvent = Record<string, unknown> | DispatchDoneEvent;
 /**
  * 默认 workspace 基础路径
  */
-const DEFAULT_DATA_ROOT = '/data';
+const DEFAULT_DATA_ROOT = './data';
 
 /**
  * ThreadManager 配置
@@ -134,6 +141,11 @@ export class ThreadManager {
     private engineFactory: EngineFactory | undefined;
     private lastUsage: QueryUsageResult | null = null;
     private dataRoot: string;
+    private artifactCandidates = new Map<string, {
+        path: string;
+        content: string;
+        toolName: string;
+    }>();
 
     constructor(config?: ThreadManagerConfig) {
         this.engineFactory = config?.engineFactory;
@@ -371,6 +383,11 @@ export class ThreadManager {
             throw new Error(`Thread 正在执行中: ${threadId}`);
         }
 
+        await runAdmissionService.enforceThreadDispatch({
+            thread,
+            requestId: requestContext?.requestId,
+        });
+
         if (!this.engineFactory) {
             throw new Error('Engine factory 未配置');
         }
@@ -387,6 +404,7 @@ export class ThreadManager {
         let tracingProcessor: TracingEventProcessor | null = null;
         let engine: QueryableEngine | null = null;
         let dispatchUsage: QueryUsageResult | undefined;
+        let runId: string | null = null;
 
         try {
             if (!agentId) {
@@ -404,6 +422,55 @@ export class ThreadManager {
                 throw new Error(`Agent 模板不存在: ${agentId}`);
             }
             log.debug('Agent 模板已加载', {...ctx, templateName: (template as any).name});
+
+            const agentVersion = await agentVersionService.ensureSnapshot({
+                template,
+                userId: thread.userId,
+                requestId: requestContext?.requestId,
+            });
+
+            const run = await runService.start({
+                tenantId: thread.tenantId,
+                userId: thread.userId,
+                agentId,
+                agentVersionId: agentVersion.id,
+                threadId,
+                requestId: requestContext?.requestId ?? randomUUID(),
+                metadata: {
+                    contentLength: content.length,
+                },
+            });
+            runId = run.id;
+            await runFactService.recordEvent({
+                tenantId: thread.tenantId,
+                runId,
+                eventType: 'run.started',
+                requestId: requestContext?.requestId ?? run.requestId,
+                payloadSummary: {
+                    agentId,
+                    agentVersionId: agentVersion.id,
+                    threadId,
+                    inputLength: content.length,
+                },
+            });
+
+            const modelConfig = template.modelConfig as {provider?: string; model?: string} | null;
+            await policyDecisionService.record({
+                tenantId: thread.tenantId,
+                runId,
+                requestId: requestContext?.requestId ?? run.requestId,
+                policyType: 'model',
+                subjectType: 'model',
+                subjectId: modelConfig?.model || 'unknown',
+                decision: 'allow',
+                reason: '模型策略预检通过',
+                details: {
+                    provider: modelConfig?.provider,
+                    model: modelConfig?.model,
+                    agentId,
+                    agentVersionId: agentVersion.id,
+                },
+            });
 
             // 步骤 2：准备 Agent 配置（结构化数据，不做字符串拼接）
             // - identity: 替换 CC 身份前缀
@@ -511,17 +578,25 @@ export class ThreadManager {
             }
 
             for await (const event of engine.query(sdkSessionId, content)) {
+                await this.recordRunFactsFromRuntimeEvent({
+                    tenantId: thread.tenantId,
+                    runId,
+                    userId: thread.userId,
+                    requestId: requestContext?.requestId ?? run.requestId,
+                    event,
+                });
+
                 // Langfuse 上报：每个事件都经过 tracing 处理器记录
                 tracingProcessor?.process(event);
 
                 // Plan 事件处理：拦截 TaskCreate/TaskUpdate 工具调用，转换为 plan_step SSE 事件
                 const planEvents = planManager.processSDKEvent(event as Record<string, unknown>);
                 for (const planEvent of planEvents) {
-                    yield planEvent;
+                    yield planEvent as unknown as ThreadDispatchEvent;
                 }
 
                 // 原始事件透传给 SSE 路由层（经 mapSSEEvent 转换后发送给前端）
-                yield event;
+                yield event as ThreadDispatchEvent;
             }
 
             // 步骤 8：Query 完成，更新 Thread 状态
@@ -544,6 +619,41 @@ export class ThreadManager {
             // 结束 Langfuse trace
             tracingProcessor?.end(usage ? {modelUsage: usage.modelUsage} : undefined, durationMs);
 
+            if (usage?.modelUsage) {
+                await this.recordBillingUsage(thread, usage, ctx);
+            }
+
+            if (runId) {
+                const usageSummary = this.summarizeUsage(usage);
+                await runService.complete({
+                    runId,
+                    tenantId: thread.tenantId,
+                    userId: thread.userId,
+                    requestId: requestContext?.requestId ?? run.requestId,
+                    model: usageSummary.model,
+                    inputTokens: usageSummary.inputTokens,
+                    outputTokens: usageSummary.outputTokens,
+                    metadata: {
+                        durationMs,
+                    },
+                });
+                await runFactService.recordEvent({
+                    tenantId: thread.tenantId,
+                    runId,
+                    eventType: 'run.completed',
+                    requestId: requestContext?.requestId ?? run.requestId,
+                    payloadSummary: {
+                        durationMs,
+                        model: usageSummary.model,
+                        inputTokens: usageSummary.inputTokens,
+                        outputTokens: usageSummary.outputTokens,
+                    },
+                });
+            }
+            if (runId) {
+                this.clearArtifactCandidatesForRun(runId);
+            }
+
             yield {type: 'dispatch_done', usage};
 
             // 持久化对话历史
@@ -564,6 +674,29 @@ export class ThreadManager {
             const durationMs = Math.round(performance.now() - startTime);
             log.error('Query failed', {...ctx, durationMs, detail: (error as Error).message});
             tracingProcessor?.endWithError();
+            if (runId) {
+                await runService.fail({
+                    runId,
+                    tenantId: thread.tenantId,
+                    userId: thread.userId,
+                    requestId: requestContext?.requestId ?? '',
+                    error: {
+                        message: (error as Error).message,
+                        durationMs,
+                    },
+                }).catch(() => {});
+                await runFactService.recordEvent({
+                    tenantId: thread.tenantId,
+                    runId,
+                    eventType: 'run.failed',
+                    requestId: requestContext?.requestId,
+                    payloadSummary: {
+                        message: (error as Error).message,
+                        durationMs,
+                    },
+                }).catch(() => {});
+                this.clearArtifactCandidatesForRun(runId);
+            }
             await this.update(threadId, {status: 'error'}).catch(() => {});
             throw error;
         } finally {
@@ -577,6 +710,284 @@ export class ThreadManager {
                 }
             }
         }
+    }
+
+    private async recordRunFactsFromRuntimeEvent(params: {
+        tenantId: string;
+        runId: string;
+        userId?: string | null;
+        requestId?: string;
+        event: unknown;
+    }): Promise<void> {
+        if (!params.event || typeof params.event !== 'object') return;
+        const event = params.event as Record<string, unknown>;
+        const type = typeof event.type === 'string' ? event.type : '';
+
+        if (type === 'tool_use') {
+            const toolUseId = stringValue(event.id) ?? stringValue(event.toolUseId) ?? randomUUID();
+            const toolName = stringValue(event.name) || 'unknown_tool';
+            const input = recordValue(event.input);
+
+            await runFactService.recordToolStarted({
+                tenantId: params.tenantId,
+                runId: params.runId,
+                requestId: params.requestId,
+                toolUseId,
+                toolName,
+                input,
+            }).catch(error => {
+                log.warn('Tool invocation record failed', {
+                    runId: params.runId,
+                    toolUseId,
+                    detail: (error as Error).message,
+                });
+            });
+
+            await policyDecisionService.record({
+                tenantId: params.tenantId,
+                runId: params.runId,
+                requestId: params.requestId,
+                policyType: 'tool',
+                subjectType: 'tool',
+                subjectId: toolName,
+                decision: 'allow',
+                reason: '工具调用策略预检通过',
+                details: {
+                    toolUseId,
+                    inputKeys: Object.keys(input),
+                },
+            }).catch(error => {
+                log.warn('Tool policy decision record failed', {
+                    runId: params.runId,
+                    toolUseId,
+                    detail: (error as Error).message,
+                });
+            });
+
+            await runFactService.recordEvent({
+                tenantId: params.tenantId,
+                runId: params.runId,
+                eventType: 'tool.invocation.started',
+                requestId: params.requestId,
+                payloadSummary: {
+                    toolUseId,
+                    toolName,
+                },
+            }).catch(() => {});
+
+            this.rememberArtifactCandidate(params.runId, toolUseId, toolName, input);
+            return;
+        }
+
+        if (type === 'tool_result') {
+            const toolUseId = stringValue(event.toolUseId) || stringValue(event.tool_use_id);
+            if (!toolUseId) return;
+            const isError = Boolean(event.isError || event.is_error);
+            const output = event.content ?? event.output;
+
+            await runFactService.recordToolCompleted({
+                tenantId: params.tenantId,
+                runId: params.runId,
+                requestId: params.requestId,
+                toolUseId,
+                output,
+                isError,
+            }).catch(error => {
+                log.warn('Tool invocation completion record failed', {
+                    runId: params.runId,
+                    toolUseId,
+                    detail: (error as Error).message,
+                });
+            });
+
+            await runFactService.recordEvent({
+                tenantId: params.tenantId,
+                runId: params.runId,
+                eventType: isError ? 'tool.invocation.failed' : 'tool.invocation.completed',
+                requestId: params.requestId,
+                payloadSummary: {
+                    toolUseId,
+                    isError,
+                },
+            }).catch(() => {});
+
+            if (!isError) {
+                await this.recordArtifactFromSuccessfulToolResult({
+                    tenantId: params.tenantId,
+                    runId: params.runId,
+                    userId: params.userId,
+                    requestId: params.requestId,
+                    toolUseId,
+                }).catch(error => {
+                    log.warn('Artifact metadata record failed', {
+                        runId: params.runId,
+                        toolUseId,
+                        detail: (error as Error).message,
+                    });
+                });
+            } else {
+                this.artifactCandidates.delete(this.artifactCandidateKey(params.runId, toolUseId));
+            }
+
+            return;
+        }
+
+        if (type === 'stream_event') {
+            const streamEvent = recordValue(event.event);
+            if (streamEvent.type === 'content_block_delta') {
+                await runFactService.recordEvent({
+                    tenantId: params.tenantId,
+                    runId: params.runId,
+                    eventType: 'run.output.delta',
+                    requestId: params.requestId,
+                    payloadSummary: {channel: 'assistant'},
+                }).catch(() => {});
+            }
+            return;
+        }
+
+        if (type === 'assistant') {
+            await runFactService.recordEvent({
+                tenantId: params.tenantId,
+                runId: params.runId,
+                eventType: 'run.output.completed',
+                requestId: params.requestId,
+                payloadSummary: {source: 'assistant'},
+            }).catch(() => {});
+            return;
+        }
+
+        if (type === 'result' && (event.is_error || event.subtype === 'error')) {
+            await runFactService.recordEvent({
+                tenantId: params.tenantId,
+                runId: params.runId,
+                eventType: 'run.failed',
+                requestId: params.requestId,
+                payloadSummary: {
+                    message: stringValue(event.message) || 'runtime result error',
+                },
+            }).catch(() => {});
+        }
+    }
+
+    private rememberArtifactCandidate(
+        runId: string,
+        toolUseId: string,
+        toolName: string,
+        input: Record<string, unknown>,
+    ): void {
+        if (toolName !== 'Write') return;
+        const path = stringValue(input.file_path) || stringValue(input.filePath) || stringValue(input.path);
+        if (!path) return;
+        this.artifactCandidates.set(this.artifactCandidateKey(runId, toolUseId), {
+            path,
+            content: stringValue(input.content) ?? '',
+            toolName,
+        });
+    }
+
+    private async recordArtifactFromSuccessfulToolResult(params: {
+        tenantId: string;
+        runId: string;
+        userId?: string | null;
+        requestId?: string;
+        toolUseId: string;
+    }): Promise<void> {
+        const key = this.artifactCandidateKey(params.runId, params.toolUseId);
+        const candidate = this.artifactCandidates.get(key);
+        this.artifactCandidates.delete(key);
+        if (!candidate) return;
+
+        const artifact = await artifactEvidenceService.recordRuntimeArtifact({
+            tenantId: params.tenantId,
+            runId: params.runId,
+            userId: params.userId,
+            requestId: params.requestId,
+            title: candidate.path.split('/').filter(Boolean).pop() || candidate.path,
+            storageUri: `workspace://${candidate.path}`,
+            content: candidate.content,
+            sourceRef: params.toolUseId,
+            metadataSummary: {
+                path: candidate.path,
+                toolName: candidate.toolName,
+                toolUseId: params.toolUseId,
+            },
+        });
+
+        await artifactEvidenceService.recordEvidenceForArtifact({
+            tenantId: params.tenantId,
+            runId: params.runId,
+            userId: params.userId,
+            requestId: params.requestId,
+            artifactId: artifact.id,
+            evidenceType: 'generated_extract',
+            sourceSystem: 'runtime_tool',
+            sourceUri: artifact.storageUri,
+            sourceHash: artifact.sha256,
+            metadataSummary: {
+                artifactType: artifact.artifactType,
+                sourceType: artifact.sourceType,
+                toolUseId: params.toolUseId,
+            },
+        });
+    }
+
+    private clearArtifactCandidatesForRun(runId: string): void {
+        for (const key of this.artifactCandidates.keys()) {
+            if (key.startsWith(`${runId}:`)) {
+                this.artifactCandidates.delete(key);
+            }
+        }
+    }
+
+    private artifactCandidateKey(runId: string, toolUseId: string): string {
+        return `${runId}:${toolUseId}`;
+    }
+
+    private async recordBillingUsage(
+        thread: Thread,
+        usage: QueryUsageResult,
+        ctx: {threadId: string; tenantId: string; agentId: string | null; requestId?: string},
+    ): Promise<void> {
+        try {
+            for (const [model, modelUsage] of Object.entries(usage.modelUsage)) {
+                await costAggregator.recordUsage(thread.tenantId, thread.id, thread.userId, {
+                    model,
+                    inputTokens: modelUsage.inputTokens + modelUsage.cacheReadInputTokens + modelUsage.cacheCreationInputTokens,
+                    outputTokens: modelUsage.outputTokens,
+                });
+            }
+        } catch (error) {
+            log.warn('Usage billing record failed', {
+                ...ctx,
+                detail: (error as Error).message,
+            });
+        }
+    }
+
+    private summarizeUsage(usage?: QueryUsageResult): {
+        model?: string;
+        inputTokens: number;
+        outputTokens: number;
+    } {
+        if (!usage?.modelUsage) {
+            return {inputTokens: 0, outputTokens: 0};
+        }
+
+        const entries = Object.entries(usage.modelUsage);
+        const [firstModel] = entries[0] ?? [];
+        return entries.reduce((summary, [model, modelUsage]) => ({
+            model: summary.model ?? model,
+            inputTokens: summary.inputTokens +
+                modelUsage.inputTokens +
+                modelUsage.cacheReadInputTokens +
+                modelUsage.cacheCreationInputTokens,
+            outputTokens: summary.outputTokens + modelUsage.outputTokens,
+        }), {
+            model: firstModel,
+            inputTokens: 0,
+            outputTokens: 0,
+        } as {model?: string; inputTokens: number; outputTokens: number});
     }
 
     /**
@@ -725,11 +1136,10 @@ export class ThreadManager {
                 content: skills.content,
             })
             .from(skills)
-            .where(sql`${skills.id}
-            = ANY(
-            ${skillIds}
-            )`)
-            .eq(skills.status, 'active');
+            .where(and(
+                sql`${skills.id} = ANY(${skillIds})`,
+                eq(skills.status, 'active'),
+            ));
 
         return skillsResult.map(s => ({
             name: s.name,
@@ -752,7 +1162,10 @@ export class ThreadManager {
                 path: documentsTable.path,
             })
             .from(documentsTable)
-            .where(eq(documentsTable.templateId, agentId));
+            .where(and(
+                eq(documentsTable.templateId, agentId),
+                eq(documentsTable.category, 'knowledge'),
+            ));
 
         // 读取文档内容
         const documents: Document[] = [];
@@ -868,6 +1281,16 @@ export class ThreadManager {
             updatedAt: row.updatedAt,
         };
     }
+}
+
+function stringValue(value: unknown): string | undefined {
+    return typeof value === 'string' && value ? value : undefined;
+}
+
+function recordValue(value: unknown): Record<string, unknown> {
+    return value && typeof value === 'object' && !Array.isArray(value)
+        ? value as Record<string, unknown>
+        : {};
 }
 
 /**

@@ -81,7 +81,7 @@ describe('Neptune-AI API 集成测试', () => {
 
             expect(response.statusCode).toBe(400);
             const json = response.json();
-            expect(json).toHaveProperty('error', 'BAD_REQUEST');
+            expect(json).toHaveProperty('error', 'VALIDATION_FAILED');
             expect(json).toHaveProperty('message');
         });
 
@@ -248,7 +248,7 @@ describe('Neptune-AI API 集成测试', () => {
 
             expect(response.statusCode).toBe(400);
             const json = response.json();
-            expect(json).toHaveProperty('error', 'BAD_REQUEST');
+            expect(json).toHaveProperty('error', 'VALIDATION_FAILED');
         });
 
         test('GET /api/v1/agents - 应该返回 Agent 列表', async () => {
@@ -293,7 +293,7 @@ describe('Neptune-AI API 集成测试', () => {
 
             expect(response.statusCode).toBe(404);
             const json = response.json();
-            expect(json).toHaveProperty('error', 'NOT_FOUND');
+            expect(json).toHaveProperty('error', 'RESOURCE_NOT_FOUND');
         });
 
         test('PUT /api/v1/agents/:id - admin 应该能更新 Agent', async () => {
@@ -469,7 +469,7 @@ describe('Neptune-AI API 集成测试', () => {
 
             expect(response.statusCode).toBe(400);
             const json = response.json();
-            expect(json).toHaveProperty('error', 'MISSING_CONTENT');
+            expect(json).toHaveProperty('error', 'VALIDATION_FAILED');
             expect(json).toHaveProperty('message');
         });
 

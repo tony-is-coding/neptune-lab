@@ -3,12 +3,16 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { RightSidebar } from '../../components/collaborate/RightSidebar';
 import type { PlanTask, PlanTodo } from '../../types/chat';
 import type { ArtifactInfo } from '../../hooks/useArtifacts';
+import type { RunDto } from '@shared/neptune-ai';
 
 describe('RightSidebar', () => {
   const defaultProps = {
     planTasks: [] as PlanTask[],
     planTodos: [] as PlanTodo[],
     artifacts: [] as ArtifactInfo[],
+    runs: [] as RunDto[],
+    runsLoading: false,
+    runsError: null as string | null,
     onCollapse: vi.fn(),
   };
 
@@ -114,5 +118,39 @@ describe('RightSidebar', () => {
     expect(screen.getByText('成果')).toBeInTheDocument();
     // Empty state should NOT be shown
     expect(screen.queryByText('发送消息后，任务进度和生成的文件将在此显示')).not.toBeInTheDocument();
+  });
+
+  it('renders thread controlled runs with governance links', () => {
+    const runs: RunDto[] = [{
+      id: '33333333-3333-4333-8333-333333333333',
+      tenantId: 'tenant-test',
+      userId: 'user-test',
+      agentId: 'agent-test',
+      agentVersionId: 'version-test',
+      threadId: 'thread-test',
+      requestId: 'req-test',
+      status: 'completed',
+      model: 'neptune-controlled-model',
+      inputTokens: 12,
+      outputTokens: 34,
+      startedAt: '2026-05-22T10:00:00.000Z',
+      completedAt: '2026-05-22T10:01:00.000Z',
+      retryOfRunId: null,
+    }];
+
+    render(<RightSidebar {...defaultProps} runs={runs} />);
+
+    expect(screen.getByText('关联运行')).toBeInTheDocument();
+    expect(screen.getByText('受控运行 1 次')).toBeInTheDocument();
+    expect(screen.getByText('已完成')).toBeInTheDocument();
+    expect(screen.getByText('neptune-controlled-model')).toBeInTheDocument();
+    expect(screen.getByRole('link', {name: '查看运行详情'})).toHaveAttribute(
+      'href',
+      '/governance?tab=runs&runId=33333333-3333-4333-8333-333333333333',
+    );
+    expect(screen.getByRole('link', {name: '查看审计链'})).toHaveAttribute(
+      'href',
+      '/governance?tab=audit&resourceType=run&resourceId=33333333-3333-4333-8333-333333333333',
+    );
   });
 });

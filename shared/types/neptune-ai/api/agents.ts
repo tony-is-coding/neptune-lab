@@ -47,3 +47,27 @@ export interface CreateAgentRequest {
 export type UpdateAgentRequest = Partial<Omit<CreateAgentRequest, 'name'>> & {
   name?: string;
 };
+
+export type AgentDocumentCategory = 'memory' | 'knowledge' | 'document';
+
+export interface AgentDocumentDto {
+  id: string;
+  name: string;
+  type: string;
+  category: AgentDocumentCategory;
+  size: number;
+  path?: string;
+  uploadedAt: IsoDateString;
+}
+
+export interface ListAgentDocumentsQuery {
+  category?: AgentDocumentCategory;
+}
+
+export interface UploadAgentDocumentRequest {
+  name: string;
+  type: string;
+  size?: number;
+  content: string;
+  category?: AgentDocumentCategory;
+}

@@ -11,8 +11,8 @@
 
 import {describe, it, expect, beforeAll, afterAll} from 'bun:test';
 import {createApp} from '../src/index';
-import {db, tenants, users, agentTemplates, skills, agentSkills} from '../src/db';
-import {eq} from 'drizzle-orm';
+import {auditEvents, db, tenants, users, agentTemplates, skills, agentSkills} from '../src/db';
+import {and, eq} from 'drizzle-orm';
 import bcrypt from 'bcrypt';
 import type {FastifyInstance} from 'fastify';
 
@@ -85,6 +85,8 @@ describe('Skills CRUD API', () => {
 
     afterAll(async () => {
         // 清理：按外键顺序删除
+        await db.delete(auditEvents).where(eq(auditEvents.tenantId, testTenantId)).catch(() => {
+        });
         await db.delete(agentSkills).where(undefined as any).catch(() => {
         });
         await db.delete(skills).where(eq(skills.tenantId, testTenantId)).catch(() => {
@@ -111,10 +113,11 @@ describe('Skills CRUD API', () => {
 
     describe('POST /api/v1/skills', () => {
         it('应该能创建 Skill', async () => {
+            const requestId = `req-skill-created-${Date.now()}`;
             const res = await app.inject({
                 method: 'POST',
                 url: '/api/v1/skills',
-                headers: {authorization: `Bearer ${adminToken}`},
+                headers: {authorization: `Bearer ${adminToken}`, 'x-request-id': requestId},
                 payload: {
                     name: '测试技能',
                     description: '用于测试',
@@ -132,6 +135,15 @@ describe('Skills CRUD API', () => {
             expect(body.status).toBe('active');
             expect(body.tenantId).toBe(testTenantId);
             testSkillId = body.id;
+
+            const auditRows = await db.select().from(auditEvents).where(and(
+                eq(auditEvents.tenantId, testTenantId),
+                eq(auditEvents.requestId, requestId),
+                eq(auditEvents.resourceType, 'skill'),
+                eq(auditEvents.resourceId, body.id),
+            ));
+            expect(auditRows.map(row => row.action)).toContain('skill.created');
+            expect(auditRows.every(row => row.outcome === 'success')).toBe(true);
         });
 
         it('应该默认 status 为 active', async () => {
@@ -147,13 +159,20 @@ describe('Skills CRUD API', () => {
         });
 
         it('未认证请求应返回 401', async () => {
+            const requestId = 'req-skills-unauthorized-create';
             const res = await app.inject({
                 method: 'POST',
                 url: '/api/v1/skills',
+                headers: {'x-request-id': requestId},
                 payload: {name: '未认证'},
             });
 
             expect(res.statusCode).toBe(401);
+            expect(res.headers['x-request-id']).toBe(requestId);
+            expect(res.json()).toMatchObject({
+                error: 'UNAUTHORIZED',
+                requestId,
+            });
         });
 
         it('缺少 name 应返回 400', async () => {
@@ -223,10 +242,11 @@ describe('Skills CRUD API', () => {
 
     describe('PUT /api/v1/skills/:id', () => {
         it('应该能更新 Skill', async () => {
+            const requestId = `req-skill-updated-${Date.now()}`;
             const res = await app.inject({
                 method: 'PUT',
                 url: `/api/v1/skills/${testSkillId}`,
-                headers: {authorization: `Bearer ${adminToken}`},
+                headers: {authorization: `Bearer ${adminToken}`, 'x-request-id': requestId},
                 payload: {
                     name: '更新后的技能',
                     description: '更新后',
@@ -239,6 +259,14 @@ describe('Skills CRUD API', () => {
             expect(body.name).toBe('更新后的技能');
             expect(body.description).toBe('更新后');
             expect(body.status).toBe('draft');
+
+            const auditRows = await db.select().from(auditEvents).where(and(
+                eq(auditEvents.tenantId, testTenantId),
+                eq(auditEvents.requestId, requestId),
+                eq(auditEvents.resourceType, 'skill'),
+                eq(auditEvents.resourceId, testSkillId),
+            ));
+            expect(auditRows.map(row => row.action)).toContain('skill.updated');
         });
 
         it('不存在的 ID 应返回 404', async () => {
@@ -250,6 +278,84 @@ describe('Skills CRUD API', () => {
             });
 
             expect(res.statusCode).toBe(404);
+        });
+    });
+
+    // ===== POST /api/v1/skills/:id/publish — 上架 =====
+
+    describe('POST /api/v1/skills/:id/publish', () => {
+        it('应该能把草稿 Skill 上架，并写入 skill.published 审计事件', async () => {
+            const createRes = await app.inject({
+                method: 'POST',
+                url: '/api/v1/skills',
+                headers: {authorization: `Bearer ${adminToken}`},
+                payload: {name: '待上架技能', status: 'draft'},
+            });
+            const skillId = createRes.json().id;
+            const requestId = `req-skill-published-${Date.now()}`;
+
+            const res = await app.inject({
+                method: 'POST',
+                url: `/api/v1/skills/${skillId}/publish`,
+                headers: {authorization: `Bearer ${adminToken}`, 'x-request-id': requestId},
+            });
+
+            expect(res.statusCode).toBe(200);
+            expect(res.json()).toMatchObject({
+                id: skillId,
+                status: 'active',
+            });
+
+            const auditRows = await db.select().from(auditEvents).where(and(
+                eq(auditEvents.tenantId, testTenantId),
+                eq(auditEvents.requestId, requestId),
+                eq(auditEvents.resourceType, 'skill'),
+                eq(auditEvents.resourceId, skillId),
+            ));
+            expect(auditRows.map(row => row.action)).toContain('skill.published');
+            expect(auditRows[0]!.metadata).toMatchObject({
+                previousStatus: 'draft',
+                status: 'active',
+            });
+        });
+    });
+
+    // ===== POST /api/v1/skills/:id/unpublish — 下架 =====
+
+    describe('POST /api/v1/skills/:id/unpublish', () => {
+        it('应该能把已上架 Skill 下架为草稿，并写入 skill.unpublished 审计事件', async () => {
+            const createRes = await app.inject({
+                method: 'POST',
+                url: '/api/v1/skills',
+                headers: {authorization: `Bearer ${adminToken}`},
+                payload: {name: '待下架技能', status: 'active'},
+            });
+            const skillId = createRes.json().id;
+            const requestId = `req-skill-unpublished-${Date.now()}`;
+
+            const res = await app.inject({
+                method: 'POST',
+                url: `/api/v1/skills/${skillId}/unpublish`,
+                headers: {authorization: `Bearer ${adminToken}`, 'x-request-id': requestId},
+            });
+
+            expect(res.statusCode).toBe(200);
+            expect(res.json()).toMatchObject({
+                id: skillId,
+                status: 'draft',
+            });
+
+            const auditRows = await db.select().from(auditEvents).where(and(
+                eq(auditEvents.tenantId, testTenantId),
+                eq(auditEvents.requestId, requestId),
+                eq(auditEvents.resourceType, 'skill'),
+                eq(auditEvents.resourceId, skillId),
+            ));
+            expect(auditRows.map(row => row.action)).toContain('skill.unpublished');
+            expect(auditRows[0]!.metadata).toMatchObject({
+                previousStatus: 'active',
+                status: 'draft',
+            });
         });
     });
 
@@ -265,14 +371,23 @@ describe('Skills CRUD API', () => {
                 payload: {name: '待删除', status: 'active'},
             });
             const skillId = createRes.json().id;
+            const requestId = `req-skill-deleted-${Date.now()}`;
 
             const res = await app.inject({
                 method: 'DELETE',
                 url: `/api/v1/skills/${skillId}`,
-                headers: {authorization: `Bearer ${adminToken}`},
+                headers: {authorization: `Bearer ${adminToken}`, 'x-request-id': requestId},
             });
 
             expect(res.statusCode).toBe(204);
+
+            const auditRows = await db.select().from(auditEvents).where(and(
+                eq(auditEvents.tenantId, testTenantId),
+                eq(auditEvents.requestId, requestId),
+                eq(auditEvents.resourceType, 'skill'),
+                eq(auditEvents.resourceId, skillId),
+            ));
+            expect(auditRows.map(row => row.action)).toContain('skill.deleted');
 
             // 验证已删除
             const getRes = await app.inject({
@@ -308,27 +423,106 @@ describe('Skills CRUD API', () => {
                 payload: {name: '关联技能', status: 'active'},
             });
             assocSkillId = createRes.json().id;
+            const requestId = `req-skill-bound-${Date.now()}`;
 
             const res = await app.inject({
                 method: 'POST',
                 url: `/api/v1/skills/${assocSkillId}/agents/${testAgentId}`,
-                headers: {authorization: `Bearer ${adminToken}`},
+                headers: {authorization: `Bearer ${adminToken}`, 'x-request-id': requestId},
             });
 
             expect(res.statusCode).toBe(201);
             expect(res.json().skillId).toBe(assocSkillId);
             expect(res.json().agentId).toBe(testAgentId);
+
+            const auditRows = await db.select().from(auditEvents).where(and(
+                eq(auditEvents.tenantId, testTenantId),
+                eq(auditEvents.requestId, requestId),
+                eq(auditEvents.resourceType, 'agent_skill_binding'),
+            ));
+            expect(auditRows).toHaveLength(1);
+            expect(auditRows[0]).toMatchObject({
+                action: 'skill.bound_to_agent',
+                outcome: 'success',
+            });
+        });
+
+        it('不能把草稿 Skill 分配给 Agent', async () => {
+            const createRes = await app.inject({
+                method: 'POST',
+                url: '/api/v1/skills',
+                headers: {authorization: `Bearer ${adminToken}`},
+                payload: {name: '草稿技能不可绑定', status: 'draft'},
+            });
+            const draftSkillId = createRes.json().id;
+
+            const res = await app.inject({
+                method: 'POST',
+                url: `/api/v1/skills/${draftSkillId}/agents/${testAgentId}`,
+                headers: {authorization: `Bearer ${adminToken}`},
+            });
+
+            expect(res.statusCode).toBe(409);
+            expect(res.json()).toMatchObject({
+                error: 'STATE_CONFLICT',
+                message: '草稿技能不能绑定到智能体，请先上架为可用状态',
+            });
+        });
+
+        it('不能把 Skill 分配给其他租户的 Agent', async () => {
+            const [otherTenant] = await db.insert(tenants).values({name: 'Other Agent Tenant'}).returning();
+            const [otherAgent] = await db.insert(agentTemplates).values({
+                tenantId: otherTenant.id,
+                name: '其他租户 Agent',
+                description: 'Cross tenant agent',
+                systemPrompt: 'test',
+                modelConfig: {provider: 'anthropic', model: 'test', temperature: 0.7, maxTokens: 100},
+                tools: [],
+                skills: [],
+                mcpServers: [],
+            }).returning();
+
+            const createRes = await app.inject({
+                method: 'POST',
+                url: '/api/v1/skills',
+                headers: {authorization: `Bearer ${adminToken}`},
+                payload: {name: '不可跨租户绑定技能', status: 'active'},
+            });
+            const skillId = createRes.json().id;
+
+            const res = await app.inject({
+                method: 'POST',
+                url: `/api/v1/skills/${skillId}/agents/${otherAgent.id}`,
+                headers: {authorization: `Bearer ${adminToken}`},
+            });
+
+            expect(res.statusCode).toBe(404);
+            expect(res.json()).toMatchObject({
+                error: 'RESOURCE_NOT_FOUND',
+                message: 'Agent 不存在',
+            });
+
+            await db.delete(agentTemplates).where(eq(agentTemplates.id, otherAgent.id));
+            await db.delete(tenants).where(eq(tenants.id, otherTenant.id));
         });
 
         it('重复分配应返回已有关联', async () => {
+            const requestId = `req-skill-bound-repeat-${Date.now()}`;
             const res = await app.inject({
                 method: 'POST',
                 url: `/api/v1/skills/${assocSkillId}/agents/${testAgentId}`,
-                headers: {authorization: `Bearer ${adminToken}`},
+                headers: {authorization: `Bearer ${adminToken}`, 'x-request-id': requestId},
             });
 
             expect(res.statusCode).toBe(201);
             expect(res.json().skillId).toBe(assocSkillId);
+
+            const auditRows = await db.select().from(auditEvents).where(and(
+                eq(auditEvents.tenantId, testTenantId),
+                eq(auditEvents.requestId, requestId),
+                eq(auditEvents.resourceType, 'agent_skill_binding'),
+            ));
+            expect(auditRows).toHaveLength(0);
         });
 
         it('应该能查看 Skill 关联的 Agents', async () => {
@@ -346,13 +540,25 @@ describe('Skills CRUD API', () => {
         });
 
         it('应该能从 Agent 移除 Skill', async () => {
+            const requestId = `req-skill-unbound-${Date.now()}`;
             const res = await app.inject({
                 method: 'DELETE',
                 url: `/api/v1/skills/${assocSkillId}/agents/${testAgentId}`,
-                headers: {authorization: `Bearer ${adminToken}`},
+                headers: {authorization: `Bearer ${adminToken}`, 'x-request-id': requestId},
             });
 
             expect(res.statusCode).toBe(204);
+
+            const auditRows = await db.select().from(auditEvents).where(and(
+                eq(auditEvents.tenantId, testTenantId),
+                eq(auditEvents.requestId, requestId),
+                eq(auditEvents.resourceType, 'agent_skill_binding'),
+            ));
+            expect(auditRows).toHaveLength(1);
+            expect(auditRows[0]).toMatchObject({
+                action: 'skill.unbound_from_agent',
+                outcome: 'success',
+            });
 
             // 验证已移除
             const agentsRes = await app.inject({

@@ -105,7 +105,7 @@ describe('旧 API 兼容性', () => {
             });
             expect(res.statusCode).toBe(400);
             const body = res.json();
-            expect(body).toHaveProperty('error', 'MISSING_CONTENT');
+            expect(body).toHaveProperty('error', 'VALIDATION_FAILED');
             expect(body.requestId).toBeTruthy();
             expect(res.headers['x-request-id']).toBe(body.requestId);
         });
