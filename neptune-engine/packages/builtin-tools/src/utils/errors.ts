@@ -15,6 +15,18 @@ export class AbortError extends Error {
 	}
 }
 
+export class ShellError extends Error {
+	constructor(
+		public readonly stdout: string,
+		public readonly stderr: string,
+		public readonly code: number,
+		public readonly interrupted: boolean,
+	) {
+		super('Shell command failed')
+		this.name = 'ShellError'
+	}
+}
+
 export function toError(error: unknown): Error {
 	return error instanceof Error ? error : new Error(String(error))
 }

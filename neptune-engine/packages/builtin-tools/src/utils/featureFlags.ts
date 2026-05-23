@@ -97,3 +97,45 @@ export function isAgentSwarmsEnabled(): boolean {
 	}
 	return false
 }
+
+/**
+ * Whether `BashTool` should preserve the original CWD across commands.
+ *
+ * When set, builtin Bash tool keeps the CWD it was launched in and refuses
+ * to follow `cd` invocations. Used by SDK / library consumers that drive
+ * the tool from a fixed working directory.
+ */
+export function shouldMaintainProjectWorkingDir(): boolean {
+	return isEnvTruthy(process.env.CLAUDE_BASH_MAINTAIN_PROJECT_WORKING_DIR)
+}
+
+/**
+ * Resolve the configuration home directory for builtin tools.
+ *
+ * Honors `CLAUDE_CONFIG_DIR` and falls back to `~/.claude`. The product host
+ * may further normalize this; builtin tools only need a stable directory to
+ * read/write tool-local artifacts and tests.
+ *
+ * Lazy-imports `os` and `path` so this module remains import-light.
+ */
+let _cachedConfigHome: {key: string | undefined; value: string} | null = null
+export function getClaudeConfigHomeDir(): string {
+	const key = process.env.CLAUDE_CONFIG_DIR
+	if (_cachedConfigHome && _cachedConfigHome.key === key) {
+		return _cachedConfigHome.value
+	}
+	const {homedir} = require('os') as typeof import('os')
+	const {join} = require('path') as typeof import('path')
+	const value = (key ?? join(homedir(), '.claude')).normalize('NFC')
+	_cachedConfigHome = {key, value}
+	return value
+}
+
+/**
+ * Whether the current build belongs to an Anthropic-internal ("ant")
+ * protected namespace. Engine kernel builds always return false; the
+ * Anthropic-internal binary linking augments this at the product layer.
+ */
+export function isInProtectedNamespace(): boolean {
+	return false
+}

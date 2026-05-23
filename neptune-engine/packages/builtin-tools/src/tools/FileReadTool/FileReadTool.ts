@@ -28,7 +28,8 @@ import {
 import type {ToolUseContext} from '../../tool.js'
 import {buildTool, type ToolDef} from '../../tool.js'
 import {getCwd} from 'src/utils/cwd.js'
-import {getClaudeConfigHomeDir, isEnvTruthy} from 'src/utils/envUtils.js'
+import {getClaudeConfigHomeDir} from '../../utils/featureFlags.js'
+import {isEnvTruthy} from '../../utils/env.js'
 import {getErrnoCode, isENOENT} from '../../utils/errors.js'
 import {
 	addLineNumbers,

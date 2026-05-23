@@ -15,7 +15,7 @@ import {buildTool, type ToolDef} from '../../tool.js'
 import {getCwd} from 'src/utils/cwd.js'
 import {logForDebugging} from 'src/utils/debug.js'
 import {countLinesChanged} from 'src/utils/diff.js'
-import {isEnvTruthy} from 'src/utils/envUtils.js'
+import {isEnvTruthy} from '../../utils/env.js'
 import {isENOENT} from '../../utils/errors.js'
 import {
 	FILE_NOT_FOUND_CWD_NOTE,

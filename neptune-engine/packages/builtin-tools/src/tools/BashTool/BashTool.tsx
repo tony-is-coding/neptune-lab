@@ -40,8 +40,8 @@ import {
 } from 'src/utils/bash/commands.js'
 import {extractClaudeCodeHints} from 'src/utils/claudeCodeHints.js'
 import {detectCodeIndexingFromCommand} from 'src/utils/codeIndexing.js'
-import {isEnvTruthy} from 'src/utils/envUtils.js'
-import {isENOENT, ShellError} from 'src/utils/errors.js'
+import {isEnvTruthy} from '../../utils/env.js'
+import {isENOENT, ShellError} from '../../utils/errors.js'
 import {
 	detectFileEncoding,
 	detectLineEndings,
@@ -52,7 +52,7 @@ import {
 	fileHistoryEnabled,
 	fileHistoryTrackEdit,
 } from 'src/utils/fileHistory.js'
-import {truncate} from 'src/utils/format.js'
+import {truncate} from '../../utils/truncate.js'
 import {getFsImplementation} from 'src/utils/fsOperations.js'
 import {lazySchema} from '../../utils/lazySchema.js'
 import {expandPath} from 'src/utils/path.js'

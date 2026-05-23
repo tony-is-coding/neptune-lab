@@ -77,7 +77,7 @@ check_empty \
 check_max_count \
   "builtin-tools host/product reverse dependencies must not increase" \
   "(@neptune/engine-product|from ['\"]src/|\\b(require|import)\\(['\"]src/|from ['\"]\\.\\./\\.\\./\\.\\./\\.\\./\\.\\./src/)" \
-  681 \
+  655 \
   packages/builtin-tools/src \
   packages/builtin-tools/package.json
 

@@ -5,7 +5,7 @@ import type {LocalAgentTaskState} from 'src/tasks/LocalAgentTask/LocalAgentTask.
 import type {LocalShellTaskState} from 'src/tasks/LocalShellTask/guards.js'
 import type {RemoteAgentTaskState} from 'src/tasks/RemoteAgentTask/RemoteAgentTask.js'
 import type {TaskState} from 'src/tasks/types.js'
-import {AbortError} from 'src/utils/errors.js'
+import {AbortError} from '../../utils/errors.js'
 import {lazySchema} from '../../utils/lazySchema.js'
 import {semanticBoolean} from '../../utils/semanticBoolean.js'
 import {sleep} from 'src/utils/sleep.js'

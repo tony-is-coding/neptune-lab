@@ -27,8 +27,8 @@ import {parseCommandRaw} from 'src/utils/bash/parser.js'
 import {tryParseShellCommand} from 'src/utils/bash/shellQuote.js'
 import {getCwd} from 'src/utils/cwd.js'
 import {logForDebugging} from 'src/utils/debug.js'
-import {isEnvTruthy} from 'src/utils/envUtils.js'
-import {AbortError} from 'src/utils/errors.js'
+import {isEnvTruthy} from '../../utils/env.js'
+import {AbortError} from '../../utils/errors.js'
 import type {
 	ClassifierBehavior,
 	ClassifierResult,
