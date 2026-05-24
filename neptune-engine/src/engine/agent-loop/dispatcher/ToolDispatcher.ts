@@ -141,6 +141,35 @@ export class ToolDispatcher {
 
 		yield {kind: 'started', toolUseId, toolName}
 
+		// Stage 2.3: PermissionMode pre-check（在 canUseTool 之前）
+		// 工具元数据 category 必须在 ToolDef 上声明（默认 'mutation' 保守）
+		const permissionMode = ctx.options.permissionMode as
+			| import('../../permissions/PermissionMode.js').PermissionMode
+			| undefined
+		if (permissionMode && permissionMode !== 'default') {
+			const {applyPermissionMode} = await import(
+				'../../permissions/PermissionMode.js'
+			)
+			const category = (tool as {category?: import('../../permissions/PermissionMode.js').ToolCategory})
+				.category ?? 'mutation' // 默认保守 mutation
+			const modeDecision = applyPermissionMode(permissionMode, category)
+			if (modeDecision.behavior === 'deny') {
+				yield {
+					kind: 'result',
+					toolUseId,
+					toolName,
+					toolResultBlock: {
+						type: 'tool_result',
+						tool_use_id: toolUseId,
+						content: modeDecision.reason,
+						is_error: true,
+					},
+				}
+				return
+			}
+			// 'allow' / 'passthrough' 都继续走 canUseTool（passthrough 是默认行为；allow 也再走 hook 不影响）
+		}
+
 		// Permission check
 		try {
 			const decision = await ctx.canUseTool(tool, input, ctx, toolUseId)

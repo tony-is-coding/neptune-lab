@@ -78,6 +78,13 @@ export interface ToolUseContext {
 		/** 当前会话可用的全部工具（用于 ToolRegistry / 工具发现）。 */
 		tools: Tool[]
 		isNonInteractiveSession: boolean
+		/** Stage 2.3: PermissionMode 注入。'default' / undefined = passthrough。 */
+		permissionMode?:
+			| 'default'
+			| 'plan'
+			| 'readonly'
+			| 'dangerous'
+			| 'bypass'
 		/** 业务方扩展：thinkingConfig / fastMode / mcpTools 等 */
 		[key: string]: unknown
 	}
