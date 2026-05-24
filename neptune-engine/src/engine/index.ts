@@ -149,6 +149,9 @@ export {GENESIS_HASH, NoopAuditStore, FilesystemAuditStore, canonicalJson, compu
 export type {Channel} from './channel/index.js'
 export {InMemoryChannel} from './channel/index.js'
 
+// Local artifact store（Stage 4.4 — content-addressable filesystem 实现 ArtifactHook）
+export {LocalArtifactStore} from './artifact/index.js'
+
 // CCRuntime
 export type {CCRuntime} from './cc-runtime/index.js'
 export {
