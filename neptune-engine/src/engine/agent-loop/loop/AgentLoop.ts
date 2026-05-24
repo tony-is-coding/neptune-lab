@@ -89,6 +89,14 @@ export interface AgentLoopParams {
 	budgetTracker?: import('../budget/BudgetTracker.js').BudgetTracker
 	/** Stage 2.4: Governance hooks（PolicyHook / HumanReviewHook / EvalHook / ArtifactHook）。 */
 	governance?: import('../../governance/index.js').GovernanceHooks
+	/**
+	 * Stage 3.5: RunStore 注入（状态外化）。
+	 * - 提供时，每个 LoopEvent 自动 append 到 store；退出时 updateStatus
+	 * - runId 必须配合 runStore；不传则 store.create() 内部生成
+	 */
+	runStore?: import('../../run/index.js').RunStore
+	/** Stage 3.5: 显式指定 runId（resume 场景必传）。 */
+	runId?: string
 }
 
 // ============================================================
@@ -751,5 +759,133 @@ export class AgentLoop {
 			finalMessages: messages,
 			turnCount,
 		})
+	}
+
+	/**
+	 * Stage 3.5: runWithStore — 包装 AgentLoop.run，在每个 LoopEvent yield 前
+	 * 同步 append 到 RunStore；退出时按 LoopResult.reason 更新 Run.status。
+	 *
+	 * 用法：
+	 *   const store = new FileRunStore('./runs')
+	 *   const run = await store.create({metadata: {...}})
+	 *   const gen = AgentLoop.runWithStore({...params, runStore: store, runId: run.id})
+	 *   for await (const event of gen) { ... }  // events 自动持久化
+	 *   // run.json status 已被刷成 'completed' / 'failed' / 'aborted'
+	 *
+	 * 不传 runStore 时退化为 AgentLoop.run（透传）。
+	 */
+	static async *runWithStore(
+		params: AgentLoopParams,
+	): AsyncGenerator<LoopEvent, LoopResult, unknown> {
+		const store = params.runStore
+		if (!store) {
+			// 无 store → 直接透传（为方便 caller 统一调用）
+			return yield* AgentLoop.run(params)
+		}
+		// 没传 runId 就 store.create() 拿
+		let runId = params.runId
+		if (!runId) {
+			const run = await store.create()
+			runId = run.id
+		}
+		// 状态切到 running
+		try {
+			await store.updateStatus(runId, 'running')
+		} catch {
+			// 容忍 updateStatus 失败（store 实现可能 strict 检查 run 存在）
+			// 此时 caller 已传 runId 但未先 create，我们尝试 create 一次
+			await store.create({id: runId})
+			await store.updateStatus(runId, 'running')
+		}
+
+		const inner = AgentLoop.run({...params, runId})
+		let result: LoopResult | undefined
+		try {
+			let next = await inner.next()
+			while (!next.done) {
+				const event = next.value as LoopEvent
+				// 先持久化再 yield 给 caller —— 保证 store 是 source of truth
+				try {
+					await store.appendEvent(runId, event)
+				} catch (err) {
+					// store 写入失败：emit error 但继续（fail-open）
+					yield {
+						type: 'error',
+						error: err instanceof Error ? err : new Error(String(err)),
+						phase: 'serialization',
+					}
+				}
+				yield event
+				next = await inner.next()
+			}
+			result = next.value as LoopResult
+		} finally {
+			// 根据 result.reason 决定 final status
+			const status = mapReasonToStatus(result?.reason)
+			try {
+				await store.updateStatus(runId, status)
+			} catch {
+				// 退出阶段不应再抛
+			}
+		}
+		// result 一定存在（while 循环 break 时已赋值）
+		return result as LoopResult
+	}
+
+	/**
+	 * Stage 3.5: resume — 从已存在 Run 续跑
+	 *
+	 * 流程：
+	 * 1. store.loadSnapshot(runId) 重建 messages
+	 * 2. 用重建的 messages 作为初始 messages 调 runWithStore（events 仍 append
+	 *    到原 jsonl 末尾）
+	 * 3. lastApiStopReason 是 'end_turn' / 'aborted' / 'pause_turn' / 'max_turns'
+	 *    时可 resume；'completed' 但 stop_reason 是 'end_turn' 也允许（用户主动续跑）
+	 *
+	 * 不传 runStore 时抛 Error。
+	 */
+	static async *resume(
+		runId: string,
+		params: Omit<AgentLoopParams, 'messages' | 'runId'>,
+	): AsyncGenerator<LoopEvent, LoopResult, unknown> {
+		if (!params.runStore) {
+			throw new Error('AgentLoop.resume requires params.runStore')
+		}
+		const snapshot = await params.runStore.loadSnapshot(runId)
+		if (!snapshot) {
+			throw new Error(`Run not found for resume: ${runId}`)
+		}
+		// 用 snapshot.messages 作为初始 messages，runId 复用
+		return yield* AgentLoop.runWithStore({
+			...params,
+			messages: snapshot.messages,
+			runId,
+		})
+	}
+}
+
+/**
+ * 把 LoopResult.reason 映射到 RunStatus。
+ */
+function mapReasonToStatus(
+	reason: LoopResult['reason'] | undefined,
+): import('../../run/index.js').RunStatus {
+	if (!reason) return 'failed'
+	switch (reason) {
+		case 'end_turn':
+		case 'stop_sequence':
+		case 'refusal':
+			return 'completed'
+		case 'aborted':
+			return 'aborted'
+		case 'pause_turn':
+		case 'max_tokens':
+		case 'max_turns':
+		case 'budget_exceeded':
+			return 'paused'
+		case 'error':
+			return 'failed'
+		default:
+			return 'failed'
 	}
 }
