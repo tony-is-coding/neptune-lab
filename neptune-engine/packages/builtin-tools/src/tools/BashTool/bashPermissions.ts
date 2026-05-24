@@ -16,15 +16,15 @@ import {
 	parseForSecurityFromAst,
 	type Redirect,
 	type SimpleCommand,
-} from 'src/utils/bash/ast.js'
+} from '../../utils/cc-shim/bash/ast.js'
 import {
 	type CommandPrefixResult,
 	extractOutputRedirections,
 	getCommandSubcommandPrefix,
 	splitCommand_DEPRECATED,
-} from 'src/utils/bash/commands.js'
-import {parseCommandRaw} from 'src/utils/bash/parser.js'
-import {tryParseShellCommand} from 'src/utils/bash/shellQuote.js'
+} from '../../utils/cc-shim/bash/commands.js'
+import {parseCommandRaw} from '../../utils/cc-shim/bash/parser.js'
+import {tryParseShellCommand} from '../../utils/cc-shim/bash/shellQuote.js'
 import {getCwd} from '../../utils/cc-shim/cwd.js'
 import {logForDebugging} from '../../utils/cc-shim/log.js'
 import {isEnvTruthy} from '../../utils/env.js'

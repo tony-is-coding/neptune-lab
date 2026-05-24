@@ -33,11 +33,11 @@ import {
 } from 'src/tasks/LocalShellTask/LocalShellTask.js'
 import type {AgentId} from 'src/types/ids.js'
 import type {AssistantMessage} from 'src/types/message.js'
-import {parseForSecurity} from 'src/utils/bash/ast.js'
+import {parseForSecurity} from '../../utils/cc-shim/bash/ast.js'
 import {
 	splitCommand_DEPRECATED,
 	splitCommandWithOperators,
-} from 'src/utils/bash/commands.js'
+} from '../../utils/cc-shim/bash/commands.js'
 import {extractClaudeCodeHints} from 'src/utils/claudeCodeHints.js'
 import {detectCodeIndexingFromCommand} from 'src/utils/codeIndexing.js'
 import {isEnvTruthy} from '../../utils/env.js'

@@ -2,12 +2,12 @@ import {homedir} from 'os'
 import {isAbsolute, resolve} from 'path'
 import type {z} from 'zod/v4'
 import type {ToolPermissionContext} from '../../tool.js'
-import type {Redirect, SimpleCommand} from 'src/utils/bash/ast.js'
+import type {Redirect, SimpleCommand} from '../../utils/cc-shim/bash/ast.js'
 import {
 	extractOutputRedirections,
 	splitCommand_DEPRECATED,
-} from 'src/utils/bash/commands.js'
-import {tryParseShellCommand} from 'src/utils/bash/shellQuote.js'
+} from '../../utils/cc-shim/bash/commands.js'
+import {tryParseShellCommand} from '../../utils/cc-shim/bash/shellQuote.js'
 import {getDirectoryForPath} from '../../utils/cc-shim/path.js'
 import {allWorkingDirectories} from 'src/utils/permissions/filesystem.js'
 import type {PermissionResult} from 'src/utils/permissions/PermissionResult.js'

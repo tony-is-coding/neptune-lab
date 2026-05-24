@@ -3,8 +3,8 @@ import {getOriginalCwd} from 'src/bootstrap/state.js'
 import {
 	extractOutputRedirections,
 	splitCommand_DEPRECATED,
-} from 'src/utils/bash/commands.js'
-import {tryParseShellCommand} from 'src/utils/bash/shellQuote.js'
+} from '../../utils/cc-shim/bash/commands.js'
+import {tryParseShellCommand} from '../../utils/cc-shim/bash/shellQuote.js'
 import {getCwd} from '../../utils/cc-shim/cwd.js'
 import {isCurrentDirectoryBareGitRepo} from 'src/utils/git.js'
 import type {PermissionResult} from 'src/utils/permissions/PermissionResult.js'
