@@ -136,6 +136,10 @@ export {NoOpSandbox, LocalSandbox} from './sandbox/index.js'
 export type {Run, RunStatus, RunSnapshot, RunStore} from './run/index.js'
 export {InMemoryRunStore, FileRunStore, rebuildSnapshotFromEvents} from './run/index.js'
 
+// Audit hash chain（Stage 4.1 — 合规护城河）
+export type {AuditEvent, AuditEventStore, VerifyResult} from './audit/index.js'
+export {GENESIS_HASH, NoopAuditStore, FilesystemAuditStore, canonicalJson, computeHash} from './audit/index.js'
+
 // CCRuntime
 export type {CCRuntime} from './cc-runtime/index.js'
 export {

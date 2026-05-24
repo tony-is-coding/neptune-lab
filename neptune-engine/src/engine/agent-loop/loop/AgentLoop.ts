@@ -97,6 +97,13 @@ export interface AgentLoopParams {
 	runStore?: import('../../run/index.js').RunStore
 	/** Stage 3.5: 显式指定 runId（resume 场景必传）。 */
 	runId?: string
+	/**
+	 * Stage 4.1: AuditEventStore 注入（合规 hash chain）。
+	 * - 提供时，governance_decision / tool_update / assistant_message
+	 *   自动 append 到 audit chain
+	 * - 与 runStore 互补：runStore 是 resume / state 用，auditStore 是合规 / 审计用
+	 */
+	auditStore?: import('../../audit/index.js').AuditEventStore
 }
 
 // ============================================================
@@ -815,6 +822,18 @@ export class AgentLoop {
 						phase: 'serialization',
 					}
 				}
+				// Stage 4.1: 同步写 audit chain（仅审计敏感事件）
+				if (params.auditStore && shouldAudit(event)) {
+					try {
+						await params.auditStore.append(runId, auditPayloadOf(event))
+					} catch (err) {
+						yield {
+							type: 'error',
+							error: err instanceof Error ? err : new Error(String(err)),
+							phase: 'serialization',
+						}
+					}
+				}
 				yield event
 				next = await inner.next()
 			}
@@ -887,5 +906,78 @@ function mapReasonToStatus(
 			return 'failed'
 		default:
 			return 'failed'
+	}
+}
+
+/**
+ * Stage 4.1: 决定哪些 LoopEvent 应该写 audit chain。
+ *
+ * 选择"语义敏感"事件：
+ * - assistant_message：模型输出（决策核心）
+ * - tool_update kind=result：工具执行结果（行动核心）
+ * - governance_decision：策略 / 人工复核 / artifact / eval 决策
+ * - error：失败事件（重要审计点）
+ *
+ * 跳过：stream_request_start（每 turn 噪音）、tool_update kind=started/progress（中间态）、usage_update（统计）
+ */
+function shouldAudit(event: LoopEvent): boolean {
+	if (event.type === 'assistant_message') return true
+	if (event.type === 'governance_decision') return true
+	if (event.type === 'error') return true
+	if (event.type === 'tool_update' && event.update.kind === 'result') return true
+	return false
+}
+
+/**
+ * Stage 4.1: 把 LoopEvent 转成 audit payload（精简关键字段，避免审计 chain 巨大）。
+ */
+function auditPayloadOf(event: LoopEvent): Record<string, unknown> {
+	switch (event.type) {
+		case 'assistant_message':
+			return {
+				kind: 'assistant_message',
+				stopReason: event.message.message?.stop_reason ?? null,
+				contentLen: Array.isArray(event.message.message?.content)
+					? event.message.message?.content.length
+					: typeof event.message.message?.content === 'string'
+						? event.message.message?.content.length
+						: 0,
+			}
+		case 'tool_update':
+			if (event.update.kind === 'result') {
+				return {
+					kind: 'tool_result',
+					toolUseId: event.update.toolUseId,
+					toolName: event.update.toolName,
+					isError: event.update.toolResultBlock.is_error ?? false,
+				}
+			}
+			return {kind: 'tool_update', updateKind: event.update.kind}
+		case 'governance_decision':
+			return {
+				kind: 'governance_decision',
+				phase: event.event.phase,
+				...(event.event.phase === 'pre_tool' && {
+					toolName: event.event.toolName,
+					decision: event.event.decision.behavior,
+				}),
+				...(event.event.phase === 'human_review' && {
+					toolName: event.event.toolName,
+					decision: event.event.review.decision,
+				}),
+				...(event.event.phase === 'artifact_persisted' && {
+					toolName: event.event.toolName,
+					artifactId: event.event.artifact.id,
+					hash: event.event.artifact.hash,
+				}),
+			}
+		case 'error':
+			return {
+				kind: 'error',
+				phase: event.phase,
+				message: event.error.message,
+			}
+		default:
+			return {kind: event.type}
 	}
 }
