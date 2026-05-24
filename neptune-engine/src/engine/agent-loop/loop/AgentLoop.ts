@@ -46,9 +46,10 @@ import {MessageSerializer} from '../message/MessageSerializer.js'
 import type {StreamingProviderAdapter} from '../provider/StreamingProviderAdapter.js'
 import {ToolDispatcher, type ToolUseBlock, type ToolResultBlock} from '../dispatcher/ToolDispatcher.js'
 import type {ToolUseContext} from '../dispatcher/ToolUseContext.js'
-import type {LoopEvent, LoopResult} from './loopEvents.js'
+import type {LoopEvent, LoopResult, GovernanceSnapshot} from './loopEvents.js'
 import type {HookSurface} from '../hook/HookSurface.js'
 import type {UsageTracker} from '../usage/UsageTracker.js'
+import type {PolicyDecision, ToolInvocation} from '@shared/contracts'
 
 const DEFAULT_MAX_TURNS = 50
 
@@ -86,6 +87,8 @@ export interface AgentLoopParams {
 	compactionPolicy?: import('../compaction/CompactionPolicy.js').CompactionPolicy
 	/** Budget tracker（默认无；注入 DefaultBudgetTracker 即可启用 token 上限保护）。 */
 	budgetTracker?: import('../budget/BudgetTracker.js').BudgetTracker
+	/** Stage 2.4: Governance hooks（PolicyHook / HumanReviewHook / EvalHook / ArtifactHook）。 */
+	governance?: import('../../governance/index.js').GovernanceHooks
 }
 
 // ============================================================
@@ -198,6 +201,50 @@ export class AgentLoop {
 		let turnCount = 0
 		let lastStopReason: StopReason = null
 
+		// Stage 2.4: governance counters（仅当 governance 注入时才填充非零）
+		const governance = params.governance
+		const governanceActive = !!(
+			governance?.policyHook ||
+			governance?.humanReviewHook ||
+			governance?.evalHook ||
+			governance?.artifactHook
+		)
+		const govSnapshot: GovernanceSnapshot = {
+			policyDecisionsCount: 0,
+			humanReviewsCount: 0,
+			artifactsPersistedCount: 0,
+			evalRunsCount: 0,
+		}
+		const buildResult = (base: Omit<LoopResult, 'governanceSnapshot'>): LoopResult => {
+			if (governanceActive) {
+				return {...base, governanceSnapshot: {...govSnapshot}}
+			}
+			return base
+		}
+
+		const runId = (params.context as {runId?: string}).runId ?? randomUUID()
+
+		// Stage 2.4: 收尾 helper —— 在每个退出点调一次 EvalHook（如果注入了），并把 governanceSnapshot 注入 LoopResult
+		// 用 generator delegation：`return yield* finalize(...)` 会把 finalize 的 return value 作为外层的 return value
+		const finalize = async function* (
+			base: Omit<LoopResult, 'governanceSnapshot'>,
+		): AsyncGenerator<LoopEvent, LoopResult, unknown> {
+			if (governance?.evalHook) {
+				try {
+					const evalResult = await governance.evalHook.onRunComplete(runId, base)
+					govSnapshot.evalRunsCount++
+					yield {
+						type: 'governance_decision',
+						event: {phase: 'eval_complete', runId, result: evalResult},
+					}
+				} catch (err) {
+					const e = err instanceof Error ? err : new Error(String(err))
+					yield {type: 'error', error: e, phase: 'governance'}
+				}
+			}
+			return buildResult(base)
+		}
+
 		// 每个 turn 都 resolve description（让模型每轮都看到最新 description；Batch 14 的 caching 策略会避免重发）
 		// 但 tools 数组本身在 loop 内是稳定的 → 一次 resolve 重复使用
 		let resolvedTools
@@ -211,14 +258,14 @@ export class AgentLoop {
 				await params.hooks.runOnError({phase: 'serialization', error})
 			}
 			yield {type: 'error', error, phase: 'serialization'}
-			return {
+			return yield* finalize({
 				reason: 'error',
 				apiStopReason: null,
 				cumulativeUsage,
 				finalMessages: messages,
 				turnCount,
 				error,
-			}
+			})
 		}
 
 		while (turnCount < maxTurns) {
@@ -226,13 +273,13 @@ export class AgentLoop {
 
 			// 取消检查
 			if (params.signal?.aborted || params.context.abortController.signal.aborted) {
-				return {
+				return yield* finalize({
 					reason: 'aborted',
 					apiStopReason: lastStopReason,
 					cumulativeUsage,
 					finalMessages: messages,
 					turnCount: turnCount - 1, // 这一轮没真正开始
-				}
+				})
 			}
 
 			yield {type: 'stream_request_start', turn: turnCount}
@@ -301,14 +348,14 @@ export class AgentLoop {
 					await params.hooks.runOnError({phase: 'stream', error, turn: turnCount})
 				}
 				yield {type: 'error', error, phase: 'stream'}
-				return {
+				return yield* finalize({
 					reason: 'error',
 					apiStopReason: lastStopReason,
 					cumulativeUsage,
 					finalMessages: messages,
 					turnCount,
 					error,
-				}
+				})
 			}
 
 			// 累加 usage
@@ -348,13 +395,13 @@ export class AgentLoop {
 
 			// Budget exceeded → 在 assistantMessage emit 后退出
 			if (budgetExceeded) {
-				return {
+				return yield* finalize({
 					reason: 'budget_exceeded',
 					apiStopReason: collected.stopReason,
 					cumulativeUsage,
 					finalMessages: messages,
 					turnCount,
-				}
+				})
 			}
 
 			// 决策 stop_reason
@@ -362,53 +409,53 @@ export class AgentLoop {
 				collected.stopReason === null ||
 				collected.stopReason === 'end_turn'
 			) {
-				return {
+				return yield* finalize({
 					reason: 'end_turn',
 					apiStopReason: collected.stopReason,
 					cumulativeUsage,
 					finalMessages: messages,
 					turnCount,
-				}
+				})
 			}
 
 			if (collected.stopReason === 'max_tokens') {
-				return {
+				return yield* finalize({
 					reason: 'max_tokens',
 					apiStopReason: 'max_tokens',
 					cumulativeUsage,
 					finalMessages: messages,
 					turnCount,
-				}
+				})
 			}
 
 			if (collected.stopReason === 'stop_sequence') {
-				return {
+				return yield* finalize({
 					reason: 'stop_sequence',
 					apiStopReason: 'stop_sequence',
 					cumulativeUsage,
 					finalMessages: messages,
 					turnCount,
-				}
+				})
 			}
 
 			if (collected.stopReason === 'pause_turn') {
-				return {
+				return yield* finalize({
 					reason: 'pause_turn',
 					apiStopReason: 'pause_turn',
 					cumulativeUsage,
 					finalMessages: messages,
 					turnCount,
-				}
+				})
 			}
 
 			if (collected.stopReason === 'refusal') {
-				return {
+				return yield* finalize({
 					reason: 'refusal',
 					apiStopReason: 'refusal',
 					cumulativeUsage,
 					finalMessages: messages,
 					turnCount,
-				}
+				})
 			}
 
 			// stop_reason === 'tool_use' → 跑工具
@@ -417,7 +464,7 @@ export class AgentLoop {
 			)
 			if (toolUseBlocks.length === 0) {
 				// 模型说 tool_use 却没有 tool_use block —— 异常，退出
-				return {
+				return yield* finalize({
 					reason: 'error',
 					apiStopReason: 'tool_use',
 					cumulativeUsage,
@@ -426,13 +473,132 @@ export class AgentLoop {
 					error: new Error(
 						'AgentLoop: stop_reason=tool_use but no tool_use blocks emitted',
 					),
-				}
+				})
 			}
 
 			// 跑工具，收集 tool_result。preTool / postTool hook 在这里包一层。
 			const toolResults: ToolResultBlock[] = []
 			try {
 				for (const block of toolUseBlocks) {
+					// Stage 2.4: PolicyHook（先于 preTool hook；产品级业务策略）
+					if (governance?.policyHook) {
+						const invocation: ToolInvocation = {
+							id: randomUUID(),
+							runId,
+							toolName: block.name,
+							inputSnapshot: block.input,
+							status: 'pending',
+							startedAt: new Date().toISOString(),
+						}
+						let decision: PolicyDecision | undefined
+						try {
+							decision = await governance.policyHook.beforeToolUse(invocation)
+						} catch (err) {
+							const e = err instanceof Error ? err : new Error(String(err))
+							yield {type: 'error', error: e, phase: 'governance'}
+							// fail-open：放行（继续走后续 preTool hook）
+						}
+						if (decision) {
+							govSnapshot.policyDecisionsCount++
+							yield {
+								type: 'governance_decision',
+								event: {
+									phase: 'pre_tool',
+									toolUseId: block.id,
+									toolName: block.name,
+									decision,
+								},
+							}
+							if (decision.behavior === 'deny') {
+								const denied: ToolResultBlock = {
+									type: 'tool_result',
+									tool_use_id: block.id,
+									content:
+										decision.reason ??
+										'Tool call denied by policy.',
+									is_error: true,
+								}
+								yield {
+									type: 'tool_update',
+									update: {
+										kind: 'result',
+										toolUseId: block.id,
+										toolName: block.name,
+										toolResultBlock: denied,
+									},
+								}
+								toolResults.push(denied)
+								continue
+							}
+							if (decision.behavior === 'require_review') {
+								// 调 HumanReviewHook（如未注入则相当于 deny —— 安全默认）
+								if (!governance.humanReviewHook) {
+									const denied: ToolResultBlock = {
+										type: 'tool_result',
+										tool_use_id: block.id,
+										content:
+											decision.reason ??
+											'Tool call requires human review (no reviewer configured).',
+										is_error: true,
+									}
+									yield {
+										type: 'tool_update',
+										update: {
+											kind: 'result',
+											toolUseId: block.id,
+											toolName: block.name,
+											toolResultBlock: denied,
+										},
+									}
+									toolResults.push(denied)
+									continue
+								}
+								let review
+								try {
+									review = await governance.humanReviewHook.requestReview({
+										runId,
+										findingId: invocation.id,
+										severity: 'medium',
+										evidence: [block.id],
+									})
+									govSnapshot.humanReviewsCount++
+									yield {
+										type: 'governance_decision',
+										event: {
+											phase: 'human_review',
+											toolUseId: block.id,
+											toolName: block.name,
+											review,
+										},
+									}
+								} catch (err) {
+									const e = err instanceof Error ? err : new Error(String(err))
+									yield {type: 'error', error: e, phase: 'governance'}
+								}
+								if (review && review.decision !== 'approved') {
+									const denied: ToolResultBlock = {
+										type: 'tool_result',
+										tool_use_id: block.id,
+										content: `Tool rejected by human reviewer: ${review.decision}`,
+										is_error: true,
+									}
+									yield {
+										type: 'tool_update',
+										update: {
+											kind: 'result',
+											toolUseId: block.id,
+											toolName: block.name,
+											toolResultBlock: denied,
+										},
+									}
+									toolResults.push(denied)
+									continue
+								}
+							}
+							// allow / approved → 继续
+						}
+					}
+
 					// preTool hook：可拒绝
 					if (params.hooks) {
 						const decision = await params.hooks.runPreTool({
@@ -462,10 +628,14 @@ export class AgentLoop {
 
 					// 真正调 dispatcher
 					let lastResult: ToolResultBlock | undefined
+					let lastMcpMeta:
+						| {_meta?: Record<string, unknown>; structuredContent?: Record<string, unknown>}
+						| undefined
 					for await (const update of ToolDispatcher.execute([block], params.context)) {
 						yield {type: 'tool_update', update}
 						if (update.kind === 'result') {
 							lastResult = update.toolResultBlock
+							lastMcpMeta = update.mcpMeta
 							toolResults.push(update.toolResultBlock)
 						}
 					}
@@ -478,6 +648,60 @@ export class AgentLoop {
 							context: params.context,
 						})
 					}
+
+					// Stage 2.4: ArtifactHook —— 从 ToolResult.mcpMeta._meta.artifactInputs 提取
+					// 约定（产品级元数据，substrate 不解析具体业务字段）：
+					//   tool 在返回 ToolResult 时挂 mcpMeta._meta.artifactInputs: ArtifactInputLite[]
+					//   字段：{mime, content, hint?, connectorVersion?}
+					if (
+						governance?.artifactHook &&
+						lastResult &&
+						!lastResult.is_error &&
+						lastMcpMeta?._meta
+					) {
+						const inputs = lastMcpMeta._meta.artifactInputs as
+							| Array<{
+									mime: string
+									content: string | Uint8Array | ArrayBuffer
+									hint?: string
+									connectorVersion?: string
+							  }>
+							| undefined
+						if (Array.isArray(inputs) && inputs.length > 0) {
+							for (const input of inputs) {
+								try {
+									const artifact = await governance.artifactHook.persistArtifact({
+										runId,
+										toolInvocationId: block.id,
+										source: {
+											toolName: block.name,
+											agentTemplateVersion:
+												((params.context as {agentTemplateVersion?: string})
+													.agentTemplateVersion ?? 'unknown'),
+											connectorVersion: input.connectorVersion,
+										},
+										content: input.content,
+										mime: input.mime,
+										hint: input.hint,
+									})
+									govSnapshot.artifactsPersistedCount++
+									yield {
+										type: 'governance_decision',
+										event: {
+											phase: 'artifact_persisted',
+											toolUseId: block.id,
+											toolName: block.name,
+											artifact,
+										},
+									}
+								} catch (err) {
+									const e =
+										err instanceof Error ? err : new Error(String(err))
+									yield {type: 'error', error: e, phase: 'governance'}
+								}
+							}
+						}
+					}
 				}
 			} catch (err) {
 				// dispatcher 内部 throw（不应该发生 —— 它会包错为 tool_result is_error）
@@ -486,14 +710,14 @@ export class AgentLoop {
 					await params.hooks.runOnError({phase: 'tool', error, turn: turnCount})
 				}
 				yield {type: 'error', error, phase: 'tool'}
-				return {
+				return yield* finalize({
 					reason: 'error',
 					apiStopReason: lastStopReason,
 					cumulativeUsage,
 					finalMessages: messages,
 					turnCount,
 					error,
-				}
+				})
 			}
 
 			// 把 tool_result 包成 user message
@@ -509,23 +733,23 @@ export class AgentLoop {
 
 			// 取消检查（tool 执行可能很久）
 			if (params.signal?.aborted || params.context.abortController.signal.aborted) {
-				return {
+				return yield* finalize({
 					reason: 'aborted',
 					apiStopReason: lastStopReason,
 					cumulativeUsage,
 					finalMessages: messages,
 					turnCount,
-				}
+				})
 			}
 		}
 
 		// 达到 maxTurns 上限
-		return {
+		return yield* finalize({
 			reason: 'max_turns',
 			apiStopReason: lastStopReason,
 			cumulativeUsage,
 			finalMessages: messages,
 			turnCount,
-		}
+		})
 	}
 }

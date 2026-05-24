@@ -5,6 +5,22 @@
 import type {AssistantMessage} from '../../types/message.js'
 import type {UsageSnapshot, StopReason} from '../types.js'
 import type {ToolUpdate} from '../dispatcher/ToolDispatcher.js'
+import type {PolicyDecision, HumanReview, EvidenceArtifact} from '@shared/contracts'
+
+/**
+ * Stage 2.4: Governance event payload — emit when a governance hook fires.
+ *
+ * 4 个 phase 对应 4 类 hook：
+ *   - pre_tool          → PolicyHook.beforeToolUse 决策返回
+ *   - human_review      → HumanReviewHook.requestReview 完成
+ *   - artifact_persisted → ArtifactHook.persistArtifact 完成
+ *   - eval_complete     → EvalHook.onRunComplete 完成
+ */
+export type GovernanceEvent =
+	| {phase: 'pre_tool'; toolUseId: string; toolName: string; decision: PolicyDecision}
+	| {phase: 'human_review'; toolUseId: string; toolName: string; review: HumanReview}
+	| {phase: 'artifact_persisted'; toolUseId: string; toolName: string; artifact: EvidenceArtifact}
+	| {phase: 'eval_complete'; runId: string; result: unknown}
 
 /**
  * AgentLoop 在运行过程中 yield 给上层的事件。
@@ -21,8 +37,20 @@ export type LoopEvent =
 	| {type: 'tool_update'; update: ToolUpdate}
 	/** Token usage 累计（每个 turn 末尾）。 */
 	| {type: 'usage_update'; usage: UsageSnapshot; cumulative: UsageSnapshot}
+	/** Stage 2.4: Governance hook 触发。 */
+	| {type: 'governance_decision'; event: GovernanceEvent}
 	/** 错误事件：上层决策（继续 / 退出）。 */
-	| {type: 'error'; error: Error; phase: 'stream' | 'tool' | 'serialization'}
+	| {type: 'error'; error: Error; phase: 'stream' | 'tool' | 'serialization' | 'governance'}
+
+/**
+ * Stage 2.4: Governance 触发计数（在 LoopResult 中暴露给上层观测）。
+ */
+export interface GovernanceSnapshot {
+	policyDecisionsCount: number
+	humanReviewsCount: number
+	artifactsPersistedCount: number
+	evalRunsCount: number
+}
 
 /**
  * AgentLoop 退出时的最终状态。
@@ -49,4 +77,6 @@ export interface LoopResult {
 	turnCount: number
 	/** 错误信息（reason='error' 时）。 */
 	error?: Error
+	/** Stage 2.4: Governance 计数快照（仅当 governance hooks 注入时非零）。 */
+	governanceSnapshot?: GovernanceSnapshot
 }

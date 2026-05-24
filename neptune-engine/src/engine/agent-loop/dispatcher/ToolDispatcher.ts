@@ -52,7 +52,17 @@ export interface ToolResultBlock {
 export type ToolUpdate =
 	| {kind: 'started'; toolUseId: string; toolName: string}
 	| {kind: 'progress'; toolUseId: string; toolName: string; data: ToolProgressData}
-	| {kind: 'result'; toolUseId: string; toolName: string; toolResultBlock: ToolResultBlock}
+	| {
+			kind: 'result'
+			toolUseId: string
+			toolName: string
+			toolResultBlock: ToolResultBlock
+			/** Stage 2.4: 透传 ToolResult.mcpMeta 用于 ArtifactHook / 产品级元数据。 */
+			mcpMeta?: {
+				_meta?: Record<string, unknown>
+				structuredContent?: Record<string, unknown>
+			}
+	  }
 
 /** Dispatcher 输入：单个 tool_use block（来自 SSEParser content_block_complete）。 */
 export type ToolUseBlock = Extract<CompleteContentBlock, {type: 'tool_use'}>
@@ -260,6 +270,7 @@ export class ToolDispatcher {
 					tool_use_id: toolUseId,
 					content: serializeToolOutput(toolResult),
 				},
+				mcpMeta: toolResult.mcpMeta,
 			}
 		} catch (err) {
 			// 兜底：canUseTool 抛错或其他意外
