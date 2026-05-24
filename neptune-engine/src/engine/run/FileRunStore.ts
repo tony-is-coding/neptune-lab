@@ -25,8 +25,8 @@ import {randomUUID} from 'crypto'
 import {join} from 'node:path'
 import {readdir, rm, stat} from 'node:fs/promises'
 import type {LoopEvent} from '../agent-loop/loop/loopEvents.js'
-import type {Run, RunSnapshot, RunStatus, RunStore} from './Run.js'
-import {rebuildSnapshotFromEvents} from './rebuildSnapshot.js'
+import type {Checkpoint, Run, RunSnapshot, RunStatus, RunStore} from './Run.js'
+import {rebuildSnapshotFromEvents, rebuildCheckpointFromEvents} from './rebuildSnapshot.js'
 import {atomicWrite} from '../utils/atomicWrite.js'
 import {appendJsonl, readJsonlLines} from '../utils/jsonl.js'
 
@@ -103,6 +103,23 @@ export class FileRunStore implements RunStore {
 			governanceSnapshot: rebuilt.governanceSnapshot,
 			lastTurnNumber: rebuilt.lastTurnNumber,
 			lastApiStopReason: rebuilt.lastApiStopReason,
+		}
+	}
+
+	async loadCheckpoint(id: string, turnNumber: number): Promise<Checkpoint | null> {
+		const run = await this.load(id)
+		if (!run) return null
+		const events = await this.loadEvents(id)
+		const rebuilt = rebuildCheckpointFromEvents(events, turnNumber)
+		if (!rebuilt) return null
+		return {
+			runId: id,
+			turnNumber,
+			messages: rebuilt.messages,
+			cumulativeUsage: rebuilt.cumulativeUsage,
+			governanceSnapshot: rebuilt.governanceSnapshot,
+			apiStopReason: rebuilt.lastApiStopReason,
+			capturedAt: new Date().toISOString(),
 		}
 	}
 

@@ -852,32 +852,48 @@ export class AgentLoop {
 	}
 
 	/**
-	 * Stage 3.5: resume — 从已存在 Run 续跑
+	 * Stage 3.5 + 4.3: resume — 从已存在 Run 续跑
 	 *
 	 * 流程：
-	 * 1. store.loadSnapshot(runId) 重建 messages
-	 * 2. 用重建的 messages 作为初始 messages 调 runWithStore（events 仍 append
+	 * 1. store.loadSnapshot(runId) 重建 messages（默认从最新位置）
+	 * 2. opts.fromCheckpoint 提供时，改用 loadCheckpoint(runId, turnNumber)
+	 *    重建到指定 turn 末尾的状态（任意点 resume）
+	 * 3. 用重建的 messages 作为初始 messages 调 runWithStore（events 仍 append
 	 *    到原 jsonl 末尾）
-	 * 3. lastApiStopReason 是 'end_turn' / 'aborted' / 'pause_turn' / 'max_turns'
-	 *    时可 resume；'completed' 但 stop_reason 是 'end_turn' 也允许（用户主动续跑）
 	 *
 	 * 不传 runStore 时抛 Error。
 	 */
 	static async *resume(
 		runId: string,
 		params: Omit<AgentLoopParams, 'messages' | 'runId'>,
+		opts?: {fromCheckpoint?: number},
 	): AsyncGenerator<LoopEvent, LoopResult, unknown> {
 		if (!params.runStore) {
 			throw new Error('AgentLoop.resume requires params.runStore')
 		}
-		const snapshot = await params.runStore.loadSnapshot(runId)
-		if (!snapshot) {
-			throw new Error(`Run not found for resume: ${runId}`)
+		let messages: Message[]
+		if (opts?.fromCheckpoint !== undefined) {
+			if (!params.runStore.loadCheckpoint) {
+				throw new Error('runStore does not implement loadCheckpoint')
+			}
+			const cp = await params.runStore.loadCheckpoint(runId, opts.fromCheckpoint)
+			if (!cp) {
+				throw new Error(
+					`Checkpoint not found for run ${runId} at turn ${opts.fromCheckpoint}`,
+				)
+			}
+			messages = cp.messages
+		} else {
+			const snapshot = await params.runStore.loadSnapshot(runId)
+			if (!snapshot) {
+				throw new Error(`Run not found for resume: ${runId}`)
+			}
+			messages = snapshot.messages
 		}
-		// 用 snapshot.messages 作为初始 messages，runId 复用
+		// 用重建后的 messages 作为初始 messages，runId 复用
 		return yield* AgentLoop.runWithStore({
 			...params,
-			messages: snapshot.messages,
+			messages,
 			runId,
 		})
 	}

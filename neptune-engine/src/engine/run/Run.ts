@@ -54,6 +54,25 @@ export interface RunSnapshot {
 }
 
 /**
+ * Stage 4.3: Checkpoint —— 任意 turn 末尾的快照
+ *
+ * 与 RunSnapshot 区别：
+ * - RunSnapshot 是 "loadSnapshot 时的最新状态"
+ * - Checkpoint 是 "指定 turnNumber 末尾的状态"（含历史定格）
+ *
+ * 用途：让 resume 可以从特定 turn 续跑（而非永远从最新）。
+ */
+export interface Checkpoint {
+	runId: string
+	turnNumber: number
+	messages: Message[]
+	cumulativeUsage: UsageSnapshot
+	governanceSnapshot?: GovernanceSnapshot
+	apiStopReason: StopReason | null
+	capturedAt: string
+}
+
+/**
  * RunStore — Run 状态外化的协议接口。
  *
  * 所有方法异步。具体后端：InMemory（默认）/ Filesystem（默认）/ PG / S3 / ...
@@ -88,6 +107,16 @@ export interface RunStore {
 	 * 如果 Run 不存在返 null。
 	 */
 	loadSnapshot(id: string): Promise<RunSnapshot | null>
+
+	/**
+	 * Stage 4.3: 加载某个 turn 末尾的 Checkpoint。
+	 *
+	 * - turnNumber=1 表示第 1 轮 assistant_message + 后续 tool_results 都
+	 *   完成的状态
+	 * - 不存在该 turn 返 null（如 turnNumber > 实际跑过的轮数）
+	 * - 可选实现（不是所有 store 都支持）
+	 */
+	loadCheckpoint?(id: string, turnNumber: number): Promise<Checkpoint | null>
 
 	/** 删除 Run（含所有 events）。不存在不报错。 */
 	delete(id: string): Promise<void>

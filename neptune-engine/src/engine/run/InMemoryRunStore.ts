@@ -7,8 +7,8 @@
 
 import {randomUUID} from 'crypto'
 import type {LoopEvent} from '../agent-loop/loop/loopEvents.js'
-import type {Run, RunSnapshot, RunStatus, RunStore} from './Run.js'
-import {rebuildSnapshotFromEvents} from './rebuildSnapshot.js'
+import type {Checkpoint, Run, RunSnapshot, RunStatus, RunStore} from './Run.js'
+import {rebuildSnapshotFromEvents, rebuildCheckpointFromEvents} from './rebuildSnapshot.js'
 
 export class InMemoryRunStore implements RunStore {
 	private readonly runs = new Map<string, Run>()
@@ -71,6 +71,23 @@ export class InMemoryRunStore implements RunStore {
 			governanceSnapshot: rebuilt.governanceSnapshot,
 			lastTurnNumber: rebuilt.lastTurnNumber,
 			lastApiStopReason: rebuilt.lastApiStopReason,
+		}
+	}
+
+	async loadCheckpoint(id: string, turnNumber: number): Promise<Checkpoint | null> {
+		const run = this.runs.get(id)
+		if (!run) return null
+		const events = await this.loadEvents(id)
+		const rebuilt = rebuildCheckpointFromEvents(events, turnNumber)
+		if (!rebuilt) return null
+		return {
+			runId: id,
+			turnNumber,
+			messages: rebuilt.messages,
+			cumulativeUsage: rebuilt.cumulativeUsage,
+			governanceSnapshot: rebuilt.governanceSnapshot,
+			apiStopReason: rebuilt.lastApiStopReason,
+			capturedAt: new Date().toISOString(),
 		}
 	}
 

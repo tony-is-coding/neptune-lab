@@ -132,9 +132,14 @@ export type {
 } from './sandbox/index.js'
 export {NoOpSandbox, LocalSandbox} from './sandbox/index.js'
 
-// Run + RunStore（Stage 3.4 — stateless 状态外化协议）
-export type {Run, RunStatus, RunSnapshot, RunStore} from './run/index.js'
-export {InMemoryRunStore, FileRunStore, rebuildSnapshotFromEvents} from './run/index.js'
+// Run + RunStore（Stage 3.4 — stateless 状态外化协议；Stage 4.3 — Checkpoint）
+export type {Run, RunStatus, RunSnapshot, RunStore, Checkpoint} from './run/index.js'
+export {
+	InMemoryRunStore,
+	FileRunStore,
+	rebuildSnapshotFromEvents,
+	rebuildCheckpointFromEvents,
+} from './run/index.js'
 
 // Audit hash chain（Stage 4.1 — 合规护城河）
 export type {AuditEvent, AuditEventStore, VerifyResult} from './audit/index.js'

@@ -30,6 +30,42 @@ export interface RebuildResult {
 }
 
 export function rebuildSnapshotFromEvents(events: LoopEvent[]): RebuildResult {
+	return rebuildSnapshotInternal(events, undefined)
+}
+
+/**
+ * Stage 4.3: 从 events 重建到指定 turnNumber 末尾的快照。
+ *
+ * 算法：扫到 turnNumber+1 的 stream_request_start 时停（即 turnNumber 已完成）。
+ * 如果跑过的轮数 < turnNumber，返 null。
+ */
+export function rebuildCheckpointFromEvents(
+	events: LoopEvent[],
+	turnNumber: number,
+): RebuildResult | null {
+	if (turnNumber < 1) return null
+	// 找到 turnNumber+1 的 stream_request_start，截到那之前
+	let cutoff = events.length // 默认到尾
+	let maxTurn = 0
+	for (let i = 0; i < events.length; i++) {
+		const e = events[i]!
+		if (e.type === 'stream_request_start') {
+			maxTurn = Math.max(maxTurn, e.turn)
+			if (e.turn > turnNumber) {
+				cutoff = i
+				break
+			}
+		}
+	}
+	// 如果还没跑到 turnNumber → null
+	if (maxTurn < turnNumber) return null
+	return rebuildSnapshotInternal(events.slice(0, cutoff), turnNumber)
+}
+
+function rebuildSnapshotInternal(
+	events: LoopEvent[],
+	_turnLimit: number | undefined,
+): RebuildResult {
 	const messages: Message[] = []
 	let cumulativeUsage: UsageSnapshot = {...EMPTY_USAGE}
 	const govSnapshot: GovernanceSnapshot = {
