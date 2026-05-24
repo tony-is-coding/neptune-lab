@@ -112,6 +112,10 @@ export type {Session} from './Session.js'
 export {InMemorySessionStore} from './storage/InMemorySessionStore.js'
 export {FilesystemSessionStore} from './storage/FilesystemSessionStore.js'
 
+// AgentRegistry（Stage 3.2 — substrate 协议）
+export type {AgentManifest, AgentRegistry} from './agent-registry/index.js'
+export {InMemoryAgentRegistry, FilesystemAgentRegistry} from './agent-registry/index.js'
+
 // CCRuntime
 export type {CCRuntime} from './cc-runtime/index.js'
 export {

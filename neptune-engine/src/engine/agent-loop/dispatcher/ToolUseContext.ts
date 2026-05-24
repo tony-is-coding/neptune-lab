@@ -20,6 +20,7 @@ import type {
 	MemoryStore,
 } from '../../index.js'
 import type {ToolRegistry as KernelToolRegistry} from '../../tool-registry/index.js'
+import type {AgentRegistry} from '../../agent-registry/index.js'
 import type {Tool} from '../../types/tool.js'
 import type {ToolPermissionContext} from '../../types/permissions.js'
 
@@ -56,6 +57,8 @@ export interface KernelProtocolBag {
 	readonly taskQueue?: TaskQueue
 	readonly toolRegistry?: KernelToolRegistry
 	readonly memoryStore?: MemoryStore
+	/** Stage 3.2: Agent manifest 注册表（substrate 协议，业务由 product 注入）。 */
+	readonly agentRegistry?: AgentRegistry
 }
 
 // ============================================================
