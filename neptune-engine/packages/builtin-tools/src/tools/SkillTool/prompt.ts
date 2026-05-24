@@ -44,10 +44,10 @@ import {
 	logEvent,
 } from 'src/services/analytics/index.js'
 import {count} from '../../utils/array.js'
-import {logForDebugging} from 'src/utils/debug.js'
+import {logForDebugging} from '../../utils/cc-shim/log.js'
 import {toError} from '../../utils/errors.js'
 import {truncate} from '../../utils/truncate.js'
-import {logError} from 'src/utils/log.js'
+import {logError} from '../../utils/cc-shim/log.js'
 
 // Skill listing gets 1% of the context window (in characters)
 export const SKILL_BUDGET_CONTEXT_PERCENT = 0.01

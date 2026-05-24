@@ -1,7 +1,7 @@
 import {z} from 'zod/v4'
 import type {ValidationResult} from '../../tool.js'
 import {buildTool, type ToolDef} from '../../tool.js'
-import {getCwd} from 'src/utils/cwd.js'
+import {getCwd} from '../../utils/cc-shim/cwd.js'
 import {isENOENT} from '../../utils/errors.js'
 import {
 	FILE_NOT_FOUND_CWD_NOTE,
@@ -10,7 +10,7 @@ import {
 import {getFsImplementation} from 'src/utils/fsOperations.js'
 import {glob} from 'src/utils/glob.js'
 import {lazySchema} from '../../utils/lazySchema.js'
-import {expandPath, toRelativePath} from 'src/utils/path.js'
+import {expandPath, toRelativePath} from '../../utils/cc-shim/path.js'
 import {checkReadPermissionForTool} from 'src/utils/permissions/filesystem.js'
 import type {PermissionDecision} from 'src/utils/permissions/PermissionResult.js'
 import {matchWildcardPattern} from 'src/utils/permissions/shellRuleMatching.js'

@@ -12,8 +12,8 @@ import {
 } from 'src/skills/loadSkillsDir.js'
 import type {ToolUseContext} from '../../tool.js'
 import {buildTool, type ToolDef} from '../../tool.js'
-import {getCwd} from 'src/utils/cwd.js'
-import {logForDebugging} from 'src/utils/debug.js'
+import {getCwd} from '../../utils/cc-shim/cwd.js'
+import {logForDebugging} from '../../utils/cc-shim/log.js'
 import {countLinesChanged} from 'src/utils/diff.js'
 import {isEnvTruthy} from '../../utils/env.js'
 import {isENOENT} from '../../utils/errors.js'
@@ -35,8 +35,8 @@ import {
 } from 'src/utils/fileRead.js'
 import {formatFileSize} from '../../utils/format.js'
 import {getFsImplementation} from 'src/utils/fsOperations.js'
-import {logError} from 'src/utils/log.js'
-import {expandPath} from 'src/utils/path.js'
+import {logError} from '../../utils/cc-shim/log.js'
+import {expandPath} from '../../utils/cc-shim/path.js'
 import {
 	checkWritePermissionForTool,
 	matchingRuleForInput,

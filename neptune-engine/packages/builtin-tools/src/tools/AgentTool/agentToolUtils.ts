@@ -38,7 +38,7 @@ import {
 import {asAgentId} from 'src/types/ids.js'
 import type {Message as MessageType, ContentItem} from 'src/types/message.js'
 import {isAgentSwarmsEnabled} from '../../utils/featureFlags.js'
-import {logForDebugging} from 'src/utils/debug.js'
+import {logForDebugging} from '../../utils/cc-shim/log.js'
 import {isInProtectedNamespace} from '../../utils/featureFlags.js'
 import {AbortError, errorMessage} from '../../utils/errors.js'
 import type {CacheSafeParams} from 'src/utils/forkedAgent.js'

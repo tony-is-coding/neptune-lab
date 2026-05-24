@@ -27,7 +27,7 @@ import {
 } from 'src/skills/loadSkillsDir.js'
 import type {ToolUseContext} from '../../tool.js'
 import {buildTool, type ToolDef} from '../../tool.js'
-import {getCwd} from 'src/utils/cwd.js'
+import {getCwd} from '../../utils/cc-shim/cwd.js'
 import {getClaudeConfigHomeDir} from '../../utils/featureFlags.js'
 import {isEnvTruthy} from '../../utils/env.js'
 import {getErrnoCode, isENOENT} from '../../utils/errors.js'
@@ -50,7 +50,7 @@ import {
 	maybeResizeAndDownsampleImageBuffer,
 } from 'src/utils/imageResizer.js'
 import {lazySchema} from '../../utils/lazySchema.js'
-import {logError} from 'src/utils/log.js'
+import {logError} from '../../utils/cc-shim/log.js'
 import {isAutoMemFile} from 'src/utils/memoryFileDetection.js'
 import {createUserMessage} from 'src/utils/messages.js'
 import {getCanonicalName, getMainLoopModel} from 'src/utils/model/model.js'
@@ -58,7 +58,7 @@ import {
 	mapNotebookCellsToToolResult,
 	readNotebook,
 } from 'src/utils/notebook.js'
-import {expandPath} from 'src/utils/path.js'
+import {expandPath} from '../../utils/cc-shim/path.js'
 import {extractPDFPages, getPDFPageCount, readPDF} from 'src/utils/pdf.js'
 import {
 	isPDFExtension,

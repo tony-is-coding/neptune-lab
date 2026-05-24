@@ -55,7 +55,7 @@ import {
 import {truncate} from '../../utils/truncate.js'
 import {getFsImplementation} from 'src/utils/fsOperations.js'
 import {lazySchema} from '../../utils/lazySchema.js'
-import {expandPath} from 'src/utils/path.js'
+import {expandPath} from '../../utils/cc-shim/path.js'
 import type {PermissionResult} from 'src/utils/permissions/PermissionResult.js'
 import {maybeRecordPluginHint} from 'src/utils/plugins/hintRecommendation.js'
 import {exec} from 'src/utils/Shell.js'

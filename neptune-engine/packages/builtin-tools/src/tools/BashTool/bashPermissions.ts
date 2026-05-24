@@ -25,8 +25,8 @@ import {
 } from 'src/utils/bash/commands.js'
 import {parseCommandRaw} from 'src/utils/bash/parser.js'
 import {tryParseShellCommand} from 'src/utils/bash/shellQuote.js'
-import {getCwd} from 'src/utils/cwd.js'
-import {logForDebugging} from 'src/utils/debug.js'
+import {getCwd} from '../../utils/cc-shim/cwd.js'
+import {logForDebugging} from '../../utils/cc-shim/log.js'
 import {isEnvTruthy} from '../../utils/env.js'
 import {AbortError} from '../../utils/errors.js'
 import type {
@@ -63,7 +63,7 @@ import {
 	suggestionForExactCommand as sharedSuggestionForExactCommand,
 	suggestionForPrefix as sharedSuggestionForPrefix,
 } from 'src/utils/permissions/shellRuleMatching.js'
-import {getPlatform} from 'src/utils/platform.js'
+import {getPlatform} from '../../utils/cc-shim/platform.js'
 import {SandboxManager} from 'src/utils/sandbox/sandbox-adapter.js'
 import {jsonStringify} from '../../utils/json.js'
 import {windowsPathToPosixPath} from 'src/utils/windowsPaths.js'

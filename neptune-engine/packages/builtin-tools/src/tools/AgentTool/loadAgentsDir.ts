@@ -13,7 +13,7 @@ import {
 	McpServerConfigSchema,
 } from 'src/services/mcp/types.js'
 import type {ToolUseContext} from '../../tool.js'
-import {logForDebugging} from 'src/utils/debug.js'
+import {logForDebugging} from '../../utils/cc-shim/log.js'
 import {
 	EFFORT_LEVELS,
 	type EffortValue,
@@ -22,7 +22,7 @@ import {
 import {isEnvTruthy} from '../../utils/env.js'
 import {parsePositiveIntFromFrontmatter} from 'src/utils/frontmatterParser.js'
 import {lazySchema} from '../../utils/lazySchema.js'
-import {logError} from 'src/utils/log.js'
+import {logError} from '../../utils/cc-shim/log.js'
 import {
 	loadMarkdownFilesForSubdir,
 	parseAgentToolsFromFrontmatter,

@@ -13,7 +13,7 @@ import {isMainSessionTask} from '../../../../../src/tasks/LocalMainSessionTask.j
 import {toAgentId} from '../../../../../src/types/ids.js'
 import {generateRequestId} from '../../../../../src/utils/agentId.js'
 import {isAgentSwarmsEnabled} from '../../../../../src/utils/agentSwarmsEnabled.js'
-import {logForDebugging} from '../../../../../src/utils/debug.js'
+import {logForDebugging} from '../../utils/cc-shim/log.js'
 import {errorMessage} from '../../utils/errors.js'
 import {truncate} from '../../utils/truncate.js'
 import {gracefulShutdown} from '../../../../../src/utils/gracefulShutdown.js'

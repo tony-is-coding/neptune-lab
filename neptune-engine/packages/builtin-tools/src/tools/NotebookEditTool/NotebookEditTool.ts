@@ -7,7 +7,7 @@ import {
 import {z} from 'zod/v4'
 import {buildTool, type ToolDef, type ToolUseContext} from '../../tool.js'
 import type {NotebookCell, NotebookContent} from 'src/types/notebook.js'
-import {getCwd} from 'src/utils/cwd.js'
+import {getCwd} from '../../utils/cc-shim/cwd.js'
 import {isENOENT} from '../../utils/errors.js'
 import {getFileModificationTime, writeTextContent} from 'src/utils/file.js'
 import {readFileSyncWithMetadata} from 'src/utils/fileRead.js'

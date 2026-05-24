@@ -17,7 +17,7 @@ import type {
 import type {Tool} from '../../tool.js'
 import {errorMessage} from '../../utils/errors.js'
 import {lazySchema} from '../../utils/lazySchema.js'
-import {logMCPDebug, logMCPError} from 'src/utils/log.js'
+import {logMCPDebug, logMCPError} from '../../utils/cc-shim/log.js'
 import type {PermissionDecision} from 'src/utils/permissions/PermissionResult.js'
 
 const inputSchema = lazySchema(() => z.object({}))

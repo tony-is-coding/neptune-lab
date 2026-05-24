@@ -1,6 +1,6 @@
 import {type StructuredPatchHunk, structuredPatch} from 'diff'
-import {logError} from 'src/utils/log.js'
-import {expandPath} from 'src/utils/path.js'
+import {logError} from '../../utils/cc-shim/log.js'
+import {expandPath} from '../../utils/cc-shim/path.js'
 import {countCharInString} from '../../utils/string.js'
 import {
 	DIFF_TIMEOUT_MS,
