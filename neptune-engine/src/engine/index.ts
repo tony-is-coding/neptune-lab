@@ -207,6 +207,8 @@ export type {FeatureOverride} from './compat/index.js'
 
 // Analytics 模块（SDK 模式零开销 analytics）
 export {NoOpAnalyticsSink, noOpAnalyticsSink, attachNoOpAnalytics} from './analytics/index.js'
+// Stage 1.1: 短命名 Analytics 接口（builtin-tools 注入用）
+export {NoOpAnalytics, noOpAnalytics, type Analytics} from './analytics/index.js'
 
 // Observability 模块（可观测性：Tracing + Metrics）
 export {NoOpTracingProvider} from './observability/index.js'
