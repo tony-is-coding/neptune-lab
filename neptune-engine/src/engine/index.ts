@@ -140,6 +140,10 @@ export {InMemoryRunStore, FileRunStore, rebuildSnapshotFromEvents} from './run/i
 export type {AuditEvent, AuditEventStore, VerifyResult} from './audit/index.js'
 export {GENESIS_HASH, NoopAuditStore, FilesystemAuditStore, canonicalJson, computeHash} from './audit/index.js'
 
+// Channel（Stage 4.2 — 多 agent 通讯协议预留）
+export type {Channel} from './channel/index.js'
+export {InMemoryChannel} from './channel/index.js'
+
 // CCRuntime
 export type {CCRuntime} from './cc-runtime/index.js'
 export {
