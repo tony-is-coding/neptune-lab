@@ -132,6 +132,10 @@ export type {
 } from './sandbox/index.js'
 export {NoOpSandbox, LocalSandbox} from './sandbox/index.js'
 
+// Run + RunStore（Stage 3.4 — stateless 状态外化协议）
+export type {Run, RunStatus, RunSnapshot, RunStore} from './run/index.js'
+export {InMemoryRunStore, FileRunStore, rebuildSnapshotFromEvents} from './run/index.js'
+
 // CCRuntime
 export type {CCRuntime} from './cc-runtime/index.js'
 export {
