@@ -1,6 +1,6 @@
 import Redis from 'ioredis'
-import type {IMemoryStore} from './IMemoryStore'
-import {LogUtil} from '../log/LogUtil.js'
+import type {IMemoryStore} from '@neptune/engine/storage/IMemoryStore.js'
+import {LogUtil} from '@neptune/engine/log/LogUtil.js'
 
 /**
  * Redis 连接配置

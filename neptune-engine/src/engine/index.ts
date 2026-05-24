@@ -106,11 +106,11 @@ export type {EngineEventMap, EngineEventType} from './types/engine-events.js'
 export {EngineState} from './EngineState.js'
 export type {EngineStateData, EngineStateEvent} from './EngineState.js'
 
-// Session 存储
+// Session 存储（engine 只提供 zero-dep 默认；具体后端如 PG/Redis/SQLite 由 product 注入）
 export type {ISessionStore} from './storage/ISessionStore.js'
 export type {Session} from './Session.js'
 export {InMemorySessionStore} from './storage/InMemorySessionStore.js'
-export {SQLiteSessionStore} from './storage/SQLiteSessionStore.js'
+export {FilesystemSessionStore} from './storage/FilesystemSessionStore.js'
 
 // CCRuntime
 export type {CCRuntime} from './cc-runtime/index.js'

@@ -3,7 +3,7 @@
 #
 # 守门脚本：验证 neptune-engine workspace 真正独立可分发。
 #
-# 7 项 check（Stage 1+2 完成后全绿才算 substrate 独立）：
+# 9 项 check（Stage 1+2+3 完成后全绿才算 substrate 独立）：
 #   1. packages/builtin-tools/src 下没有 .tsx 文件（UI 全部迁出 product）
 #   2. packages/builtin-tools/src 下没有 react / @anthropic*ink import
 #   3. packages/*/src 下没有 from '@neptune/engine-product' 引用
@@ -11,6 +11,8 @@
 #   5. cd packages/agent-tools && bunx tsc --noEmit 0 错
 #   6. cd packages/mcp-client  && bunx tsc --noEmit 0 错
 #   7. cd packages/builtin-tools && bunx tsc --noEmit 0 错（最严苛 — 整个污染面收敛后才能过）
+#   8. (Stage 3) neptune-engine/package.json 不含 PG/Redis/SQLite 依赖
+#   9. (Stage 3) neptune-engine/src/engine/storage 下不含 Pg* / Redis* / SQLite* 实现文件
 #
 # 用法：
 #   cd neptune-engine && bash scripts/verify-workspace-independent.sh
@@ -100,6 +102,24 @@ check "5. agent-tools tsc 通过" "cd packages/agent-tools && bunx tsc --noEmit 
 check "6. mcp-client tsc 通过" "cd packages/mcp-client && bunx tsc --noEmit --pretty false 2>&1 | head -5"
 
 check "7. builtin-tools tsc 通过" "cd packages/builtin-tools && bunx tsc --noEmit --pretty false 2>&1 | head -5"
+
+check "8. neptune-engine/package.json 不含 PG/Redis/SQLite 依赖" "
+	out=\$(grep -E '\"(postgres|drizzle-orm|ioredis|better-sqlite3|sqlite3)\"' package.json 2>/dev/null)
+	if [ -n \"\$out\" ]; then
+		echo 'engine 仍含具体后端依赖（应迁到 product）:'
+		echo \"\$out\"
+		exit 1
+	fi
+"
+
+check "9. engine/storage 下不含 Pg/Redis/SQLite 实现文件" "
+	bad=\$(find src/engine/storage -maxdepth 2 -type f \\( -name 'Pg*' -o -name 'Redis*' -o -name 'SQLite*' \\) 2>/dev/null)
+	if [ -n \"\$bad\" ]; then
+		echo '发现具体后端实现文件（应迁到 product）:'
+		echo \"\$bad\"
+		exit 1
+	fi
+"
 
 echo "==========================================================================="
 if [ "$fails" -gt 0 ]; then

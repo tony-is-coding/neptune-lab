@@ -1,29 +1,75 @@
 import {describe, test, expect, beforeEach, afterEach} from 'bun:test'
-import {SQLiteSessionStore} from '../SQLiteSessionStore'
-import {Session} from '../../Session'
-import type {SessionSnapshot} from '../../Session'
-import {Database} from 'bun:sqlite'
-import {rm} from 'node:fs/promises'
-import {join} from 'node:path'
-import {tmpdir} from 'node:os'
+import {PgSessionStore} from '../PgSessionStore'
+import {Session} from '@neptune/engine/Session.js'
+import type {SessionSnapshot} from '@neptune/engine/Session.js'
+import {drizzle} from 'drizzle-orm/postgres-js'
+import postgres from 'postgres'
+import {sql} from 'drizzle-orm'
 
-describe('SQLiteSessionStore', () => {
-	const DB_PATH = join(tmpdir(), `claude-session-test-${Date.now()}.db`)
-	let store: SQLiteSessionStore
+/**
+ * PgSessionStore 测试
+ *
+ * 测试环境变量：
+ * - TEST_PG_HOST: PostgreSQL 主机（默认 localhost）
+ * - TEST_PG_PORT: PostgreSQL 端口（默认 5432）
+ * - TEST_PG_USER: PostgreSQL 用户（默认 postgres）
+ * - TEST_PG_PASSWORD: PostgreSQL 密码（默认 postgres）
+ * - TEST_PG_DATABASE: PostgreSQL 数据库（默认 claude_test）
+ *
+ * 运行测试前需要创建测试数据库：
+ * ```sql
+ * CREATE DATABASE claude_test;
+ * ```
+ */
+
+describe('PgSessionStore', () => {
+	const getConfig = () => ({
+		host: process.env.TEST_PG_HOST ?? 'localhost',
+		port: parseInt(process.env.TEST_PG_PORT ?? '5432'),
+		user: process.env.TEST_PG_USER ?? 'postgres',
+		password: process.env.TEST_PG_PASSWORD ?? 'postgres',
+		database: process.env.TEST_PG_DATABASE ?? 'claude_test',
+	})
+
+	let store: PgSessionStore
+	let sqlClient: postgres.Sql<Record<string, never>>
 
 	beforeEach(async () => {
-		// 清理可能存在的测试数据库
-		await rm(DB_PATH, {force: true})
-		store = new SQLiteSessionStore(DB_PATH)
+		const config = getConfig()
+
+		// 创建原始 SQL 客户端用于建表和清理
+		sqlClient = postgres({
+			host: config.host,
+			port: config.port,
+			user: config.user,
+			password: config.password,
+			database: config.database,
+			max: 1,
+		})
+
+		// 创建测试表
+		await sqlClient.unsafe(`
+      DROP TABLE IF EXISTS sessions;
+      CREATE TABLE sessions (
+        session_id TEXT PRIMARY KEY,
+        workspace TEXT NOT NULL,
+        created_at BIGINT NOT NULL,
+        status TEXT NOT NULL,
+        metadata JSONB NOT NULL DEFAULT '{}',
+        system_prompt TEXT,
+        provider_config JSONB
+      );
+    `)
+
+		// 创建 PgSessionStore 实例
+		store = new PgSessionStore(config)
 	})
 
 	afterEach(async () => {
-		try {
-			await store.dispose()
-			await rm(DB_PATH, {force: true})
-		} catch {
-			// 忽略清理错误
-		}
+		// 清理资源
+		await store.dispose()
+		await sqlClient.unsafe('DROP TABLE IF EXISTS sessions;')
+		await sqlClient.end()
 	})
 
 	describe('基本 CRUD 操作', () => {
@@ -189,21 +235,6 @@ describe('SQLiteSessionStore', () => {
 
 			expect(loaded?.getMetadata()).toEqual({})
 		})
-
-		test('metadata JSON 解析失败时使用空对象', async () => {
-			// 直接插入损坏的 JSON 数据
-			const db = new Database(DB_PATH)
-			db.run(
-				`INSERT INTO sessions (session_id, workspace, created_at, status, metadata)
-         VALUES (?, ?, ?, ?, ?)`,
-				['session-corrupt', '/workspace', Date.now(), 'active', '{invalid json}']
-			)
-			db.close()
-
-			const loaded = await store.load('session-corrupt')
-			expect(loaded).not.toBeNull()
-			expect(loaded?.getMetadata()).toEqual({})
-		})
 	})
 
 	describe('持久化', () => {
@@ -220,92 +251,10 @@ describe('SQLiteSessionStore', () => {
 			await store.dispose()
 
 			// 创建新的 store 实例，数据应该仍然存在
-			const newStore = new SQLiteSessionStore(DB_PATH)
+			const newStore = new PgSessionStore(getConfig())
 			const loaded = await newStore.load('session-1')
 			expect(loaded).not.toBeNull()
 			expect(loaded?.sessionId).toBe('session-1')
-
-			await newStore.dispose()
-		})
-
-		test('WAL 模式启用', async () => {
-			// 检查 WAL 模式是否启用（通过检查 -wal 文件）
-			// 这里我们只验证数据库正常工作
-			const snapshot: SessionSnapshot = {
-				sessionId: 'session-1',
-				workspace: '/workspace',
-				createdAt: Date.now(),
-				status: 'active',
-				metadata: {},
-			}
-
-			await store.save(Session.restore(snapshot))
-			const loaded = await store.load('session-1')
-			expect(loaded).not.toBeNull()
-		})
-	})
-
-	describe('数据库操作', () => {
-		test('close 方法关闭数据库连接', async () => {
-			const snapshot: SessionSnapshot = {
-				sessionId: 'session-1',
-				workspace: '/workspace',
-				createdAt: Date.now(),
-				status: 'active',
-				metadata: {},
-			}
-
-			await store.save(Session.restore(snapshot))
-			store.close()
-
-			// close 后再创建新实例应该能读取数据
-			const newStore = new SQLiteSessionStore(DB_PATH)
-			const loaded = await newStore.load('session-1')
-			expect(loaded).not.toBeNull()
-
-			await newStore.dispose()
-		})
-
-		test('close 方法幂等性 - 多次调用不报错', async () => {
-			const snapshot: SessionSnapshot = {
-				sessionId: 'session-1',
-				workspace: '/workspace',
-				createdAt: Date.now(),
-				status: 'active',
-				metadata: {},
-			}
-
-			await store.save(Session.restore(snapshot))
-
-			// 多次调用 close 不应该报错
-			store.close()
-			store.close()
-			store.close()
-
-			// 创建新实例验证数据持久化
-			const newStore = new SQLiteSessionStore(DB_PATH)
-			const loaded = await newStore.load('session-1')
-			expect(loaded).not.toBeNull()
-
-			await newStore.dispose()
-		})
-
-		test('dispose 方法也关闭数据库连接', async () => {
-			const snapshot: SessionSnapshot = {
-				sessionId: 'session-1',
-				workspace: '/workspace',
-				createdAt: Date.now(),
-				status: 'active',
-				metadata: {},
-			}
-
-			await store.save(Session.restore(snapshot))
-			await store.dispose()
-
-			// dispose 后再创建新实例应该能读取数据
-			const newStore = new SQLiteSessionStore(DB_PATH)
-			const loaded = await newStore.load('session-1')
-			expect(loaded).not.toBeNull()
 
 			await newStore.dispose()
 		})
@@ -408,24 +357,43 @@ describe('SQLiteSessionStore', () => {
 		})
 	})
 
-	describe('数据库表结构', () => {
-		test('自动创建表', async () => {
-			// 创建新的 store 应该自动创建表
-			const newStore = new SQLiteSessionStore(DB_PATH)
-
+	describe('扩展字段支持', () => {
+		test('保存和加载 systemPrompt', async () => {
 			const snapshot: SessionSnapshot = {
 				sessionId: 'session-1',
 				workspace: '/workspace',
 				createdAt: Date.now(),
 				status: 'active',
 				metadata: {},
+				systemPrompt: 'Custom system prompt',
 			}
 
-			await newStore.save(Session.restore(snapshot))
-			const loaded = await newStore.load('session-1')
-			expect(loaded).not.toBeNull()
+			await store.save(Session.restore(snapshot))
+			const loaded = await store.load('session-1')
 
-			await newStore.dispose()
+			expect(loaded?.getSystemPrompt()).toBe('Custom system prompt')
+		})
+
+		test('保存和加载 providerConfig', async () => {
+			const snapshot: SessionSnapshot = {
+				sessionId: 'session-1',
+				workspace: '/workspace',
+				createdAt: Date.now(),
+				status: 'active',
+				metadata: {},
+				providerConfig: {
+					type: 'bedrock',
+					config: {
+						region: 'us-east-1',
+						defaultModel: 'anthropic.claude-3-sonnet-20240229-v1:0',
+					},
+				},
+			}
+
+			await store.save(Session.restore(snapshot))
+			const loaded = await store.load('session-1')
+
+			expect(loaded?.getProviderConfig()).toEqual(snapshot.providerConfig)
 		})
 	})
 })

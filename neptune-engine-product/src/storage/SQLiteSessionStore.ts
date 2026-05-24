@@ -1,9 +1,9 @@
 import {Database} from 'bun:sqlite'
 import type {SQLQueryBindings} from 'bun:sqlite'
-import {Session} from '../Session'
-import type {SessionSnapshot} from '../Session'
-import type {ISessionStore} from './ISessionStore'
-import {LogUtil} from '../log/LogUtil.js'
+import {Session} from '@neptune/engine/Session.js'
+import type {SessionSnapshot} from '@neptune/engine/Session.js'
+import type {ISessionStore} from '@neptune/engine/storage/ISessionStore.js'
+import {LogUtil} from '@neptune/engine/log/LogUtil.js'
 
 /**
  * 数据库行类型定义

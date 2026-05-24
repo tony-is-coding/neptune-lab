@@ -118,7 +118,12 @@ export type {HookExecutor, HookContext, HookResult} from '@neptune/engine/hooks/
 // Session 存储
 export type {ISessionStore} from '@neptune/engine/storage/ISessionStore.js'
 export {InMemorySessionStore} from '@neptune/engine/storage/InMemorySessionStore.js'
-export {SQLiteSessionStore} from '@neptune/engine/storage/SQLiteSessionStore.js'
+export {FilesystemSessionStore} from '@neptune/engine/storage/FilesystemSessionStore.js'
+// Specific backends live in product layer (Stage 3 decoupling)
+export {SQLiteSessionStore} from './storage/SQLiteSessionStore.js'
+export {PgSessionStore, type PgSessionStoreConfig} from './storage/PgSessionStore.js'
+export {PgContentStore, type PgContentStoreConfig} from './storage/PgContentStore.js'
+export {RedisMemoryStore, type RedisMemoryStoreConfig} from './storage/RedisMemoryStore.js'
 
 // 通用存储后端（新增）
 export type {IBackend} from '@neptune/engine/storage/IBackend.js'

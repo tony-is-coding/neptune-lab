@@ -1,7 +1,7 @@
 import {describe, test, expect, beforeEach, afterEach} from 'bun:test'
 import {PgSessionStore} from '../PgSessionStore'
-import {Session} from '../../Session'
-import type {SessionSnapshot} from '../../Session'
+import {Session} from '@neptune/engine/Session.js'
+import type {SessionSnapshot} from '@neptune/engine/Session.js'
 import postgres from 'postgres'
 
 /**

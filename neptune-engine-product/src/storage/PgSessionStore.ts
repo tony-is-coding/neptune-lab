@@ -1,10 +1,10 @@
 import {drizzle} from 'drizzle-orm/postgres-js'
 import postgres from 'postgres'
-import {Session} from '../Session'
-import type {SessionSnapshot} from '../Session'
-import type {ISessionStore} from './ISessionStore'
-import type {ProviderConfig} from '../types'
-import {LogUtil} from '../log/LogUtil.js'
+import {Session} from '@neptune/engine/Session.js'
+import type {SessionSnapshot} from '@neptune/engine/Session.js'
+import type {ISessionStore} from '@neptune/engine/storage/ISessionStore.js'
+import type {ProviderConfig} from '@neptune/engine/types.js'
+import {LogUtil} from '@neptune/engine/log/LogUtil.js'
 
 /**
  * PostgreSQL 连接配置

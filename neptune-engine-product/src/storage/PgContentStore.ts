@@ -1,6 +1,6 @@
 import postgres from 'postgres'
-import type {ISessionContentStore, ReadOptions, SessionContentItem} from './ISessionContentStore'
-import {LogUtil} from '../log/LogUtil.js'
+import type {ISessionContentStore, ReadOptions, SessionContentItem} from '@neptune/engine/storage/ISessionContentStore.js'
+import {LogUtil} from '@neptune/engine/log/LogUtil.js'
 
 /**
  * PostgreSQL 连接配置
