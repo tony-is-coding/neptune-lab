@@ -1,9 +1,11 @@
 /**
  * Shared spawn module for teammate creation.
  * Extracted from TeammateTool to allow reuse by AgentTool.
+ *
+ * NOTE (S1.2): React import 已移除。It2SetupPrompt 的 JSX 渲染逻辑保留为 null,
+ * S1.5 整个文件会迁出到 product/agent-adapter 由 cc product 实现 setup prompt UI。
  */
 
-import React from 'react'
 import {
 	getChromeFlagOverride,
 	getFlagSettingsPath,
@@ -348,20 +350,10 @@ async function handleSpawnSplitPane(
 		const tmuxAvailable = await isTmuxAvailable()
 
 		// Show the setup prompt and wait for user decision
-		const setupResult = await new Promise<
-			'installed' | 'use-tmux' | 'cancelled'
-		>(resolve => {
-			context.setToolJSX!({
-				jsx: React.createElement(It2SetupPrompt, {
-					onDone: resolve,
-					tmuxAvailable,
-				}),
-				shouldHidePromptInput: true,
-			})
-		})
-
-		// Clear the JSX
-		context.setToolJSX(null)
+		// S1.2: React.createElement(It2SetupPrompt, ...) 已移除；S1.5 整个 spawnMultiAgent 迁出
+		// 到 product/agent-adapter，product 端实现 it2 setup prompt UI。
+		// substrate 主体直接 resolve 'cancelled'，让 spawn 流程走兜底分支。
+		const setupResult: 'installed' | 'use-tmux' | 'cancelled' = 'cancelled'
 
 		if (setupResult === 'cancelled') {
 			throw new Error('Teammate spawn cancelled - iTerm2 setup required')

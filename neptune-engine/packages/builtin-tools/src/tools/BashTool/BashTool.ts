@@ -6,7 +6,7 @@ import {
 	truncate as fsTruncate,
 	link,
 } from 'fs/promises'
-import * as React from 'react'
+// React/JSX import removed in S1.2 — substrate 主体不再渲染 React。
 import type {CanUseToolFn} from '../../../../../src/ui/hooks/useCanUseTool'
 import type {AppState} from 'src/state/AppState.js'
 import {z} from 'zod/v4'
@@ -74,7 +74,7 @@ import {
 	getToolResultPath,
 	PREVIEW_SIZE_BYTES,
 } from 'src/utils/toolResultStorage.js'
-import {userFacingName as fileEditUserFacingName} from '../FileEditTool/UI.js'
+import {userFacingName as fileEditUserFacingName} from '../FileEditTool/userFacingName.js'
 import {
 	bashToolHasPermission,
 	commandHasAnyCd,
@@ -91,14 +91,8 @@ import {checkReadOnlyConstraints} from './readOnlyValidation.js'
 import {parseSedEditCommand} from './sedEditParser.js'
 import {shouldUseSandbox} from './shouldUseSandbox.js'
 import {BASH_TOOL_NAME} from './toolName.js'
-import {
-	BackgroundHint,
-	renderToolResultMessage,
-	renderToolUseErrorMessage,
-	renderToolUseMessage,
-	renderToolUseProgressMessage,
-	renderToolUseQueuedMessage,
-} from './UI.js'
+// UI render functions and BackgroundHint removed in S1.2:
+// substrate 不再持有 React 渲染。Product 的 tool-ui-adapter 接管所有 UI。
 import {
 	buildImageToolResult,
 	isImageOutput,
@@ -754,13 +748,9 @@ export const BashTool = buildTool({
 	async checkPermissions(input, context): Promise<PermissionResult> {
 		return bashToolHasPermission(input, context)
 	},
-	renderToolUseMessage,
-	renderToolUseProgressMessage,
-	renderToolUseQueuedMessage,
-	renderToolResultMessage,
-	// BashToolResultMessage shows <OutputLine content={stdout}> + stderr.
-	// UI never shows persistedOutputPath wrapper, backgroundInfo — those are
-	// model-facing (mapToolResult... below).
+	// renderToolUseMessage / renderToolUseProgressMessage / renderToolUseQueuedMessage /
+	// renderToolResultMessage / renderToolUseErrorMessage 已移除（S1.2）
+	// product 的 tool-ui-adapter 接管所有渲染。
 	extractSearchText({stdout, stderr}) {
 		return stderr ? `${stdout}\n${stderr}` : stdout
 	},
@@ -1092,7 +1082,7 @@ export const BashTool = buildTool({
 			},
 		}
 	},
-	renderToolUseErrorMessage,
+	// renderToolUseErrorMessage 已移除（S1.2 — 由 product tool-ui-adapter 接管）
 	isResultTruncated(output: Out): boolean {
 		return (
 			isOutputLineTruncated(output.stdout) ||
@@ -1450,7 +1440,9 @@ async function* runShellCommand({
 				}
 
 				setToolJSX({
-					jsx: <BackgroundHint/>,
+					// substrate 不渲染 React JSX；S1.2 移除 BackgroundHint。
+					// product 的 tool-ui-adapter 自行处理后台提示。
+					jsx: null,
 					shouldHidePromptInput: false,
 					shouldContinueAnimation: true,
 					showSpinner: true,

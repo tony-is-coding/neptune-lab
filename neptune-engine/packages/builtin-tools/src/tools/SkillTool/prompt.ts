@@ -6,7 +6,39 @@ import {
 	getSlashCommandToolSkills,
 } from 'src/commands.js'
 import {COMMAND_NAME_TAG} from '../../constants/xml.js'
-import {stringWidth} from '@anthropic/ink'
+// stringWidth: substrate 用 minimal CJK/emoji-aware 实现，避免依赖 @anthropic/ink。
+// cc product 端的 ink 版本可以在 product layer 自定义替换。
+const stringWidth = (s: string): number => {
+	let width = 0
+	for (const ch of s) {
+		const code = ch.codePointAt(0) ?? 0
+		if (code === 0) continue
+		// 控制字符 / 零宽字符跳过
+		if (code < 0x20 || (code >= 0x7f && code < 0xa0)) continue
+		// CJK / 全角等占两格的字符（粗略范围）
+		if (
+			(code >= 0x1100 && code <= 0x115f) ||
+			(code >= 0x2e80 && code <= 0x303e) ||
+			(code >= 0x3041 && code <= 0x33ff) ||
+			(code >= 0x3400 && code <= 0x4dbf) ||
+			(code >= 0x4e00 && code <= 0x9fff) ||
+			(code >= 0xa000 && code <= 0xa4cf) ||
+			(code >= 0xac00 && code <= 0xd7a3) ||
+			(code >= 0xf900 && code <= 0xfaff) ||
+			(code >= 0xff00 && code <= 0xff60) ||
+			(code >= 0xffe0 && code <= 0xffe6) ||
+			(code >= 0x1f300 && code <= 0x1f64f) ||
+			(code >= 0x1f900 && code <= 0x1f9ff) ||
+			(code >= 0x20000 && code <= 0x2fffd) ||
+			(code >= 0x30000 && code <= 0x3fffd)
+		) {
+			width += 2
+		} else {
+			width += 1
+		}
+	}
+	return width
+}
 import {
 	type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
 	logEvent,

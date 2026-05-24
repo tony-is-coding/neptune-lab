@@ -1,5 +1,5 @@
 import {feature} from 'bun:bundle'
-import * as React from 'react'
+// React import removed in S1.2 — AgentTool 主体不再渲染 JSX。
 import {buildTool, type ToolDef, toolMatchesName} from '../../tool.js'
 import type {
 	AssistantMessage,
@@ -87,7 +87,8 @@ import {
 	removeAgentWorktree,
 } from 'src/utils/worktree.js'
 import {BASH_TOOL_NAME} from '../BashTool/toolName.js'
-import {BackgroundHint} from '../BashTool/UI.js'
+// BackgroundHint UI removed: substrate 不渲染 React JSX；product 的 tool-ui-adapter
+// 自己处理后台提示的 UI。S1.5 拆 AgentTool 时整段 setToolJSX 逻辑也会移走。
 import {FILE_READ_TOOL_NAME} from '../FileReadTool/prompt.js'
 import {spawnTeammate} from '../shared/spawnMultiAgent.js'
 import {setAgentColor} from './agentColorManager.js'
@@ -121,17 +122,12 @@ import {
 import {getPrompt} from './prompt.js'
 import {mapAgentToolResultToBlock} from './resultMapping.js'
 import {runAgent} from './runAgent.js'
-import {
-	renderGroupedAgentToolUse,
-	renderToolResultMessage,
-	renderToolUseErrorMessage,
-	renderToolUseMessage,
-	renderToolUseProgressMessage,
-	renderToolUseRejectedMessage,
-	renderToolUseTag,
-	userFacingName,
-	userFacingNameBackgroundColor,
-} from './UI.js'
+// AgentTool UI render functions removed in S1.2:
+// userFacingName / userFacingNameBackgroundColor / renderToolResultMessage /
+// renderToolUseMessage / renderToolUseTag / renderToolUseProgressMessage /
+// renderToolUseRejectedMessage / renderToolUseErrorMessage / renderGroupedAgentToolUse
+// 全部迁出到 product 的 tool-ui-adapter（cc 特定的 worker→Agent 别名 / agent 颜色等业务）。
+// substrate 主体只保留 ToolDef 模型可见字段。
 
 /* eslint-disable @typescript-eslint/no-require-imports */
 const proactiveModule =
@@ -1170,7 +1166,7 @@ export const AgentTool = buildTool({
 							) {
 								backgroundHintShown = true
 								toolUseContext.setToolJSX({
-									jsx: <BackgroundHint/>,
+									jsx: null,
 									shouldHidePromptInput: false,
 									shouldContinueAnimation: true,
 									showSpinner: true,
@@ -1686,8 +1682,8 @@ export const AgentTool = buildTool({
 	isConcurrencySafe() {
 		return true
 	},
-	userFacingName,
-	userFacingNameBackgroundColor,
+	// userFacingName / userFacingNameBackgroundColor 移除（S1.2）—— substrate 不感知
+	// cc 特定的 worker→Agent 别名 / agent 颜色业务；走 buildTool 默认（tool.name = 'Agent'）。
 	getActivityDescription(input) {
 		return input?.description ?? 'Running task'
 	},
@@ -1712,13 +1708,9 @@ export const AgentTool = buildTool({
 		mapToolResultToToolResultBlockParam(data, toolUseID) {
 			return mapAgentToolResultToBlock(data as InternalOutput, toolUseID)
 		},
-	renderToolResultMessage,
-	renderToolUseMessage,
-	renderToolUseTag,
-	renderToolUseProgressMessage,
-	renderToolUseRejectedMessage,
-	renderToolUseErrorMessage,
-	renderGroupedToolUse: renderGroupedAgentToolUse,
+	// renderToolResultMessage / renderToolUseMessage / renderToolUseTag /
+	// renderToolUseProgressMessage / renderToolUseRejectedMessage /
+	// renderToolUseErrorMessage / renderGroupedToolUse 已移除（S1.2）
 } satisfies ToolDef<InputSchema, Output, Progress>)
 
 function resolveTeamName(
