@@ -8,15 +8,15 @@ import {
 } from 'fs/promises'
 // React/JSX import removed in S1.2 — substrate 主体不再渲染 React。
 import type {CanUseToolFn} from '../../../../../src/ui/hooks/useCanUseTool'
-import type {AppState} from 'src/state/AppState.js'
+import type {AppState} from '../../utils/cc-shim/misc.js'
 import {z} from 'zod/v4'
-import {getKairosActive} from 'src/bootstrap/state.js'
+import {getKairosActive} from '../../utils/cc-shim/misc.js'
 import {TOOL_SUMMARY_MAX_LENGTH} from '../../constants/toolLimits.js'
 import {
 	type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
 	logEvent,
-} from 'src/services/analytics/index.js'
-import {notifyVscodeFileUpdated} from 'src/services/mcp/vscodeSdkMcp.js'
+} from '../../utils/cc-shim/analytics.js'
+import {notifyVscodeFileUpdated} from '../../utils/cc-shim/misc.js'
 import type {
 	SetToolJSXFn,
 	ToolCallProgress,
@@ -30,16 +30,16 @@ import {
 	registerForeground,
 	spawnShellTask,
 	unregisterForeground,
-} from 'src/tasks/LocalShellTask/LocalShellTask.js'
-import type {AgentId} from 'src/types/ids.js'
-import type {AssistantMessage} from 'src/types/message.js'
+} from '../../utils/cc-shim/misc.js'
+import type {AgentId} from '../../utils/cc-shim/misc.js'
+import type {AssistantMessage} from '../../utils/cc-shim/misc.js'
 import {parseForSecurity} from '../../utils/cc-shim/bash/ast.js'
 import {
 	splitCommand_DEPRECATED,
 	splitCommandWithOperators,
 } from '../../utils/cc-shim/bash/commands.js'
-import {extractClaudeCodeHints} from 'src/utils/claudeCodeHints.js'
-import {detectCodeIndexingFromCommand} from 'src/utils/codeIndexing.js'
+import {extractClaudeCodeHints} from '../../utils/cc-shim/misc.js'
+import {detectCodeIndexingFromCommand} from '../../utils/cc-shim/misc.js'
 import {isEnvTruthy} from '../../utils/env.js'
 import {isENOENT, ShellError} from '../../utils/errors.js'
 import {
@@ -47,25 +47,25 @@ import {
 	detectLineEndings,
 	getFileModificationTime,
 	writeTextContent,
-} from 'src/utils/file.js'
+} from '../../utils/cc-shim/file.js'
 import {
 	fileHistoryEnabled,
 	fileHistoryTrackEdit,
-} from 'src/utils/fileHistory.js'
+} from '../../utils/cc-shim/file.js'
 import {truncate} from '../../utils/truncate.js'
-import {getFsImplementation} from 'src/utils/fsOperations.js'
+import {getFsImplementation} from '../../utils/cc-shim/file.js'
 import {lazySchema} from '../../utils/lazySchema.js'
 import {expandPath} from '../../utils/cc-shim/path.js'
-import type {PermissionResult} from 'src/utils/permissions/PermissionResult.js'
-import {maybeRecordPluginHint} from 'src/utils/plugins/hintRecommendation.js'
-import {exec} from 'src/utils/Shell.js'
-import type {ExecResult} from 'src/utils/ShellCommand.js'
-import {SandboxManager} from 'src/utils/sandbox/sandbox-adapter.js'
+import type {PermissionResult} from '../../utils/cc-shim/permissions/index.js'
+import {maybeRecordPluginHint} from '../../utils/cc-shim/misc.js'
+import {exec} from '../../utils/cc-shim/misc.js'
+import type {ExecResult} from '../../utils/cc-shim/misc.js'
+import {SandboxManager} from '../../utils/cc-shim/misc.js'
 import {semanticBoolean} from '../../utils/semanticBoolean.js'
 import {semanticNumber} from '../../utils/semanticNumber.js'
-import {EndTruncatingAccumulator} from 'src/utils/stringUtils.js'
-import {getTaskOutputPath} from 'src/utils/task/diskOutput.js'
-import {TaskOutput} from 'src/utils/task/TaskOutput.js'
+import {EndTruncatingAccumulator} from '../../utils/cc-shim/misc.js'
+import {getTaskOutputPath} from '../../utils/cc-shim/misc.js'
+import {TaskOutput} from '../../utils/cc-shim/misc.js'
 import {isOutputLineTruncated} from '../../../../../src/ui/terminal'
 import {
 	buildLargeToolResultMessage,
@@ -73,7 +73,7 @@ import {
 	generatePreview,
 	getToolResultPath,
 	PREVIEW_SIZE_BYTES,
-} from 'src/utils/toolResultStorage.js'
+} from '../../utils/cc-shim/misc.js'
 import {userFacingName as fileEditUserFacingName} from '../FileEditTool/userFacingName.js'
 import {
 	bashToolHasPermission,
@@ -499,9 +499,9 @@ type OutputSchema = ReturnType<typeof outputSchema>
 export type Out = z.infer<OutputSchema>
 
 // Re-export BashProgress from centralized types to break import cycles
-export type {BashProgress} from 'src/types/tools.js'
+export type {BashProgress} from '../../utils/cc-shim/misc.js'
 
-import type {BashProgress} from 'src/types/tools.js'
+import type {BashProgress} from '../../utils/cc-shim/misc.js'
 
 /**
  * Checks if a command is allowed to be automatically backgrounded

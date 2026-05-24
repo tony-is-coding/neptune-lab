@@ -7,24 +7,24 @@ import {
 	PDF_AT_MENTION_INLINE_THRESHOLD,
 	PDF_EXTRACT_SIZE_THRESHOLD,
 	PDF_MAX_PAGES_PER_READ,
-} from 'src/constants/apiLimits.js'
-import {hasBinaryExtension} from 'src/constants/files.js'
-import {memoryFreshnessNote} from 'src/memdir/memoryAge.js'
-import {getFeatureValue_CACHED_MAY_BE_STALE} from 'src/services/analytics/growthbook.js'
-import {logEvent} from 'src/services/analytics/index.js'
+} from '../../utils/cc-shim/misc.js'
+import {hasBinaryExtension} from '../../utils/cc-shim/misc.js'
+import {memoryFreshnessNote} from '../../utils/cc-shim/misc.js'
+import {getFeatureValue_CACHED_MAY_BE_STALE} from '../../utils/cc-shim/analytics.js'
+import {logEvent} from '../../utils/cc-shim/analytics.js'
 import {
 	type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
 	getFileExtensionForAnalytics,
-} from 'src/services/analytics/metadata.js'
+} from '../../utils/cc-shim/analytics.js'
 import {
 	countTokensWithAPI,
 	roughTokenCountEstimationForFileType,
-} from 'src/services/tokenEstimation.js'
+} from '../../utils/cc-shim/misc.js'
 import {
 	activateConditionalSkillsForPaths,
 	addSkillDirectories,
 	discoverSkillDirsForPaths,
-} from 'src/skills/loadSkillsDir.js'
+} from '../../utils/cc-shim/misc.js'
 import type {ToolUseContext} from '../../tool.js'
 import {buildTool, type ToolDef} from '../../tool.js'
 import {getCwd} from '../../utils/cc-shim/cwd.js'
@@ -37,10 +37,10 @@ import {
 	findSimilarFile,
 	getFileModificationTimeAsync,
 	suggestPathUnderCwd,
-} from 'src/utils/file.js'
-import {logFileOperation} from 'src/utils/fileOperationAnalytics.js'
+} from '../../utils/cc-shim/file.js'
+import {logFileOperation} from '../../utils/cc-shim/analytics.js'
 import {formatFileSize} from '../../utils/format.js'
-import {getFsImplementation} from 'src/utils/fsOperations.js'
+import {getFsImplementation} from '../../utils/cc-shim/file.js'
 import {
 	compressImageBufferWithTokenLimit,
 	createImageMetadataText,
@@ -48,30 +48,30 @@ import {
 	type ImageDimensions,
 	ImageResizeError,
 	maybeResizeAndDownsampleImageBuffer,
-} from 'src/utils/imageResizer.js'
+} from '../../utils/cc-shim/misc.js'
 import {lazySchema} from '../../utils/lazySchema.js'
 import {logError} from '../../utils/cc-shim/log.js'
-import {isAutoMemFile} from 'src/utils/memoryFileDetection.js'
-import {createUserMessage} from 'src/utils/messages.js'
-import {getCanonicalName, getMainLoopModel} from 'src/utils/model/model.js'
+import {isAutoMemFile} from '../../utils/cc-shim/misc.js'
+import {createUserMessage} from '../../utils/cc-shim/misc.js'
+import {getCanonicalName, getMainLoopModel} from '../../utils/cc-shim/misc.js'
 import {
 	mapNotebookCellsToToolResult,
 	readNotebook,
-} from 'src/utils/notebook.js'
+} from '../../utils/cc-shim/misc.js'
 import {expandPath} from '../../utils/cc-shim/path.js'
-import {extractPDFPages, getPDFPageCount, readPDF} from 'src/utils/pdf.js'
+import {extractPDFPages, getPDFPageCount, readPDF} from '../../utils/cc-shim/misc.js'
 import {
 	isPDFExtension,
 	isPDFSupported,
 	parsePDFPageRange,
-} from 'src/utils/pdfUtils.js'
+} from '../../utils/cc-shim/misc.js'
 import {
 	checkReadPermissionForTool,
 	matchingRuleForInput,
-} from 'src/utils/permissions/filesystem.js'
-import type {PermissionDecision} from 'src/utils/permissions/PermissionResult.js'
-import {matchWildcardPattern} from 'src/utils/permissions/shellRuleMatching.js'
-import {readFileInRange} from 'src/utils/readFileInRange.js'
+} from '../../utils/cc-shim/permissions/index.js'
+import type {PermissionDecision} from '../../utils/cc-shim/permissions/index.js'
+import {matchWildcardPattern} from '../../utils/cc-shim/permissions/index.js'
+import {readFileInRange} from '../../utils/cc-shim/misc.js'
 import {semanticNumber} from '../../utils/semanticNumber.js'
 import {jsonStringify} from '../../utils/json.js'
 import {BASH_TOOL_NAME} from '../BashTool/toolName.js'

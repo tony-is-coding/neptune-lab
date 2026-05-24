@@ -3,17 +3,17 @@ import type {UUID} from 'crypto'
 import {randomUUID} from 'crypto'
 import uniqBy from 'lodash-es/uniqBy.js'
 import {logForDebugging} from '../../utils/cc-shim/log.js'
-import {getProjectRoot, getSessionId} from 'src/bootstrap/state.js'
+import {getProjectRoot, getSessionId} from '../../utils/cc-shim/misc.js'
 import {getCommand, getSkillToolCommands, hasCommand} from 'src/commands.js'
 import {
 	DEFAULT_AGENT_PROMPT,
 	enhanceSystemPromptWithEnvDetails,
-} from 'src/constants/prompts.js'
+} from '../../utils/cc-shim/misc.js'
 import type {QuerySource} from 'src/constants/querySource.js'
 import {getSystemContext, getUserContext} from 'src/context.js'
 import type {CanUseToolFn} from '../../../../../src/ui/hooks/useCanUseTool'
 import {query} from 'src/query.js'
-import {getFeatureValue_CACHED_MAY_BE_STALE} from 'src/services/analytics/growthbook.js'
+import {getFeatureValue_CACHED_MAY_BE_STALE} from '../../utils/cc-shim/analytics.js'
 import {getDumpPromptsPath} from 'src/services/api/dumpPrompts.js'
 import {cleanupAgentTracking} from 'src/services/api/promptCacheBreakDetection.js'
 import {
@@ -28,7 +28,7 @@ import type {
 import type {Tool, Tools, ToolUseContext} from '../../tool.js'
 import {killShellTasksForAgent} from 'src/tasks/LocalShellTask/killShellTasks.js'
 import type {Command} from 'src/types/command.js'
-import type {AgentId} from 'src/types/ids.js'
+import type {AgentId} from '../../utils/cc-shim/misc.js'
 import type {
 	AssistantMessage,
 	Message,
@@ -39,15 +39,15 @@ import type {
 	TombstoneMessage,
 	ToolUseSummaryMessage,
 	UserMessage,
-} from 'src/types/message.js'
+} from '../../utils/cc-shim/misc.js'
 import {createAttachmentMessage} from 'src/utils/attachments.js'
 import {AbortError} from '../../utils/errors.js'
-import {getDisplayPath} from 'src/utils/file.js'
+import {getDisplayPath} from '../../utils/cc-shim/file.js'
 import {
 	cloneFileStateCache,
 	createFileStateCacheWithSizeLimit,
 	READ_FILE_STATE_CACHE_SIZE,
-} from 'src/utils/fileStateCache.js'
+} from '../../utils/cc-shim/file.js'
 import {
 	type CacheSafeParams,
 	createSubagentContext,
@@ -55,9 +55,9 @@ import {
 import {registerFrontmatterHooks} from 'src/utils/hooks/registerFrontmatterHooks.js'
 import {clearSessionHooks} from 'src/utils/hooks/sessionHooks.js'
 import {executeSubagentStartHooks} from 'src/utils/hooks.js'
-import {createUserMessage} from 'src/utils/messages.js'
+import {createUserMessage} from '../../utils/cc-shim/misc.js'
 import {getAgentModel} from 'src/utils/model/agent.js'
-import {getAPIProvider} from 'src/utils/model/providers.js'
+import {getAPIProvider} from '../../utils/cc-shim/misc.js'
 import {
 	createSubagentTrace,
 	endTrace,
@@ -77,13 +77,13 @@ import {
 import {
 	asSystemPrompt,
 	type SystemPrompt,
-} from 'src/utils/systemPromptType.js'
+} from '../../utils/cc-shim/misc.js'
 import {
 	isPerfettoTracingEnabled,
 	registerAgent as registerPerfettoAgent,
 	unregisterAgent as unregisterPerfettoAgent,
 } from 'src/utils/telemetry/perfettoTracing.js'
-import type {ContentReplacementState} from 'src/utils/toolResultStorage.js'
+import type {ContentReplacementState} from '../../utils/cc-shim/misc.js'
 import {createAgentId} from 'src/utils/uuid.js'
 import {resolveAgentTools} from './agentToolUtils.js'
 import {type AgentDefinition, isBuiltInAgent} from './loadAgentsDir.js'

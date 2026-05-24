@@ -4,15 +4,15 @@ import type {
 	ToolResultBlockParam,
 } from '@anthropic-ai/sdk/resources/index.mjs'
 import {readFile, stat} from 'fs/promises'
-import {getOriginalCwd} from 'src/bootstrap/state.js'
-import {logEvent} from 'src/services/analytics/index.js'
+import {getOriginalCwd} from '../../utils/cc-shim/misc.js'
+import {logEvent} from '../../utils/cc-shim/analytics.js'
 import type {ToolPermissionContext} from '../../tool.js'
 import {getCwd} from '../../utils/cc-shim/cwd.js'
-import {pathInAllowedWorkingPath} from 'src/utils/permissions/filesystem.js'
-import {setCwd} from 'src/utils/Shell.js'
+import {pathInAllowedWorkingPath} from '../../utils/cc-shim/permissions/index.js'
+import {setCwd} from '../../utils/cc-shim/misc.js'
 import {shouldMaintainProjectWorkingDir} from '../../utils/featureFlags.js'
-import {maybeResizeAndDownsampleImageBuffer} from 'src/utils/imageResizer.js'
-import {getMaxOutputLength} from 'src/utils/shell/outputLimits.js'
+import {maybeResizeAndDownsampleImageBuffer} from '../../utils/cc-shim/misc.js'
+import {getMaxOutputLength} from '../../utils/cc-shim/misc.js'
 import {countCharInString, plural} from '../../utils/string.js'
 
 /**

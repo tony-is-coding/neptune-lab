@@ -1,14 +1,14 @@
 import {feature} from 'bun:bundle'
-import {prependBullets} from 'src/constants/prompts.js'
+import {prependBullets} from '../../utils/cc-shim/misc.js'
 import {isEnvTruthy} from '../../utils/env.js'
 import {hasEmbeddedSearchTools} from '../../utils/featureFlags.js'
 import {jsonStringify} from '../../utils/json.js'
-import {getClaudeTempDir} from 'src/utils/permissions/filesystem.js'
-import {SandboxManager} from 'src/utils/sandbox/sandbox-adapter.js'
+import {getClaudeTempDir} from '../../utils/cc-shim/permissions/index.js'
+import {SandboxManager} from '../../utils/cc-shim/misc.js'
 import {
 	getDefaultBashTimeoutMs,
 	getMaxBashTimeoutMs,
-} from 'src/utils/timeouts.js'
+} from '../../utils/cc-shim/misc.js'
 import {FILE_EDIT_TOOL_NAME} from '../FileEditTool/constants.js'
 import {FILE_READ_TOOL_NAME} from '../FileReadTool/prompt.js'
 import {FILE_WRITE_TOOL_NAME} from '../FileWriteTool/prompt.js'

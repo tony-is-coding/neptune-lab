@@ -5,24 +5,24 @@ import type {
 	AssistantMessage,
 	Message as MessageType,
 	NormalizedUserMessage,
-} from 'src/types/message.js'
+} from '../../utils/cc-shim/misc.js'
 import {getQuerySourceForAgent} from 'src/utils/promptCategory.js'
 import {z} from 'zod/v4'
 import {
 	clearInvokedSkillsForAgent,
 	getSdkAgentProgressSummariesEnabled,
-} from 'src/bootstrap/state.js'
+} from '../../utils/cc-shim/misc.js'
 import {
 	enhanceSystemPromptWithEnvDetails,
 	getSystemPrompt,
-} from 'src/constants/prompts.js'
+} from '../../utils/cc-shim/misc.js'
 import {isCoordinatorMode} from 'src/coordinator/coordinatorMode.js'
 import {startAgentSummarization} from 'src/services/AgentSummary/agentSummary.js'
-import {getFeatureValue_CACHED_MAY_BE_STALE} from 'src/services/analytics/growthbook.js'
+import {getFeatureValue_CACHED_MAY_BE_STALE} from '../../utils/cc-shim/analytics.js'
 import {
 	type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
 	logEvent,
-} from 'src/services/analytics/index.js'
+} from '../../utils/cc-shim/analytics.js'
 import {clearDumpState} from 'src/services/api/dumpPrompts.js'
 import {
 	completeAgentTask as completeAsyncAgent,
@@ -48,7 +48,7 @@ import {
 	type BackgroundRemoteSessionPrecondition,
 } from 'src/tasks/RemoteAgentTask/RemoteAgentTask.js'
 import {assembleToolPool} from 'src/tools.js'
-import {asAgentId} from 'src/types/ids.js'
+import {asAgentId} from '../../utils/cc-shim/misc.js'
 import {runWithAgentContext, type SubagentContext} from 'src/utils/agentContext.js'
 import {isAgentSwarmsEnabled} from '../../utils/featureFlags.js'
 import {getCwd, runWithCwdOverride} from '../../utils/cc-shim/cwd.js'
@@ -62,20 +62,20 @@ import {
 	extractTextContent,
 	isSyntheticMessage,
 	normalizeMessages,
-} from 'src/utils/messages.js'
+} from '../../utils/cc-shim/misc.js'
 import {getAgentModel} from 'src/utils/model/agent.js'
-import {permissionModeSchema} from 'src/utils/permissions/PermissionMode.js'
-import type {PermissionResult} from 'src/utils/permissions/PermissionResult.js'
+import {permissionModeSchema} from '../../utils/cc-shim/permissions/index.js'
+import type {PermissionResult} from '../../utils/cc-shim/permissions/index.js'
 import {
 	filterDeniedAgents,
 	getDenyRuleForAgent,
-} from 'src/utils/permissions/permissions.js'
+} from '../../utils/cc-shim/permissions/index.js'
 import {enqueueSdkEvent} from 'src/utils/sdkEventQueue.js'
 import {writeAgentMetadata} from 'src/utils/sessionStorage.js'
 import {sleep} from 'src/utils/sleep.js'
 import {buildEffectiveSystemPrompt} from 'src/utils/systemPrompt.js'
-import {asSystemPrompt} from 'src/utils/systemPromptType.js'
-import {getTaskOutputPath} from 'src/utils/task/diskOutput.js'
+import {asSystemPrompt} from '../../utils/cc-shim/misc.js'
+import {getTaskOutputPath} from '../../utils/cc-shim/misc.js'
 import {getParentSessionId, isTeammate} from 'src/utils/teammate.js'
 import {isInProcessTeammate} from 'src/utils/teammateContext.js'
 import {teleportToRemote} from 'src/utils/teleport.js'
@@ -322,7 +322,7 @@ export type RemoteLaunchedOutput = {
 
 type InternalOutput = Output | TeammateSpawnedOutput | RemoteLaunchedOutput
 
-import type {AgentToolProgress, ShellProgress} from 'src/types/tools.js'
+import type {AgentToolProgress, ShellProgress} from '../../utils/cc-shim/misc.js'
 // AgentTool forwards both its own progress events and shell progress
 // events from the sub-agent so the SDK receives tool_progress updates during bash/powershell runs.
 export type Progress = AgentToolProgress | ShellProgress

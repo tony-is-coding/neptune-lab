@@ -1,7 +1,7 @@
 import {feature} from 'bun:bundle'
 import type {BetaToolUseBlock} from '@anthropic-ai/sdk/resources/beta/messages/messages.mjs'
 import {randomUUID} from 'crypto'
-import {getIsNonInteractiveSession} from 'src/bootstrap/state.js'
+import {getIsNonInteractiveSession} from '../../utils/cc-shim/misc.js'
 import {
 	FORK_BOILERPLATE_TAG,
 	FORK_DIRECTIVE_PREFIX,
@@ -10,9 +10,9 @@ import {isCoordinatorMode} from 'src/coordinator/coordinatorMode.js'
 import type {
 	AssistantMessage,
 	Message as MessageType,
-} from 'src/types/message.js'
+} from '../../utils/cc-shim/misc.js'
 import {logForDebugging} from '../../utils/cc-shim/log.js'
-import {createUserMessage} from 'src/utils/messages.js'
+import {createUserMessage} from '../../utils/cc-shim/misc.js'
 import type {BuiltInAgentDefinition} from './loadAgentsDir.js'
 
 /**

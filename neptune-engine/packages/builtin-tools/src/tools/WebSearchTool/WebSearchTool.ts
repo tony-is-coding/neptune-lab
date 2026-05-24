@@ -1,4 +1,4 @@
-import type {PermissionResult} from 'src/utils/permissions/PermissionResult.js'
+import type {PermissionResult} from '../../utils/cc-shim/permissions/index.js'
 import {z} from 'zod/v4'
 import {jsonStringify} from '../../utils/json.js'
 import {buildTool, type ToolDef, type ToolUseContext} from '../../tool.js'
@@ -61,9 +61,9 @@ function getToolUseSummary(input: Partial<{query: string}> | undefined): string 
 }
 
 // Re-export WebSearchProgress from centralized types to break import cycles
-export type {WebSearchProgress} from 'src/types/tools.js'
+export type {WebSearchProgress} from '../../utils/cc-shim/misc.js'
 
-import type {WebSearchProgress} from 'src/types/tools.js'
+import type {WebSearchProgress} from '../../utils/cc-shim/misc.js'
 
 export const WebSearchTool = buildTool({
 	name: WEB_SEARCH_TOOL_NAME,

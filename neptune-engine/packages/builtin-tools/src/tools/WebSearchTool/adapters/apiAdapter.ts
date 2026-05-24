@@ -7,12 +7,12 @@ import type {
 	BetaContentBlock,
 	BetaWebSearchTool20250305,
 } from '@anthropic-ai/sdk/resources/beta/messages/messages.mjs'
-import {getFeatureValue_CACHED_MAY_BE_STALE} from 'src/services/analytics/growthbook.js'
-import {queryModelWithStreaming} from 'src/services/api/claude.js'
-import {createUserMessage} from 'src/utils/messages.js'
-import {getMainLoopModel, getSmallFastModel} from 'src/utils/model/model.js'
+import {getFeatureValue_CACHED_MAY_BE_STALE} from '../../utils/cc-shim/analytics.js'
+import {queryModelWithStreaming} from '../../utils/cc-shim/misc.js'
+import {createUserMessage} from '../../utils/cc-shim/misc.js'
+import {getMainLoopModel, getSmallFastModel} from '../../utils/cc-shim/misc.js'
 import {jsonParse} from '../../../utils/json.js'
-import {asSystemPrompt} from 'src/utils/systemPromptType.js'
+import {asSystemPrompt} from '../../utils/cc-shim/misc.js'
 import type {SearchResult, SearchOptions, WebSearchAdapter} from './types.js'
 
 function makeToolSchema(input: { allowedDomains?: string[]; blockedDomains?: string[] }): BetaWebSearchTool20250305 {

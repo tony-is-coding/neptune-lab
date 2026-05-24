@@ -42,7 +42,7 @@ const stringWidth = (s: string): number => {
 import {
 	type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
 	logEvent,
-} from 'src/services/analytics/index.js'
+} from '../../utils/cc-shim/analytics.js'
 import {count} from '../../utils/array.js'
 import {logForDebugging} from '../../utils/cc-shim/log.js'
 import {toError} from '../../utils/errors.js'

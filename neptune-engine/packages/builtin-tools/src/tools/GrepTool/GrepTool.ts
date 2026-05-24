@@ -6,19 +6,19 @@ import {isENOENT} from '../../utils/errors.js'
 import {
 	FILE_NOT_FOUND_CWD_NOTE,
 	suggestPathUnderCwd,
-} from 'src/utils/file.js'
-import {getFsImplementation} from 'src/utils/fsOperations.js'
+} from '../../utils/cc-shim/file.js'
+import {getFsImplementation} from '../../utils/cc-shim/file.js'
 import {lazySchema} from '../../utils/lazySchema.js'
 import {expandPath, toRelativePath} from '../../utils/cc-shim/path.js'
 import {
 	checkReadPermissionForTool,
 	getFileReadIgnorePatterns,
 	normalizePatternsToPath,
-} from 'src/utils/permissions/filesystem.js'
-import type {PermissionDecision} from 'src/utils/permissions/PermissionResult.js'
-import {matchWildcardPattern} from 'src/utils/permissions/shellRuleMatching.js'
-import {getGlobExclusionsForPluginCache} from 'src/utils/plugins/orphanedPluginFilter.js'
-import {ripGrep} from 'src/utils/ripgrep.js'
+} from '../../utils/cc-shim/permissions/index.js'
+import type {PermissionDecision} from '../../utils/cc-shim/permissions/index.js'
+import {matchWildcardPattern} from '../../utils/cc-shim/permissions/index.js'
+import {getGlobExclusionsForPluginCache} from '../../utils/cc-shim/misc.js'
+import {ripGrep} from '../../utils/cc-shim/misc.js'
 import {semanticBoolean} from '../../utils/semanticBoolean.js'
 import {semanticNumber} from '../../utils/semanticNumber.js'
 import {plural} from '../../utils/string.js'

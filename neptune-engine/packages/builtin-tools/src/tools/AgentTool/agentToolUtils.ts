@@ -1,6 +1,6 @@
 import {feature} from 'bun:bundle'
 import {z} from 'zod/v4'
-import {clearInvokedSkillsForAgent} from 'src/bootstrap/state.js'
+import {clearInvokedSkillsForAgent} from '../../utils/cc-shim/misc.js'
 import {
 	ALL_AGENT_DISALLOWED_TOOLS,
 	ASYNC_AGENT_ALLOWED_TOOLS,
@@ -11,9 +11,9 @@ import {startAgentSummarization} from 'src/services/AgentSummary/agentSummary.js
 import {
 	type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
 	logEvent,
-} from 'src/services/analytics/index.js'
+} from '../../utils/cc-shim/analytics.js'
 import {clearDumpState} from 'src/services/api/dumpPrompts.js'
-import type {AppState} from 'src/state/AppState.js'
+import type {AppState} from '../../utils/cc-shim/misc.js'
 import type {
 	Tool,
 	ToolPermissionContext,
@@ -35,8 +35,8 @@ import {
 	updateAgentProgress as updateAsyncAgentProgress,
 	updateProgressFromMessage,
 } from 'src/tasks/LocalAgentTask/LocalAgentTask.js'
-import {asAgentId} from 'src/types/ids.js'
-import type {Message as MessageType, ContentItem} from 'src/types/message.js'
+import {asAgentId} from '../../utils/cc-shim/misc.js'
+import type {Message as MessageType, ContentItem} from '../../utils/cc-shim/misc.js'
 import {isAgentSwarmsEnabled} from '../../utils/featureFlags.js'
 import {logForDebugging} from '../../utils/cc-shim/log.js'
 import {isInProtectedNamespace} from '../../utils/featureFlags.js'
@@ -46,13 +46,13 @@ import {lazySchema} from '../../utils/lazySchema.js'
 import {
 	extractTextContent,
 	getLastAssistantMessage,
-} from 'src/utils/messages.js'
-import type {PermissionMode} from 'src/utils/permissions/PermissionMode.js'
-import {permissionRuleValueFromString} from 'src/utils/permissions/permissionRuleParser.js'
+} from '../../utils/cc-shim/misc.js'
+import type {PermissionMode} from '../../utils/cc-shim/permissions/index.js'
+import {permissionRuleValueFromString} from '../../utils/cc-shim/permissions/index.js'
 import {
 	buildTranscriptForClassifier,
 	classifyYoloAction,
-} from 'src/utils/permissions/yoloClassifier.js'
+} from '../../utils/cc-shim/permissions/index.js'
 import {emitTaskProgress as emitTaskProgressEvent} from 'src/utils/task/sdkProgress.js'
 import {isInProcessTeammate} from 'src/utils/teammateContext.js'
 import {getTokenCountFromUsage} from 'src/utils/tokens.js'

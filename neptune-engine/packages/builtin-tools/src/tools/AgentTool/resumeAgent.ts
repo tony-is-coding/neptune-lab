@@ -1,12 +1,12 @@
 import {promises as fsp} from 'fs'
-import {getSdkAgentProgressSummariesEnabled} from 'src/bootstrap/state.js'
-import {getSystemPrompt} from 'src/constants/prompts.js'
+import {getSdkAgentProgressSummariesEnabled} from '../../utils/cc-shim/misc.js'
+import {getSystemPrompt} from '../../utils/cc-shim/misc.js'
 import {isCoordinatorMode} from 'src/coordinator/coordinatorMode.js'
 import type {CanUseToolFn} from '../../../../../src/ui/hooks/useCanUseTool'
 import type {ToolUseContext} from '../../tool.js'
 import {registerAsyncAgent} from 'src/tasks/LocalAgentTask/LocalAgentTask.js'
 import {assembleToolPool} from 'src/tools.js'
-import {asAgentId} from 'src/types/ids.js'
+import {asAgentId} from '../../utils/cc-shim/misc.js'
 import {runWithAgentContext} from 'src/utils/agentContext.js'
 import {runWithCwdOverride} from '../../utils/cc-shim/cwd.js'
 import {logForDebugging} from '../../utils/cc-shim/log.js'
@@ -15,7 +15,7 @@ import {
 	filterOrphanedThinkingOnlyMessages,
 	filterUnresolvedToolUses,
 	filterWhitespaceOnlyAssistantMessages,
-} from 'src/utils/messages.js'
+} from '../../utils/cc-shim/misc.js'
 import {getAgentModel} from 'src/utils/model/agent.js'
 import {getQuerySourceForAgent} from 'src/utils/promptCategory.js'
 import {
@@ -23,10 +23,10 @@ import {
 	readAgentMetadata,
 } from 'src/utils/sessionStorage.js'
 import {buildEffectiveSystemPrompt} from 'src/utils/systemPrompt.js'
-import type {SystemPrompt} from 'src/utils/systemPromptType.js'
-import {getTaskOutputPath} from 'src/utils/task/diskOutput.js'
+import type {SystemPrompt} from '../../utils/cc-shim/misc.js'
+import {getTaskOutputPath} from '../../utils/cc-shim/misc.js'
 import {getParentSessionId} from 'src/utils/teammate.js'
-import {reconstructForSubagentResume} from 'src/utils/toolResultStorage.js'
+import {reconstructForSubagentResume} from '../../utils/cc-shim/misc.js'
 import {runAsyncAgentLifecycle} from './agentToolUtils.js'
 import {GENERAL_PURPOSE_AGENT} from './built-in/generalPurposeAgent.js'
 import {FORK_AGENT, isForkSubagentEnabled} from './forkSubagent.js'

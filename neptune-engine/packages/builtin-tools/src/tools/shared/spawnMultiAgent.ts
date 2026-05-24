@@ -13,8 +13,8 @@ import {
 	getMainLoopModelOverride,
 	getSessionBypassPermissionsMode,
 	getSessionId,
-} from 'src/bootstrap/state.js'
-import type {AppState} from 'src/state/AppState.js'
+} from '../../utils/cc-shim/misc.js'
+import type {AppState} from '../../utils/cc-shim/misc.js'
 import {createTaskStateBase, generateTaskId} from 'src/Task.js'
 import type {ToolUseContext} from '../../tool.js'
 import type {InProcessTeammateTaskState} from 'src/tasks/InProcessTeammateTask/types.js'
@@ -25,9 +25,9 @@ import {getGlobalConfig} from 'src/utils/config.js'
 import {getCwd} from '../../utils/cc-shim/cwd.js'
 import {logForDebugging} from '../../utils/cc-shim/log.js'
 import {errorMessage} from '../../utils/errors.js'
-import {execFileNoThrow} from 'src/utils/execFileNoThrow.js'
-import {parseUserSpecifiedModel} from 'src/utils/model/model.js'
-import type {PermissionMode} from 'src/utils/permissions/PermissionMode.js'
+import {execFileNoThrow} from '../../utils/cc-shim/misc.js'
+import {parseUserSpecifiedModel} from '../../utils/cc-shim/misc.js'
+import type {PermissionMode} from '../../utils/cc-shim/permissions/index.js'
 import {isTmuxAvailable} from 'src/utils/swarm/backends/detection.js'
 import {
 	detectAndGetBackend,

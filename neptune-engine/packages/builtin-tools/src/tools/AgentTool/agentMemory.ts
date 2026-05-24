@@ -1,12 +1,12 @@
 import {join, normalize, sep} from 'path'
-import {getProjectRoot} from 'src/bootstrap/state.js'
+import {getProjectRoot} from '../../utils/cc-shim/misc.js'
 import {
 	buildMemoryPrompt,
 	ensureMemoryDirExists,
 } from 'src/memdir/memdir.js'
 import {getMemoryBaseDir} from 'src/memdir/paths.js'
 import {getCwd} from '../../utils/cc-shim/cwd.js'
-import {findCanonicalGitRoot} from 'src/utils/git.js'
+import {findCanonicalGitRoot} from '../../utils/cc-shim/misc.js'
 import {sanitizePath} from '../../utils/cc-shim/path.js'
 
 // Persistent agent memory scope: 'user' (~/.claude/agent-memory/), 'project' (.claude/agent-memory/), or 'local' (.claude/agent-memory-local/)

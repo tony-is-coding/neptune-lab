@@ -1,4 +1,4 @@
-import {getFsImplementation} from 'src/utils/fsOperations.js'
+import {getFsImplementation} from '../../utils/cc-shim/file.js'
 import {expandPath} from '../../utils/cc-shim/path.js'
 import {logForDebugging} from '../../utils/debug.js'
 import {truncate} from '../../utils/truncate.js'

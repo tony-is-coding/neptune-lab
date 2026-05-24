@@ -1,7 +1,7 @@
 import type {z} from 'zod/v4'
 import type {ToolPermissionContext} from '../../tool.js'
 import {splitCommand_DEPRECATED} from '../../utils/cc-shim/bash/commands.js'
-import type {PermissionResult} from 'src/utils/permissions/PermissionResult.js'
+import type {PermissionResult} from '../../utils/cc-shim/permissions/index.js'
 import type {BashTool} from './BashTool.js'
 
 const ACCEPT_EDITS_ALLOWED_COMMANDS = [

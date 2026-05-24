@@ -7,7 +7,7 @@ import {isAutoMemoryEnabled} from 'src/memdir/paths.js'
 import {
 	type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
 	logEvent,
-} from 'src/services/analytics/index.js'
+} from '../../utils/cc-shim/analytics.js'
 import {
 	type McpServerConfig,
 	McpServerConfigSchema,
@@ -31,7 +31,7 @@ import {
 import {
 	PERMISSION_MODES,
 	type PermissionMode,
-} from 'src/utils/permissions/PermissionMode.js'
+} from '../../utils/cc-shim/permissions/index.js'
 import {
 	clearPluginAgentCache,
 	loadPluginAgents,

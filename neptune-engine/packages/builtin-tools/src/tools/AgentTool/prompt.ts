@@ -1,4 +1,4 @@
-import {getFeatureValue_CACHED_MAY_BE_STALE} from 'src/services/analytics/growthbook.js'
+import {getFeatureValue_CACHED_MAY_BE_STALE} from '../../utils/cc-shim/analytics.js'
 import {hasEmbeddedSearchTools} from '../../utils/featureFlags.js'
 import {isEnvDefinedFalsy, isEnvTruthy} from '../../utils/env.js'
 import {FILE_READ_TOOL_NAME} from '../FileReadTool/prompt.js'

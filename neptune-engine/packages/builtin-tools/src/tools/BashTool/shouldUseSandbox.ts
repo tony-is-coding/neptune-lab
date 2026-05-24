@@ -1,7 +1,7 @@
-import {getFeatureValue_CACHED_MAY_BE_STALE} from 'src/services/analytics/growthbook.js'
+import {getFeatureValue_CACHED_MAY_BE_STALE} from '../../utils/cc-shim/analytics.js'
 import {splitCommand_DEPRECATED} from '../../utils/cc-shim/bash/commands.js'
-import {SandboxManager} from 'src/utils/sandbox/sandbox-adapter.js'
-import {getSettings_DEPRECATED} from 'src/utils/settings/settings.js'
+import {SandboxManager} from '../../utils/cc-shim/misc.js'
+import {getSettings_DEPRECATED} from '../../utils/cc-shim/misc.js'
 import {
 	BINARY_HIJACK_VARS,
 	bashPermissionRule,

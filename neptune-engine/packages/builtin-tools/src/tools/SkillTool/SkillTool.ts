@@ -23,10 +23,10 @@ import type {
 	Message,
 	SystemMessage,
 	UserMessage,
-} from 'src/types/message.js'
+} from '../../utils/cc-shim/misc.js'
 import {logForDebugging} from '../../utils/cc-shim/log.js'
-import type {PermissionDecision} from 'src/utils/permissions/PermissionResult.js'
-import {getRuleByContentsForTool} from 'src/utils/permissions/permissions.js'
+import type {PermissionDecision} from '../../utils/cc-shim/permissions/index.js'
+import {getRuleByContentsForTool} from '../../utils/cc-shim/permissions/index.js'
 import {
 	isOfficialMarketplaceName,
 	parsePluginIdentifier,
@@ -37,14 +37,14 @@ import {
 	addInvokedSkill,
 	clearInvokedSkillsForAgent,
 	getSessionId,
-} from 'src/bootstrap/state.js'
+} from '../../utils/cc-shim/misc.js'
 import {COMMAND_MESSAGE_TAG} from '../../constants/xml.js'
 import type {CanUseToolFn} from '../../../../../src/ui/hooks/useCanUseTool'
 import {
 	type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
 	type AnalyticsMetadata_I_VERIFIED_THIS_IS_PII_TAGGED,
 	logEvent,
-} from 'src/services/analytics/index.js'
+} from '../../utils/cc-shim/analytics.js'
 import {getAgentContext} from 'src/utils/agentContext.js'
 import {errorMessage} from '../../utils/errors.js'
 import {
@@ -53,9 +53,9 @@ import {
 } from 'src/utils/forkedAgent.js'
 import {parseFrontmatter} from 'src/utils/frontmatterParser.js'
 import {lazySchema} from '../../utils/lazySchema.js'
-import {createUserMessage, normalizeMessages} from 'src/utils/messages.js'
+import {createUserMessage, normalizeMessages} from '../../utils/cc-shim/misc.js'
 import type {ModelAlias} from 'src/utils/model/aliases.js'
-import {resolveSkillModelOverride} from 'src/utils/model/model.js'
+import {resolveSkillModelOverride} from '../../utils/cc-shim/misc.js'
 import {recordSkillUsage} from 'src/utils/suggestions/skillUsageTracking.js'
 import {createAgentId} from 'src/utils/uuid.js'
 import {runAgent} from '../AgentTool/runAgent.js'
@@ -93,9 +93,9 @@ async function getAllCommands(context: ToolUseContext): Promise<Command[]> {
 }
 
 // Re-export Progress from centralized types to break import cycles
-export type {SkillToolProgress as Progress} from 'src/types/tools.js'
+export type {SkillToolProgress as Progress} from '../../utils/cc-shim/misc.js'
 
-import type {SkillToolProgress as Progress} from 'src/types/tools.js'
+import type {SkillToolProgress as Progress} from '../../utils/cc-shim/misc.js'
 
 // Conditional require for remote skill modules — static imports here would
 // pull in akiBackend.ts (via remoteSkillLoader → akiBackend), which has

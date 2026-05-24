@@ -1,4 +1,4 @@
-import {getAgentColorMap} from 'src/bootstrap/state.js'
+import {getAgentColorMap} from '../../utils/cc-shim/misc.js'
 import type {Theme} from 'src/utils/theme.js'
 
 export type AgentColorName =
