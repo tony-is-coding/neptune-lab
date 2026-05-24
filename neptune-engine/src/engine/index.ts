@@ -116,6 +116,22 @@ export {FilesystemSessionStore} from './storage/FilesystemSessionStore.js'
 export type {AgentManifest, AgentRegistry} from './agent-registry/index.js'
 export {InMemoryAgentRegistry, FilesystemAgentRegistry} from './agent-registry/index.js'
 
+// Sandbox（Stage 3.3 — 规则级护栏，secure-by-default）
+export type {
+	SandboxAdapter,
+	SandboxDeny,
+	ExecRequest,
+	ExecResult,
+	ReadFileOptions,
+	ReadFileResult,
+	WriteFileOptions,
+	WriteFileResult,
+	FetchRequest,
+	FetchResult,
+	LocalSandboxConfig,
+} from './sandbox/index.js'
+export {NoOpSandbox, LocalSandbox} from './sandbox/index.js'
+
 // CCRuntime
 export type {CCRuntime} from './cc-runtime/index.js'
 export {

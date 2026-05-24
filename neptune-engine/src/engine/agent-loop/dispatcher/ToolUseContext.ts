@@ -21,6 +21,7 @@ import type {
 } from '../../index.js'
 import type {ToolRegistry as KernelToolRegistry} from '../../tool-registry/index.js'
 import type {AgentRegistry} from '../../agent-registry/index.js'
+import type {SandboxAdapter} from '../../sandbox/index.js'
 import type {Tool} from '../../types/tool.js'
 import type {ToolPermissionContext} from '../../types/permissions.js'
 
@@ -93,6 +94,8 @@ export interface ToolUseContext {
 	}
 	/** Permission 委托（默认 allow-all；product 可换 ask-user / policy）。 */
 	canUseTool: CanUseToolFn
+	/** Stage 3.3: Sandbox 注入（默认 NoOpSandbox；product 推荐 LocalSandbox）。 */
+	sandbox?: SandboxAdapter
 	/** 权限上下文（cc canUseTool 调用时需要传入）。可空。 */
 	getToolPermissionContext?: () => Promise<ToolPermissionContext> | ToolPermissionContext
 	/** Phase A 五个 protocol。Phase B kernel tools 从这里拿。 */
@@ -111,6 +114,7 @@ export interface CreateToolUseContextOptions {
 	agentId?: string
 	abortController?: AbortController
 	canUseTool?: CanUseToolFn
+	sandbox?: SandboxAdapter
 	getToolPermissionContext?: () => Promise<ToolPermissionContext> | ToolPermissionContext
 	kernel?: KernelProtocolBag
 	/** 任意扩展字段，会合并到 context 顶层。 */
@@ -141,6 +145,9 @@ export function createToolUseContext(
 			...(opts.optionsExtra ?? {}),
 		},
 		canUseTool: opts.canUseTool ?? allowAllCanUseTool,
+	}
+	if (opts.sandbox) {
+		ctx.sandbox = opts.sandbox
 	}
 	if (opts.getToolPermissionContext) {
 		ctx.getToolPermissionContext = opts.getToolPermissionContext
