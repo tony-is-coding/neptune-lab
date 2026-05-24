@@ -26,6 +26,12 @@
       ],
       "@neptune/mcp-client/*": [
         "./packages/mcp-client/src/*"
+      ],
+      "@shared/contracts": [
+        "../shared/types/contracts/index.ts"
+      ],
+      "@shared/contracts/*": [
+        "../shared/types/contracts/*"
       ]
     }
   }
