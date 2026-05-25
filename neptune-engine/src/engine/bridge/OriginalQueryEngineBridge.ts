@@ -198,39 +198,22 @@ async function createProviderWithConfig(
 			return registry.get(providerType)
 		}
 
-		// fallback 到内置 Provider
+		// fallback 到内置 Provider（仅 anthropic 是 substrate 默认；其他 provider
+		// 由 product 通过 providerRegistry.register 注入后，走上面的 registry 路径）
 		switch (providerType) {
 			case 'anthropic': {
 				const {AnthropicProvider} = await import('../provider/adapters/AnthropicProvider.js')
 				return new AnthropicProvider(config)
 			}
-			case 'openai': {
-				const {OpenAIProvider} = await import('../provider/adapters/OpenAIProvider.js')
-				return new OpenAIProvider(config)
-			}
-			case 'gemini': {
-				const {GeminiProvider} = await import('../provider/adapters/GeminiProvider.js')
-				return new GeminiProvider(config)
-			}
-			case 'grok': {
-				const {GrokProvider} = await import('../provider/adapters/GrokProvider.js')
-				return new GrokProvider(config)
-			}
-			case 'bedrock': {
-				const {BedrockProvider} = await import('../provider/adapters/BedrockProvider.js')
-				return new BedrockProvider(config)
-			}
-			case 'vertex': {
-				const {VertexProvider} = await import('../provider/adapters/VertexProvider.js')
-				return new VertexProvider(config)
-			}
-			case 'foundry': {
-				const {FoundryProvider} = await import('../provider/adapters/FoundryProvider.js')
-				return new FoundryProvider(config)
-			}
-			default:
-				LogUtil.warn(`Unknown provider type: ${providerType}`)
+			default: {
+				// 非 anthropic provider：尝试从 registry 拿（product 注入）
+				const {getGlobalProviderRegistry} = await import('../provider/ProviderRegistry.js')
+				const registry = await getGlobalProviderRegistry()
+				const adapter = registry.get(providerType)
+				if (adapter) return adapter
+				LogUtil.warn(`Unknown provider type: ${providerType} (product 未注册）`)
 				return undefined
+			}
 		}
 	} catch (error) {
 		LogUtil.warn(`Failed to create provider '${providerType}':`, {detail: (error as Error).message})

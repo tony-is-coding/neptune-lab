@@ -9,7 +9,7 @@
 
 import {describe, test, expect, beforeEach} from 'bun:test'
 import {VertexProvider} from '../VertexProvider.js'
-import type {ProviderQueryParams} from '../../ProviderAdapter.js'
+import type {ProviderQueryParams} from '@neptune/engine/provider/ProviderAdapter.js'
 
 describe('VertexProvider', () => {
 	let provider: VertexProvider

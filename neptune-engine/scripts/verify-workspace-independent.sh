@@ -134,6 +134,16 @@ check "10. packages/*/src 0 反向引用（substrate 自闭环硬底线）" "
 	fi
 "
 
+check "11. engine/provider/adapters 仅含 Anthropic + Base" "
+	bad=\$(find src/engine/provider/adapters -maxdepth 1 -type f -name '*.ts' \\
+		| grep -v 'AnthropicProvider.ts' | grep -v 'BaseProvider.ts' | head -5)
+	if [ -n \"\$bad\" ]; then
+		echo 'engine/provider/adapters 含非 Anthropic 实现（应迁到 product）:'
+		echo \"\$bad\"
+		exit 1
+	fi
+"
+
 echo "==========================================================================="
 if [ "$fails" -gt 0 ]; then
 	echo "  ❌ TOTAL: $pass_count/$total pass, $fails fail"

@@ -12,9 +12,9 @@
  * - 继承 BaseProvider，只保留 query() 方法的特定实现
  */
 
-import type {ProviderQueryParams, ProviderMessage} from '../ProviderAdapter.js'
-import {BaseProvider, type BaseProviderConfig} from './BaseProvider.js'
-import type {FoundryProviderConfig} from '../types/ProviderConfigs.js'
+import type {ProviderQueryParams, ProviderMessage} from '@neptune/engine/provider/ProviderAdapter.js'
+import {BaseProvider, type BaseProviderConfig} from '@neptune/engine/provider/adapters/BaseProvider.js'
+import type {FoundryProviderConfig} from '@neptune/engine/provider/types/ProviderConfigs.js'
 
 // ============================================================
 // FoundryProvider 实现

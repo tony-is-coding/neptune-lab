@@ -5,7 +5,7 @@
  */
 
 import {describe, test, expect} from 'bun:test'
-import {AnthropicProvider} from '../AnthropicProvider.js'
+import {AnthropicProvider} from '@neptune/engine/provider/adapters/AnthropicProvider.js'
 import {BedrockProvider} from '../BedrockProvider.js'
 import {VertexProvider} from '../VertexProvider.js'
 import {FoundryProvider} from '../FoundryProvider.js'

@@ -8,7 +8,7 @@
 
 import {describe, test, expect, beforeEach} from 'bun:test'
 import {GrokProvider} from '../GrokProvider.js'
-import type {ProviderQueryParams} from '../../ProviderAdapter.js'
+import type {ProviderQueryParams} from '@neptune/engine/provider/ProviderAdapter.js'
 
 describe('GrokProvider', () => {
 	let provider: GrokProvider

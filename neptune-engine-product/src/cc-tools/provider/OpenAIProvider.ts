@@ -12,9 +12,9 @@
  * - OpenAI 使用位置参数调用方式
  */
 
-import type {ProviderQueryParams, ProviderMessage} from '../ProviderAdapter.js'
-import {BaseProvider, type BaseProviderConfig} from './BaseProvider.js'
-import type {OpenAIProviderConfig} from '../types/ProviderConfigs.js'
+import type {ProviderQueryParams, ProviderMessage} from '@neptune/engine/provider/ProviderAdapter.js'
+import {BaseProvider, type BaseProviderConfig} from '@neptune/engine/provider/adapters/BaseProvider.js'
+import type {OpenAIProviderConfig} from '@neptune/engine/provider/types/ProviderConfigs.js'
 
 // ============================================================
 // OpenAIProvider 实现

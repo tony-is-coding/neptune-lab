@@ -1,25 +1,25 @@
 /**
- * FoundryProvider 测试
+ * GeminiProvider 测试
  *
  * 测试目标：
- * - 验证 FoundryProvider 的基本功能
+ * - 验证 GeminiProvider 的基本功能
  * - 验证 ProviderAdapter 接口实现
  */
 
 import {describe, test, expect, beforeEach} from 'bun:test'
-import {FoundryProvider} from '../FoundryProvider.js'
-import type {ProviderQueryParams} from '../../ProviderAdapter.js'
+import {GeminiProvider} from '../GeminiProvider.js'
+import type {ProviderQueryParams} from '@neptune/engine/provider/ProviderAdapter.js'
 
-describe('FoundryProvider', () => {
-	let provider: FoundryProvider
+describe('GeminiProvider', () => {
+	let provider: GeminiProvider
 
 	beforeEach(() => {
-		provider = new FoundryProvider()
+		provider = new GeminiProvider()
 	})
 
 	describe('基本属性', () => {
-		test('type 应该是 "foundry"', () => {
-			expect(provider.type).toBe('foundry')
+		test('type 应该是 "gemini"', () => {
+			expect(provider.type).toBe('gemini')
 		})
 
 		test('getConfig 应该返回配置对象', () => {
@@ -29,20 +29,18 @@ describe('FoundryProvider', () => {
 		})
 
 		test('应该支持自定义配置', () => {
-			const customProvider = new FoundryProvider({
+			const customProvider = new GeminiProvider({
 				apiKey: 'test-api-key',
-				baseURL: 'https://api.foundry.example.com',
 			})
 			const config = customProvider.getConfig()
 			expect(config.apiKey).toBe('test-api-key')
-			expect(config.baseURL).toBe('https://api.foundry.example.com')
 		})
 	})
 
 	describe('query 方法', () => {
 		test('query 方法应该返回 AsyncGenerator', async () => {
 			const params: ProviderQueryParams = {
-				model: 'claude-3-sonnet-20240229',
+				model: 'gemini-pro',
 				messages: [],
 			}
 
@@ -53,7 +51,7 @@ describe('FoundryProvider', () => {
 
 		test('query 方法应该支持完整的参数', async () => {
 			const params: ProviderQueryParams = {
-				model: 'claude-3-sonnet-20240229',
+				model: 'gemini-pro',
 				messages: [],
 				tools: [],
 				systemPrompt: 'You are a helpful assistant',
@@ -69,16 +67,31 @@ describe('FoundryProvider', () => {
 
 	describe('ProviderAdapter 接口符合性', () => {
 		test('应该实现 ProviderAdapter 接口', () => {
-			const adapter: FoundryProvider = provider
+			const adapter: GeminiProvider = provider
 			expect(adapter).toBeDefined()
-			expect(adapter.type).toBe('foundry')
+			expect(adapter.type).toBe('gemini')
 			expect(typeof adapter.query).toBe('function')
 			expect(typeof adapter.getConfig).toBe('function')
 		})
 
 		test('应该支持默认模型配置', () => {
-			const p = new FoundryProvider({defaultModel: 'claude-3-opus-20240229'})
-			expect(p.getConfig().defaultModel).toBe('claude-3-opus-20240229')
+			const p = new GeminiProvider({defaultModel: 'gemini-ultra'})
+			expect(p.getConfig().defaultModel).toBe('gemini-ultra')
+		})
+	})
+
+	describe('Gemini 特定配置', () => {
+		test('应该支持不同的 Gemini 模型', () => {
+			const models = ['gemini-pro', 'gemini-ultra', 'gemini-flash']
+			models.forEach(model => {
+				const p = new GeminiProvider({defaultModel: model})
+				expect(p.getConfig().defaultModel).toBe(model)
+			})
+		})
+
+		test('应该支持 API Key 配置', () => {
+			const p = new GeminiProvider({apiKey: 'AIza-test-key'})
+			expect(p.getConfig().apiKey).toBe('AIza-test-key')
 		})
 	})
 })
