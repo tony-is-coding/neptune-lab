@@ -335,3 +335,12 @@ export type {
 	MemoryStore,
 } from './memory/index.js'
 export {InMemoryMemoryStore} from './memory/index.js'
+
+// Stage B1.1: AgentScopedMemoryStore（cc agentMemory + agentMemorySnapshot 等价协议）
+export type {
+	AgentMemoryScope,
+	AgentScopedMemoryStore,
+	SnapshotCheckResult,
+	FilesystemAgentScopedMemoryStoreConfig,
+} from './memory/index.js'
+export {FilesystemAgentScopedMemoryStore} from './memory/index.js'
