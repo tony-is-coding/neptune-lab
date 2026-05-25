@@ -50,6 +50,7 @@ import type {LoopEvent, LoopResult, GovernanceSnapshot} from './loopEvents.js'
 import type {HookSurface} from '../hook/HookSurface.js'
 import type {UsageTracker} from '../usage/UsageTracker.js'
 import type {PolicyDecision, ToolInvocation} from '@shared/contracts'
+import {SpanStatus} from '../../observability/index.js'
 
 const DEFAULT_MAX_TURNS = 50
 
@@ -104,6 +105,14 @@ export interface AgentLoopParams {
 	 * - 与 runStore 互补：runStore 是 resume / state 用，auditStore 是合规 / 审计用
 	 */
 	auditStore?: import('../../audit/index.js').AuditEventStore
+	/**
+	 * Stage 6: Observability provider 注入（OTel-compatible）。
+	 * - tracingProvider：startSpan/runInSpan，AgentLoop 主循环 + 每个 turn + 每个 tool 包 span
+	 * - metricsProvider：counter/gauge/histogram，记录 turn count / tool count / token usage
+	 * - 默认 NoOp（不输出），product 注入 OTel adapter 即可接入实际后端
+	 */
+	tracingProvider?: import('../../observability/index.js').ITracingProvider
+	metricsProvider?: import('../../observability/index.js').IMetricsProvider
 }
 
 // ============================================================
@@ -210,6 +219,13 @@ export class AgentLoop {
 	static async *run(
 		params: AgentLoopParams,
 	): AsyncGenerator<LoopEvent, LoopResult, unknown> {
+		// Stage 6: observability span（root），整个 run 包一层
+		const rootSpan = params.tracingProvider?.startSpan('agent.run', {
+			model: params.model,
+			runId: (params.context as {runId?: string}).runId,
+		})
+		params.metricsProvider?.counter('agent.run.started').increment(1)
+
 		const maxTurns = params.maxTurns ?? DEFAULT_MAX_TURNS
 		const messages: Message[] = [...params.messages]
 		const cumulativeUsage: UsageSnapshot = {...EMPTY_USAGE}
@@ -256,6 +272,34 @@ export class AgentLoop {
 					const e = err instanceof Error ? err : new Error(String(err))
 					yield {type: 'error', error: e, phase: 'governance'}
 				}
+			}
+			// Stage 6: end root span + 累计 metrics
+			if (rootSpan) {
+				rootSpan.addEvent('run.completed', {
+					reason: base.reason,
+					turnCount: base.turnCount,
+					inputTokens: base.cumulativeUsage.input_tokens,
+					outputTokens: base.cumulativeUsage.output_tokens,
+				})
+				if (base.reason === 'error' && base.error) {
+					rootSpan.addEvent('exception', {
+						message: base.error.message,
+						stack: base.error.stack,
+					})
+					rootSpan.setStatus(SpanStatus.ERROR)
+				} else {
+					rootSpan.setStatus(SpanStatus.OK)
+				}
+				rootSpan.end()
+			}
+			if (params.metricsProvider) {
+				params.metricsProvider.counter(`agent.run.${base.reason}`).increment(1)
+				params.metricsProvider
+					.histogram('agent.run.tokens.input')
+					.record(base.cumulativeUsage.input_tokens, {model: params.model})
+				params.metricsProvider
+					.histogram('agent.run.tokens.output')
+					.record(base.cumulativeUsage.output_tokens, {model: params.model})
 			}
 			return buildResult(base)
 		}
