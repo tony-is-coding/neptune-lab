@@ -158,6 +158,19 @@ export {
 	cleanupForResume,
 } from './run/index.js'
 
+// Stage B1.4 — TeammateChannel 协议（agent teams 多 agent 协作）
+export type {
+	TeammateChannel,
+	TeammateMessage,
+	TeammateMessageInput,
+	StructuredMessage,
+} from './teammate/index.js'
+export {
+	InMemoryTeammateChannel,
+	encodeStructuredMessage,
+	decodeStructuredMessage,
+} from './teammate/index.js'
+
 // Audit hash chain（Stage 4.1 — 合规护城河）
 export type {AuditEvent, AuditEventStore, VerifyResult} from './audit/index.js'
 export {GENESIS_HASH, NoopAuditStore, FilesystemAuditStore, canonicalJson, computeHash} from './audit/index.js'
