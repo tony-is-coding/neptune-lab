@@ -8,6 +8,8 @@
  * - 借鉴 cc loadAgentsDir 的目录扫描语义，但不解析 markdown frontmatter
  *   （markdown 解析放 product，registry 只认 JSON manifest）
  * - register() 是按 type upsert（同名覆盖），不抛冲突错误
+ *
+ * Stage B1.3 — 增加 getBuiltIns() / registerBuiltIns() 与 InMemory 一致
  */
 
 import {readdir, readFile, unlink} from 'node:fs/promises'
@@ -15,6 +17,7 @@ import {join} from 'node:path'
 import type {AgentManifest, AgentRegistry} from './AgentRegistry.js'
 import {atomicWrite} from '../utils/atomicWrite.js'
 import {sanitizePath} from '../utils/sanitizePath.js'
+import {BUILT_IN_AGENT_MANIFESTS} from './builtins/index.js'
 
 const SUFFIX = '.agent.json'
 
@@ -62,6 +65,23 @@ export class FilesystemAgentRegistry implements AgentRegistry {
 		} catch (err) {
 			if ((err as NodeJS.ErrnoException).code === 'ENOENT') return
 			throw err
+		}
+	}
+
+	/**
+	 * Stage B1.3 — 返回 substrate baseline 4 agents 的 manifest 列表（不实际注册）。
+	 */
+	getBuiltIns(): readonly AgentManifest[] {
+		return BUILT_IN_AGENT_MANIFESTS
+	}
+
+	/**
+	 * Stage B3 — 一键把 4 个 baseline 写入文件系统。
+	 * Idempotent。
+	 */
+	async registerBuiltIns(): Promise<void> {
+		for (const manifest of BUILT_IN_AGENT_MANIFESTS) {
+			await this.register(manifest)
 		}
 	}
 

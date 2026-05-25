@@ -38,6 +38,10 @@ export interface AgentManifest {
  * AgentRegistry 接口 — 注入到 ToolUseContext.kernel.agentRegistry。
  *
  * 所有方法返 Promise（兼容 fs / DB 后端）。
+ *
+ * Stage B1.3 — 增加 getBuiltIns() 协议方法，让 substrate 默认提供
+ * baseline agents（generalPurpose / explore / plan / verification）。
+ * Default 实现可选 —— 不实现时返回 []，不破坏现有 product 自定义注册表。
  */
 export interface AgentRegistry {
 	/** 按 type 取一个 manifest；不存在返 undefined。 */
@@ -48,4 +52,15 @@ export interface AgentRegistry {
 	register(manifest: AgentManifest): Promise<void>
 	/** 注销一个 manifest（不存在不报错）。 */
 	unregister(type: string): Promise<void>
+	/**
+	 * Stage B1.3 — 列出 substrate 提供的 baseline agents。
+	 *
+	 * 设计目的：
+	 * - 让 product / SDK 用户开箱即用 4 个 cc 已证明的内置 agent 模板
+	 * - product 可以选择 register 这些 baseline 到自己的 registry，或
+	 *   完全 override 用自家 manifest
+	 *
+	 * 默认实现可选；返回 [] 表示不提供 baseline。
+	 */
+	getBuiltIns?(): readonly AgentManifest[]
 }

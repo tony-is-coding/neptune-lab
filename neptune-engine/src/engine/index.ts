@@ -113,8 +113,17 @@ export {InMemorySessionStore} from './storage/InMemorySessionStore.js'
 export {FilesystemSessionStore} from './storage/FilesystemSessionStore.js'
 
 // AgentRegistry（Stage 3.2 — substrate 协议）
+// Stage B1.3 + B3 — getBuiltIns() 协议方法 + 4 baseline manifests
 export type {AgentManifest, AgentRegistry} from './agent-registry/index.js'
-export {InMemoryAgentRegistry, FilesystemAgentRegistry} from './agent-registry/index.js'
+export {
+	InMemoryAgentRegistry,
+	FilesystemAgentRegistry,
+	BUILT_IN_AGENT_MANIFESTS,
+	GENERAL_PURPOSE_AGENT_MANIFEST,
+	EXPLORE_AGENT_MANIFEST,
+	PLAN_AGENT_MANIFEST,
+	VERIFICATION_AGENT_MANIFEST,
+} from './agent-registry/index.js'
 
 // Sandbox（Stage 3.3 — 规则级护栏，secure-by-default）
 export type {
