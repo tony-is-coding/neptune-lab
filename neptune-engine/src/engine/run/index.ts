@@ -6,3 +6,11 @@ export {
 	rebuildCheckpointFromEvents,
 	type RebuildResult,
 } from './rebuildSnapshot.js'
+
+// Stage B1.2 — resume 前 messages 清理（cc resumeAgent.ts:71-75 等价流水线）
+export {
+	filterUnresolvedToolUses,
+	filterOrphanedThinkingOnlyMessages,
+	filterWhitespaceOnlyAssistantMessages,
+	cleanupForResume,
+} from './messageFilters.js'

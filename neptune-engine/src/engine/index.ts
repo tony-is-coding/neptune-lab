@@ -141,6 +141,14 @@ export {
 	rebuildCheckpointFromEvents,
 } from './run/index.js'
 
+// Stage B1.2 — resume 前 messages 清理流水线（cc 等价行为）
+export {
+	filterUnresolvedToolUses,
+	filterOrphanedThinkingOnlyMessages,
+	filterWhitespaceOnlyAssistantMessages,
+	cleanupForResume,
+} from './run/index.js'
+
 // Audit hash chain（Stage 4.1 — 合规护城河）
 export type {AuditEvent, AuditEventStore, VerifyResult} from './audit/index.js'
 export {GENESIS_HASH, NoopAuditStore, FilesystemAuditStore, canonicalJson, computeHash} from './audit/index.js'
