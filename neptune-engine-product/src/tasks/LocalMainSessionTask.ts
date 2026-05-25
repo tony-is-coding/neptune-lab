@@ -26,7 +26,7 @@ import {createTaskStateBase} from '../Task.js'
 import type {
 	AgentDefinition,
 	CustomAgentDefinition,
-} from '@neptune/builtin-tools/tools/AgentTool/loadAgentsDir.js'
+} from '@neptune/engine-product/cc-tools/AgentTool/loadAgentsDir.js'
 import {asAgentId} from '../types/ids.js'
 import type {Message} from '../types/message.js'
 import {createAbortController} from '../utils/abortController.js'

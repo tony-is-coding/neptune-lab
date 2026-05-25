@@ -21,7 +21,6 @@
 // =============================================================================
 // Runtime-side tools that remain in engine
 // =============================================================================
-export {AgentTool} from './tools/AgentTool/AgentTool.js'
 export {BashTool} from './tools/BashTool/BashTool.js'
 export {FileEditTool} from './tools/FileEditTool/FileEditTool.js'
 export {FileReadTool} from './tools/FileReadTool/FileReadTool.js'
@@ -31,10 +30,16 @@ export {GrepTool} from './tools/GrepTool/GrepTool.js'
 export {LSPTool} from './tools/LSPTool/LSPTool.js'
 export {ListMcpResourcesTool} from './tools/ListMcpResourcesTool/ListMcpResourcesTool.js'
 export {ReadMcpResourceTool} from './tools/ReadMcpResourceTool/ReadMcpResourceTool.js'
-export {NotebookEditTool} from './tools/NotebookEditTool/NotebookEditTool.js'
-export {SkillTool} from './tools/SkillTool/SkillTool.js'
 export {WebFetchTool} from './tools/WebFetchTool/WebFetchTool.js'
 export {WebSearchTool} from './tools/WebSearchTool/WebSearchTool.js'
+
+// Stage 7: 以下工具已迁出到 neptune-engine-product/src/cc-tools/（业务深度耦合 cc）：
+//   - AgentTool（sub-agent 启动器，cc query/teammate/agent-context 业务）
+//   - SkillTool（cc frontmatter md 格式 skill）
+//   - NotebookEditTool（cc Jupyter 业务）
+//   - McpAuthTool（cc MCP auth 业务）
+// 想用 sub-agent 能力？基于 substrate AgentRegistry 协议（@neptune/engine）
+// 自己实现工具或从 product/cc-tools/ 引用 cc 参考版
 
 // Feature-gated runtime tools
 export {REPLTool} from './tools/REPLTool/REPLTool.js'

@@ -21,7 +21,7 @@ import {
 import {accumulateUsage, updateUsage} from '../services/api/claude.js'
 import {EMPTY_USAGE, type NonNullableUsage} from '../services/api/logging.js'
 import type {ToolUseContext} from '../Tool.js'
-import type {AgentDefinition} from '@neptune/builtin-tools/tools/AgentTool/loadAgentsDir.js'
+import type {AgentDefinition} from '@neptune/engine-product/cc-tools/AgentTool/loadAgentsDir.js'
 import type {AgentId} from '../types/ids.js'
 import type {Message} from '../types/message.js'
 import {createChildAbortController} from './abortController.js'

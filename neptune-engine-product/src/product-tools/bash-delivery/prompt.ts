@@ -1,5 +1,5 @@
 import {BASH_TOOL_NAME} from '@neptune/builtin-tools/tools/BashTool/toolName.js'
-import {AGENT_TOOL_NAME} from '@neptune/builtin-tools/tools/AgentTool/constants.js'
+import {AGENT_TOOL_NAME} from '@neptune/engine-product/cc-tools/AgentTool/constants.js'
 import {TODO_WRITE_TOOL_NAME} from '@neptune/builtin-tools/tools/TodoWriteTool/constants.js'
 import {isEnvTruthy} from 'src/utils/envUtils.js'
 import {shouldIncludeGitInstructions} from 'src/utils/gitSettings.js'

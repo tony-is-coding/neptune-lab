@@ -7,8 +7,8 @@
  */
 
 import type {Tool, ToolUseContext} from '../../Tool.js'
-import type {BuiltInAgentDefinition} from '@neptune/builtin-tools/tools/AgentTool/loadAgentsDir.js'
-import {runAgent} from '@neptune/builtin-tools/tools/AgentTool/runAgent.js'
+import type {BuiltInAgentDefinition} from '@neptune/engine-product/cc-tools/AgentTool/loadAgentsDir.js'
+import {runAgent} from '@neptune/engine-product/cc-tools/AgentTool/runAgent.js'
 import {FILE_EDIT_TOOL_NAME} from '@neptune/builtin-tools/tools/FileEditTool/constants.js'
 import {
 	FileReadTool,

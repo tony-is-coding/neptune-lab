@@ -1,12 +1,12 @@
 import memoize from 'lodash-es/memoize.js'
 import {basename} from 'path'
 import {isAutoMemoryEnabled} from '../../memdir/paths.js'
-import type {AgentColorName} from '@neptune/builtin-tools/tools/AgentTool/agentColorManager.js'
+import type {AgentColorName} from '@neptune/engine-product/cc-tools/AgentTool/agentColorManager.js'
 import {
 	type AgentMemoryScope,
 	loadAgentMemoryPrompt,
-} from '@neptune/builtin-tools/tools/AgentTool/agentMemory.js'
-import type {AgentDefinition} from '@neptune/builtin-tools/tools/AgentTool/loadAgentsDir.js'
+} from '@neptune/engine-product/cc-tools/AgentTool/agentMemory.js'
+import type {AgentDefinition} from '@neptune/engine-product/cc-tools/AgentTool/loadAgentsDir.js'
 import {FILE_EDIT_TOOL_NAME} from '@neptune/builtin-tools/tools/FileEditTool/constants.js'
 import {FILE_READ_TOOL_NAME} from '@neptune/builtin-tools/tools/FileReadTool/prompt.js'
 import {FILE_WRITE_TOOL_NAME} from '@neptune/builtin-tools/tools/FileWriteTool/prompt.js'

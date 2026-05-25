@@ -1,5 +1,5 @@
 import {afterEach, beforeEach, describe, expect, test} from 'bun:test'
-import type {AgentDefinition} from '@neptune/builtin-tools/tools/AgentTool/loadAgentsDir.js'
+import type {AgentDefinition} from '@neptune/engine-product/cc-tools/AgentTool/loadAgentsDir.js'
 import {
 	applyProductBuiltInAgents,
 	CLAUDE_CODE_GUIDE_AGENT_TYPE,

@@ -52,7 +52,7 @@ import {
 } from '../../Tool.js'
 import {ListMcpResourcesTool} from '@neptune/builtin-tools/tools/ListMcpResourcesTool/ListMcpResourcesTool.js'
 import {type MCPProgress, MCPTool} from '@neptune/builtin-tools/tools/MCPTool/MCPTool.js'
-import {createMcpAuthTool} from '@neptune/builtin-tools/tools/McpAuthTool/McpAuthTool.js'
+import {createMcpAuthTool} from '@neptune/engine-product/cc-tools/McpAuthTool/McpAuthTool.js'
 import {ReadMcpResourceTool} from '@neptune/builtin-tools/tools/ReadMcpResourceTool/ReadMcpResourceTool.js'
 import {createAbortController} from '../../utils/abortController.js'
 import {count} from '../../utils/array.js'

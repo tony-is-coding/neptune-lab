@@ -41,7 +41,7 @@ import {BASH_TOOL_NAME} from '@neptune/builtin-tools/tools/BashTool/toolName.js'
 import {FILE_EDIT_TOOL_NAME} from '@neptune/builtin-tools/tools/FileEditTool/constants.js'
 import {FILE_READ_TOOL_NAME} from '@neptune/builtin-tools/tools/FileReadTool/prompt.js'
 import {FILE_WRITE_TOOL_NAME} from '@neptune/builtin-tools/tools/FileWriteTool/prompt.js'
-import {NOTEBOOK_EDIT_TOOL_NAME} from '@neptune/builtin-tools/tools/NotebookEditTool/constants.js'
+import {NOTEBOOK_EDIT_TOOL_NAME} from '@neptune/engine-product/cc-tools/NotebookEditTool/constants.js'
 import {POWERSHELL_TOOL_NAME} from '../../product-tools/powershell/toolName.js'
 import {
 	parseGitCommitId,

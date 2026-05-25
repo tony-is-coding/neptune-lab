@@ -40,7 +40,7 @@ import type {MCPServerConnection} from './services/mcp/types.js'
 import {createMcpResourceRuntime} from './services/mcp/resourceRuntime.js'
 import type {AppState} from './state/AppStateStore.js'
 import {type Tools, type ToolUseContext, toolMatchesName} from './Tool.js'
-import type {AgentDefinition} from '@neptune/builtin-tools/tools/AgentTool/loadAgentsDir.js'
+import type {AgentDefinition} from '@neptune/engine-product/cc-tools/AgentTool/loadAgentsDir.js'
 import {
 	SYNTHETIC_OUTPUT_TOOL_NAME
 } from '../product-tools/synthetic-output/SyntheticOutputTool.js'

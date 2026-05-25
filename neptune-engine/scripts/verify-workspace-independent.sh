@@ -13,6 +13,7 @@
 #   7. cd packages/builtin-tools && bunx tsc --noEmit 0 错（最严苛 — 整个污染面收敛后才能过）
 #   8. (Stage 3) neptune-engine/package.json 不含 PG/Redis/SQLite 依赖
 #   9. (Stage 3) neptune-engine/src/engine/storage 下不含 Pg* / Redis* / SQLite* 实现文件
+#   10. (Stage 7) packages/*/src 0 反向引用（src/ + @neptune/engine-product）— substrate 自闭环硬底线
 #
 # 用法：
 #   cd neptune-engine && bash scripts/verify-workspace-independent.sh
@@ -117,6 +118,18 @@ check "9. engine/storage 下不含 Pg/Redis/SQLite 实现文件" "
 	if [ -n \"\$bad\" ]; then
 		echo '发现具体后端实现文件（应迁到 product）:'
 		echo \"\$bad\"
+		exit 1
+	fi
+"
+
+check "10. packages/*/src 0 反向引用（substrate 自闭环硬底线）" "
+	# 只算真正 import 行（行首是 import 关键字），排除注释
+	bad_src=\$(grep -rln \"^import .*from 'src/\" packages/*/src 2>/dev/null)
+	bad_product=\$(grep -rln \"from '@neptune/engine-product\" packages/*/src 2>/dev/null)
+	if [ -n \"\$bad_src\" ] || [ -n \"\$bad_product\" ]; then
+		echo 'packages 内反向引用（违反 substrate 自闭环底线）:'
+		echo \"\$bad_src\" | head -10
+		echo \"\$bad_product\" | head -5
 		exit 1
 	fi
 "

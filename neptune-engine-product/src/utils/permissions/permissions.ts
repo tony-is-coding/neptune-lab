@@ -6,7 +6,7 @@ import {
 	mcpInfoFromString,
 } from '../../services/mcp/mcpStringUtils.js'
 import type {Tool, ToolPermissionContext, ToolUseContext} from '../../Tool.js'
-import {AGENT_TOOL_NAME} from '@neptune/builtin-tools/tools/AgentTool/constants.js'
+import {AGENT_TOOL_NAME} from '@neptune/engine-product/cc-tools/AgentTool/constants.js'
 import {shouldUseSandbox} from '@neptune/builtin-tools/tools/BashTool/shouldUseSandbox.js'
 import {BASH_TOOL_NAME} from '@neptune/builtin-tools/tools/BashTool/toolName.js'
 import {POWERSHELL_TOOL_NAME} from '../../product-tools/powershell/toolName.js'

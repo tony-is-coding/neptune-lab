@@ -1,5 +1,5 @@
-import {AGENT_TOOL_NAME} from '@neptune/builtin-tools/tools/AgentTool/constants.js'
-import {isForkSubagentEnabled} from '@neptune/builtin-tools/tools/AgentTool/forkSubagent.js'
+import {AGENT_TOOL_NAME} from '@neptune/engine-product/cc-tools/AgentTool/constants.js'
+import {isForkSubagentEnabled} from '@neptune/engine-product/cc-tools/AgentTool/forkSubagent.js'
 import {SEND_MESSAGE_TOOL_NAME} from '@neptune/builtin-tools/tools/SendMessageTool/constants.js'
 import type {Tool} from '../../Tool.js'
 import {getSubscriptionType} from 'src/utils/auth.js'

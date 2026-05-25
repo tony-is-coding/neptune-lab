@@ -5,7 +5,7 @@ import {FILE_READ_TOOL_NAME} from '@neptune/builtin-tools/tools/FileReadTool/pro
 import {FILE_WRITE_TOOL_NAME} from '@neptune/builtin-tools/tools/FileWriteTool/prompt.js'
 import {GLOB_TOOL_NAME} from '@neptune/builtin-tools/tools/GlobTool/prompt.js'
 import {GREP_TOOL_NAME} from '@neptune/builtin-tools/tools/GrepTool/prompt.js'
-import {NOTEBOOK_EDIT_TOOL_NAME} from '@neptune/builtin-tools/tools/NotebookEditTool/constants.js'
+import {NOTEBOOK_EDIT_TOOL_NAME} from '@neptune/engine-product/cc-tools/NotebookEditTool/constants.js'
 import {hasEmbeddedSearchTools} from '../../../utils/featureFlags.js'
 import {AGENT_TOOL_NAME} from '../constants.js'
 import type {BuiltInAgentDefinition} from '../loadAgentsDir.js'

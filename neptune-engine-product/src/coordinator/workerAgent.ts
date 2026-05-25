@@ -17,7 +17,7 @@ import {
 } from '../product-tools/synthetic-output/SyntheticOutputTool.js'
 import {TEAM_CREATE_TOOL_NAME} from '@neptune/builtin-tools/tools/TeamCreateTool/constants.js'
 import {TEAM_DELETE_TOOL_NAME} from '@neptune/builtin-tools/tools/TeamDeleteTool/constants.js'
-import type {BuiltInAgentDefinition} from '@neptune/builtin-tools/tools/AgentTool/loadAgentsDir.js'
+import type {BuiltInAgentDefinition} from '@neptune/engine-product/cc-tools/AgentTool/loadAgentsDir.js'
 
 /**
  * Tools that workers must NOT have — these are coordinator-only

@@ -1,7 +1,7 @@
 import type {
 	AgentDefinition,
 	AgentDefinitionsResult,
-} from '@neptune/builtin-tools/tools/AgentTool/loadAgentsDir.js'
+} from '@neptune/engine-product/cc-tools/AgentTool/loadAgentsDir.js'
 import {
 	CLAUDE_CODE_GUIDE_AGENT,
 	CLAUDE_CODE_GUIDE_AGENT_TYPE,
