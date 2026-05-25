@@ -159,11 +159,17 @@ export {
 } from './run/index.js'
 
 // Stage B1.4 — TeammateChannel 协议（agent teams 多 agent 协作）
+// Stage B1.5 — TeammateBackend 协议（spawn 后端接口）
 export type {
 	TeammateChannel,
 	TeammateMessage,
 	TeammateMessageInput,
 	StructuredMessage,
+	TeammateBackend,
+	SpawnTeammateInput,
+	SpawnTeammateResult,
+	TeammateStatus,
+	TeammateInfo,
 } from './teammate/index.js'
 export {
 	InMemoryTeammateChannel,
