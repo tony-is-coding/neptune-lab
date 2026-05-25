@@ -136,38 +136,11 @@ export async function getGlobalProviderRegistry(): Promise<ProviderRegistry> {
 	if (!globalRegistry) {
 		globalRegistry = new ProviderRegistry()
 
-		// 注册核心 Provider。保持动态加载，避免仅导入 engine 公共 API 时
-		// 把 provider SDK 或宿主运行时依赖带入后端进程。
+		// Stage 5.1: substrate 默认只注册 Anthropic（engine 唯一真实可用的 provider）
+		// 其他 provider（OpenAI / Gemini / Grok / Bedrock / Vertex / Foundry）
+		// 当前都是 unsupported stub，product 按需显式 register 即可
 		const {AnthropicProvider} = await import('./adapters/AnthropicProvider.js')
-		const {OpenAIProvider} = await import('./adapters/OpenAIProvider.js')
-		const {GeminiProvider} = await import('./adapters/GeminiProvider.js')
-		const {GrokProvider} = await import('./adapters/GrokProvider.js')
 		globalRegistry.register('anthropic', new AnthropicProvider())
-		globalRegistry.register('openai', new OpenAIProvider())
-		globalRegistry.register('gemini', new GeminiProvider())
-		globalRegistry.register('grok', new GrokProvider())
-
-		// 尝试注册可选 Provider
-		try {
-			const {BedrockProvider} = await import('./adapters/BedrockProvider.js')
-			globalRegistry.register('bedrock', new BedrockProvider())
-		} catch {
-			LogUtil.debug('Bedrock Provider not available (optional dependency)')
-		}
-
-		try {
-			const {VertexProvider} = await import('./adapters/VertexProvider.js')
-			globalRegistry.register('vertex', new VertexProvider())
-		} catch {
-			LogUtil.debug('Vertex Provider not available (optional dependency)')
-		}
-
-		try {
-			const {FoundryProvider} = await import('./adapters/FoundryProvider.js')
-			globalRegistry.register('foundry', new FoundryProvider())
-		} catch {
-			LogUtil.debug('Foundry Provider not available (optional dependency)')
-		}
 	}
 	return globalRegistry
 }
