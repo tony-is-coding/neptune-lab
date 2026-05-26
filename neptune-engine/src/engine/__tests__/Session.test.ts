@@ -192,7 +192,6 @@ describe("Session", () => {
 				status: "active",
 				metadata: {key1: "value1", key2: 123},
 				systemPrompt: undefined,
-				providerConfig: undefined,
 			});
 		});
 
@@ -348,60 +347,8 @@ describe("Session", () => {
 		});
 	});
 
-	describe("providerConfig management", () => {
-		let session: InstanceType<typeof Session>;
-
-		beforeEach(() => {
-			session = new Session({workspace: "/tmp/test"});
-		});
-
-		test("constructor accepts providerConfig", () => {
-			const providerConfig = {type: "anthropic" as const, config: {apiKey: "test"}};
-			const sessionWithProvider = new Session({
-				workspace: "/tmp/test",
-				providerConfig,
-			});
-
-			expect(sessionWithProvider.getProviderConfig()).toEqual(providerConfig);
-		});
-
-		test("setProviderConfig updates providerConfig", () => {
-			const providerConfig = {type: "openai" as const, config: {apiKey: "sk-test"}};
-			session.setProviderConfig(providerConfig);
-
-			expect(session.getProviderConfig()).toEqual(providerConfig);
-		});
-
-		test("setProviderConfig on destroyed session throws error", () => {
-			session.destroy();
-			expect(() => session.setProviderConfig({type: "anthropic"})).toThrow(EngineError);
-			expect(() => session.setProviderConfig({type: "anthropic"})).toThrow(
-				"Cannot operate on a destroyed session",
-			);
-		});
-
-		test("getProviderConfig on destroyed session still works", () => {
-			const providerConfig = {type: "anthropic" as const};
-			session.setProviderConfig(providerConfig);
-			session.destroy();
-			expect(session.getProviderConfig()).toEqual(providerConfig);
-		});
-
-		test("toSnapshot includes providerConfig", () => {
-			const providerConfig = {type: "bedrock" as const, config: {region: "us-east-1"}};
-			session.setProviderConfig(providerConfig);
-			const snapshot = session.toSnapshot();
-
-			expect(snapshot.providerConfig).toEqual(providerConfig);
-		});
-
-		test("restore preserves providerConfig", () => {
-			const providerConfig = {type: "vertex" as const, config: {project: "test-project"}};
-			session.setProviderConfig(providerConfig);
-			const snapshot = session.toSnapshot();
-			const restoredSession = Session.restore(snapshot);
-
-			expect(restoredSession.getProviderConfig()).toEqual(providerConfig);
-		});
+	describe("providerConfig management — DELETED in v6.0 P0.2.C", () => {
+		// 旧 provider 双轨已一刀切删除，Session 不再保存 providerConfig
+		// 留 placeholder 描述块仅为告知后来者；如需恢复请走新 streamingProvider 协议
 	});
 });

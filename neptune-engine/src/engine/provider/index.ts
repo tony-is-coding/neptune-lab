@@ -1,27 +1,10 @@
 /**
  * engine/provider/ 公共 API 导出
  *
- * Provider 适配器统一接口，支持 per-session Provider 配置。
- * LLMRuntime 已合并到 ProviderAdapter，不再单独导出。
+ * 旧 provider 双轨（ProviderAdapter / BaseProvider / ProviderRegistry / CircuitBreaker）
+ * 已于 v6.0 P0.2.C 一刀切删除。substrate 唯一查询路径是 agent-loop:
+ *   AgentEngine.query → AgentLoop.runWithStore + AgentLoopBridge → SDK QueryEvent
+ * 实际 LLM 调用走 src/engine/agent-loop/provider/AnthropicStreamingProvider.ts
  */
 
-// 核心接口
-export type {ProviderAdapter, ProviderQueryParams, ProviderMessage} from './ProviderAdapter.js'
-
-// Provider 配置类型
-export type {
-	AnthropicProviderConfig,
-	OpenAIProviderConfig,
-	GeminiProviderConfig,
-	GrokProviderConfig,
-	BedrockProviderConfig,
-	VertexProviderConfig,
-	FoundryProviderConfig,
-} from './types/ProviderConfigs.js'
-
-// 注册表
-export {ProviderRegistry, getGlobalProviderRegistry, resetGlobalProviderRegistryForTesting} from './ProviderRegistry.js'
-
-// CircuitBreaker 熔断器
-export type {CircuitBreakerConfig, CircuitBreakerState, CircuitBreakerStateChangedEvent} from './CircuitBreaker.js'
-export {CircuitBreaker} from './CircuitBreaker.js'
+export type {AnthropicProviderConfig} from './types/ProviderConfigs.js'

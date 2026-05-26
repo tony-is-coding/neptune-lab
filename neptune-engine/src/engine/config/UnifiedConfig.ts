@@ -26,21 +26,24 @@
  * ```
  */
 
-import type {AgentEngineConfig, ProviderConfig} from '../AgentEngine.js'
+import type {AgentEngineConfig} from '../AgentEngine.js'
 import type {EngineConfig} from './ConfigValidation.js'
 /** Inlined from @neptune/engine-product/utils/settings/types.js — engine-local subset (pure type, no AppState dep) */
 export type SettingsJson = Record<string, unknown>
-import type {ToolExtension} from '../bridge/OriginalQueryEngineBridge.js'
-import type {PermissionConfig} from '../bridge/OriginalQueryEngineBridge.js'
-import type {ProviderRegistry} from '../provider/ProviderRegistry.js'
+import type {ToolExtension} from '../bridge/extensions.js'
+import type {PermissionConfig} from '../bridge/extensions.js'
 import {ConfigDiagnostics, ConfigSummary, type ConfigSourceType} from './ConfigDiagnostics.js'
 
 /**
- * Provider 配置项（从 AgentEngine.ts 导入）
- * 支持在引擎级别或会话级别配置不同的 Provider（如 Anthropic、OpenAI 等）
- * 使用 discriminated union 确保类型安全。
+ * Provider 配置（精简）
+ *
+ * v6.0 P0.2.C — 旧 provider 双轨删除后，substrate 不再维护 discriminated union，
+ * 这里保留一个最小型态供 UnifiedConfig 兼容（仅作为 product 配置桥接 placeholder）。
  */
-export type {ProviderConfig}
+export interface ProviderConfig {
+	type?: string
+	config?: Record<string, unknown>
+}
 
 /**
  * 统一配置类型
@@ -242,8 +245,6 @@ export interface UnifiedConfig {
 
 	/** Provider 配置（来自 AgentEngineConfig） */
 	provider?: ProviderConfig
-	/** 自定义 Provider 注册表（来自 AgentEngineConfig） */
-	providerRegistry?: ProviderRegistry
 
 	// ============================================================
 	// 存储配置
@@ -324,7 +325,7 @@ export function normalizeConfig(
 
 	// ===== 模型配置 =====
 	const modelDiag = new ConfigDiagnostics('model')
-	const modelValue = engineConfig.provider?.config?.model as string | undefined
+	const modelValue = engineConfig.defaultModel
 	if (modelValue) {
 		modelDiag.record('agentConfig', modelValue)
 	} else {
@@ -336,12 +337,8 @@ export function normalizeConfig(
 	}
 
 	const fallbackModelDiag = new ConfigDiagnostics('fallbackModel')
-	const fallbackModelValue = engineConfig.provider?.config?.fallbackModel as string | undefined
-	if (fallbackModelValue) {
-		fallbackModelDiag.record('agentConfig', fallbackModelValue)
-	} else {
-		fallbackModelDiag.record('default', undefined)
-	}
+	const fallbackModelValue: string | undefined = undefined
+	fallbackModelDiag.record('default', undefined)
 	fallbackModelDiag.finalize()
 	if (fallbackModelValue) {
 		summary.add('fallbackModel', fallbackModelValue, 'agentConfig')
@@ -404,18 +401,10 @@ export function normalizeConfig(
 		summary.add('maxMessagesPerSession', String(maxMessagesPerSessionValue), 'agentConfig')
 	}
 
-	// ===== Provider 配置 =====
+	// ===== Provider 配置（v6.0 P0.2.C — 已删除，仅保留诊断 placeholder） =====
 	const providerTypeDiag = new ConfigDiagnostics('provider.type')
-	const providerTypeValue = engineConfig.provider?.type
-	if (providerTypeValue) {
-		providerTypeDiag.record('agentConfig', providerTypeValue)
-	} else {
-		providerTypeDiag.record('default', 'anthropic')
-	}
+	providerTypeDiag.record('default', 'anthropic')
 	providerTypeDiag.finalize()
-	if (providerTypeValue && providerTypeValue !== 'anthropic') {
-		summary.add('provider.type', providerTypeValue, 'agentConfig')
-	}
 
 	// ===== 存储配置 =====
 	const memoryRootDiag = new ConfigDiagnostics('memoryRoot')
@@ -472,9 +461,8 @@ export function normalizeConfig(
 		workspaceRoot: engineConfig.options?.workspaceRoot,
 		maxMessagesPerSession: engineConfig.options?.maxMessagesPerSession,
 
-		// Provider 配置
-		provider: engineConfig.provider,
-		providerRegistry: engineConfig.providerRegistry,
+		// Provider 配置（v6.0 P0.2.C 后已不再传递）
+		provider: undefined,
 
 		// 存储配置
 		memoryRoot: engineConfig.memoryRoot,

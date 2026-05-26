@@ -82,7 +82,7 @@ export type {ConfigSourceType} from './config/index.js'
 // ============================================================
 
 export {AgentEngine} from './AgentEngine.js'
-export type {AgentEngineConfig, QueryOptions, EngineStats, ProviderConfig, ProviderType} from './AgentEngine.js'
+export type {AgentEngineConfig, QueryOptions, EngineStats} from './AgentEngine.js'
 export type {
 	SessionStatus,
 	SessionConfig,
@@ -229,16 +229,8 @@ export {InMemoryBackend} from './storage/InMemoryBackend.js'
 export {FilesystemBackend} from './storage/FilesystemBackend.js'
 export {CompositeBackend} from './storage/CompositeBackend.js'
 
-// Provider 适配器（多 Provider 支持）
-export type {ProviderAdapter, ProviderQueryParams, ProviderMessage} from './provider/index.js'
-export {ProviderRegistry, getGlobalProviderRegistry} from './provider/index.js'
+// Provider 配置（v6.0 P0.2.C — 旧 provider 双轨删除后仅保留 Anthropic 配置类型）
 export type {AnthropicProviderConfig} from './provider/index.js'
-export type {BedrockProviderConfig} from './provider/index.js'
-export type {VertexProviderConfig} from './provider/index.js'
-export type {FoundryProviderConfig} from './provider/index.js'
-export type {OpenAIProviderConfig} from './provider/index.js'
-export type {GeminiProviderConfig} from './provider/index.js'
-export type {GrokProviderConfig} from './provider/index.js'
 
 // ============================================================
 // 第四层：SDK 便捷 API
@@ -300,8 +292,8 @@ export type {
 } from './observability/index.js'
 export {SpanStatus} from './observability/index.js'
 
-// Bridge 模块（ToolExtension 类型）
-export type {ToolExtension, PermissionConfig} from './bridge/OriginalQueryEngineBridge.js'
+// Bridge 模块（ToolExtension / PermissionConfig 类型）
+export type {ToolExtension, PermissionConfig} from './bridge/extensions.js'
 
 // =============================================================================
 // Agent Loop API（v1.0 16 batch — substrate 内部唯一主循环）

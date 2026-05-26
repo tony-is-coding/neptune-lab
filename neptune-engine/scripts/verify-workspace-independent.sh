@@ -134,12 +134,19 @@ check "10. packages/*/src 0 反向引用（substrate 自闭环硬底线）" "
 	fi
 "
 
-check "11. engine/provider/adapters 仅含 Anthropic + Base" "
-	bad=\$(find src/engine/provider/adapters -maxdepth 1 -type f -name '*.ts' \\
-		| grep -v 'AnthropicProvider.ts' | grep -v 'BaseProvider.ts' | head -5)
-	if [ -n \"\$bad\" ]; then
-		echo 'engine/provider/adapters 含非 Anthropic 实现（应迁到 product）:'
-		echo \"\$bad\"
+check "11. engine/provider/ 不再有 BaseProvider / 旧 ProviderAdapter / adapters" "
+	# v6.0 P0.2.C 后 substrate provider/ 只剩 types/ProviderConfigs.ts + index.ts（仅 AnthropicProviderConfig）
+	bad_files=\$(find src/engine/provider -maxdepth 2 -type f -name '*.ts' \
+		\\( -name 'ProviderAdapter.ts' -o -name 'ProviderRegistry.ts' \
+		   -o -name 'CircuitBreaker.ts' -o -name 'BaseProviderConfig.ts' \\) 2>/dev/null)
+	if [ -n \"\$bad_files\" ]; then
+		echo 'engine/provider/ 仍含旧双轨实现:'
+		echo \"\$bad_files\"
+		exit 1
+	fi
+	if [ -d src/engine/provider/adapters ]; then
+		echo 'engine/provider/adapters/ 仍存在（应整目录删除）:'
+		ls src/engine/provider/adapters
 		exit 1
 	fi
 "

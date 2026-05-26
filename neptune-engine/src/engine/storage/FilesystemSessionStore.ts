@@ -85,7 +85,6 @@ export class FilesystemSessionStore implements ISessionStore {
 			createdAt: snap.createdAt,
 			status: snap.status,
 			metadata: snap.metadata,
-			providerConfig: snap.providerConfig,
 		}
 		if (snap.systemPrompt !== undefined) {
 			persistable.systemPrompt =
@@ -101,7 +100,6 @@ export class FilesystemSessionStore implements ISessionStore {
 			createdAt: p.createdAt,
 			status: p.status,
 			metadata: p.metadata ?? {},
-			providerConfig: p.providerConfig,
 		}
 		if (p.systemPrompt === '__function__') {
 			snap.systemPrompt = async () => ''
@@ -119,5 +117,4 @@ interface PersistableSnapshot {
 	status: SessionSnapshot['status']
 	metadata?: Record<string, unknown>
 	systemPrompt?: string
-	providerConfig?: SessionSnapshot['providerConfig']
 }

@@ -102,10 +102,11 @@ check "A.10 packages/*/src 0 反向引用 from 'src/' (substrate 自闭环硬底
 	[ -z \"\$bad\" ]
 "
 
-check "A.11 engine/provider/adapters 仅含 Anthropic + Base" "
-	bad=\$(find src/engine/provider/adapters -maxdepth 1 -type f -name '*.ts' \\
-		| grep -v 'AnthropicProvider.ts' | grep -v 'BaseProvider.ts' | head -5)
-	[ -z \"\$bad\" ]
+check "A.11 engine/provider/ 不再有旧双轨实现（v6.0 P0.2.C）" "
+	bad_files=\$(find src/engine/provider -maxdepth 2 -type f -name '*.ts' \\
+		\\( -name 'ProviderAdapter.ts' -o -name 'ProviderRegistry.ts' \\
+		   -o -name 'CircuitBreaker.ts' -o -name 'BaseProviderConfig.ts' \\) 2>/dev/null)
+	[ -z \"\$bad_files\" ] && [ ! -d src/engine/provider/adapters ]
 "
 
 check "A.12 packages/*/src 5 级相对反向引用 (../../../../../src/) = 0" "
@@ -201,11 +202,11 @@ check "D.10 examples scripted smoke (sdk-pure / fs-store / server) (v6.0 P0.1.B)
 echo ""
 echo "-- Gate E: 量化基线 --"
 
-check "E.1 engine baseline >= 1400 pass / 0 fail" "
+check "E.1 engine baseline >= 1300 pass / 0 fail (v6.0 P0.2.C 删 stub 测试后下调)" "
 	out=\$(bun test src/engine 2>&1 | tail -5)
 	pass=\$(echo \"\$out\" | grep -E '^ +[0-9]+ pass' | head -1 | awk '{print \$1}')
 	fail=\$(echo \"\$out\" | grep -E '^ +[0-9]+ fail' | head -1 | awk '{print \$1}')
-	[ \"\$pass\" -ge 1400 ] && [ \"\$fail\" = '0' ]
+	[ \"\$pass\" -ge 1300 ] && [ \"\$fail\" = '0' ]
 "
 
 check "E.2 builtin-tools 关键工具测试不退化（AgentTool >= 20 + SkillTool >= 12）" "

@@ -30,7 +30,7 @@ import type {SessionInfo} from './types'
 import {EngineError, EngineErrorCode} from './errors'
 import {EventBus} from './events/EventBus'
 import type {SessionStatus, SessionMetadata} from './types'
-import type {ToolExtension, PermissionConfig} from './bridge/OriginalQueryEngineBridge'
+import type {ToolExtension, PermissionConfig} from './bridge/extensions'
 import {loadSkillsToWorkspace, cleanupEngineSkills, type SkillExtension} from './skill/SkillLoader'
 import {parseTranscript, transcriptToMessages} from './session/TranscriptParser'
 import {
@@ -56,27 +56,10 @@ import {NoOpTracingProvider} from './observability/NoOpTracingProvider.js'
 import {NoOpMetricsProvider} from './observability/NoOpMetricsProvider.js'
 import {LogUtil} from './log/LogUtil.js'
 import {asSessionId} from './types/ids.js'
-import type {
-	AnthropicProviderConfig,
-	OpenAIProviderConfig,
-	GeminiProviderConfig,
-	GrokProviderConfig,
-	BedrockProviderConfig,
-	VertexProviderConfig,
-	FoundryProviderConfig,
-} from './provider/types/ProviderConfigs.js'
-import type {ProviderRegistry} from './provider/ProviderRegistry.js'
-import type {CircuitBreakerConfig} from './provider/CircuitBreaker.js'
 
 // ============================================================
 // 类型定义
 // ============================================================
-
-/** 有效的 Provider 类型列表 */
-const VALID_PROVIDER_TYPES = ['anthropic', 'bedrock', 'vertex', 'foundry', 'openai', 'gemini', 'grok'] as const
-
-/** Provider 类型联合 */
-export type ProviderType = typeof VALID_PROVIDER_TYPES[number]
 
 /** 配置校验错误 */
 interface ConfigValidationError {
@@ -124,64 +107,11 @@ function validateAgentEngineConfig(config: AgentEngineConfig): ConfigValidationR
 		}
 	}
 
-	// 校验 provider.type
-	if (config.provider?.type !== undefined) {
-		if (typeof config.provider.type !== 'string') {
-			errors.push({
-				path: 'provider.type',
-				message: '必须是字符串',
-			})
-		} else if (!VALID_PROVIDER_TYPES.includes(config.provider.type as ProviderType)) {
-			errors.push({
-				path: 'provider.type',
-				message: `必须是以下值之一: ${VALID_PROVIDER_TYPES.join(', ')}`,
-			})
-		}
-	}
-
 	return {
 		valid: errors.length === 0,
 		errors,
 	}
 }
-
-/**
- * Provider 配置项 — discriminated union 类型
- *
- * 支持在引擎级别或会话级别配置不同的 Provider（如 Anthropic、OpenAI 等）。
- * 使用 discriminated union 确保类型安全：每个 Provider 类型都有对应的配置类型。
- *
- * @example
- * ```typescript
- * // Anthropic Provider 配置
- * const anthropicConfig: ProviderConfig = {
- *   type: 'anthropic',
- *   config: {
- *     apiKey: 'sk-ant-...',
- *     baseURL: 'https://api.anthropic.com',
- *     defaultModel: 'claude-sonnet-4-20250514'
- *   }
- * }
- *
- * // OpenAI Provider 配置
- * const openaiConfig: ProviderConfig = {
- *   type: 'openai',
- *   config: {
- *     apiKey: 'sk-openai-...',
- *     baseURL: 'https://api.openai.com/v1',
- *     defaultModel: 'gpt-4o'
- *   }
- * }
- * ```
- */
-export type ProviderConfig =
-	| { type: 'anthropic'; config?: Omit<AnthropicProviderConfig, 'type'> }
-	| { type: 'openai'; config?: Omit<OpenAIProviderConfig, 'type'> }
-	| { type: 'gemini'; config?: Omit<GeminiProviderConfig, 'type'> }
-	| { type: 'grok'; config?: Omit<GrokProviderConfig, 'type'> }
-	| { type: 'bedrock'; config?: Omit<BedrockProviderConfig, 'type'> }
-	| { type: 'vertex'; config?: Omit<VertexProviderConfig, 'type'> }
-	| { type: 'foundry'; config?: Omit<FoundryProviderConfig, 'type'> }
 
 /**
  * AgentEngine 配置选项
@@ -223,19 +153,12 @@ export interface AgentEngineConfig {
 	}
 	/** 记忆存储根目录，用于用户级记忆隔离 */
 	memoryRoot?: string
-	/** Provider 配置（支持 per-session 覆盖） */
-	provider?: ProviderConfig
-	/** 自定义 Provider 注册表，优先于内置 Provider 查找 */
-	providerRegistry?: ProviderRegistry
-	/** CircuitBreaker 熔断器配置 */
-	circuitBreaker?: {
-		/** 连续失败阈值，默认 5 */
-		failureThreshold?: number
-		/** 熔断恢复超时（毫秒），默认 30000 */
-		resetTimeoutMs?: number
-		/** 半开状态最大调用数，默认 3 */
-		halfOpenMaxCalls?: number
-	}
+	/**
+	 * 默认 model（substrate 不再硬编码，必须由 caller 显式提供）。
+	 *
+	 * 解析顺序：query call 时未指定 → 此字段 → AnthropicStreamingProvider.config.defaultModel → 抛 MODEL_REQUIRED
+	 */
+	defaultModel?: string
 	/** Session 持久化存储（可选） */
 	sessionStore?: ISessionStore
 	/** Session 内容存储（可选，默认使用 InMemorySessionContentStore） */
@@ -366,8 +289,6 @@ export class AgentEngine {
 	private sessionMessages = new Map<string, SDKMessage[]>()
 	/** per-session 系统提示词覆盖（优先于 engine 级 systemPrompt） */
 	private sessionPrompts = new Map<string, string | (() => Promise<string>)>()
-	/** per-session Provider 配置覆盖（优先于 engine 级 provider） */
-	private sessionProviders = new Map<string, ProviderConfig>()
 	/** per-session 缓存 SessionContext */
 	private sessionContexts = new Map<string, SessionContext>()
 	/** 外部注入的 system prompt 回调 */
@@ -455,7 +376,6 @@ export class AgentEngine {
 		metadata?: Record<string, unknown>
 		systemPrompt?: string | (() => Promise<string>)  // per-session 系统提示词
 		sessionId?: string  // 外部指定 sessionId
-		provider?: ProviderConfig  // per-session Provider 配置
 	}): Promise<string> {
 		this.assertNotDestroyed()
 		const workspace = context?.workspace || `${process.cwd()}/.workspace/session-${Date.now()}`
@@ -464,7 +384,6 @@ export class AgentEngine {
 			metadata: context?.metadata ?? {},
 			sessionId: context?.sessionId,
 			systemPrompt: context?.systemPrompt,
-			providerConfig: context?.provider,
 		})
 
 		// 创建 SessionContext
@@ -474,11 +393,6 @@ export class AgentEngine {
 		// 存储 per-session systemPrompt
 		if (context?.systemPrompt !== undefined) {
 			this.sessionPrompts.set(sessionId, context.systemPrompt)
-		}
-
-		// 存储 per-session Provider 配置
-		if (context?.provider !== undefined) {
-			this.sessionProviders.set(sessionId, context.provider)
 		}
 
 		// 将 SkillExtension 写入 workspace/.claude/skills/ 目录
@@ -571,7 +485,6 @@ export class AgentEngine {
 
 		this.sessionMessages.delete(sessionId)
 		this.sessionPrompts.delete(sessionId)
-		this.sessionProviders.delete(sessionId)
 		this.sessionContexts.delete(sessionId)
 
 		// 清理 TokenBudgetState
@@ -765,11 +678,8 @@ export class AgentEngine {
 				| import('./types/tool.js').Tool[]
 				| undefined
 
-			// substrate 不再硬编码 model：从 config.provider 读取，缺失则委托 provider 自报错
-			const resolvedModel =
-				(this.config.provider as unknown as {config?: {model?: string; defaultModel?: string}})?.config?.model ??
-				(this.config.provider as unknown as {config?: {defaultModel?: string}})?.config?.defaultModel ??
-				''
+			// substrate 不再硬编码 model：从 config.defaultModel 读取，缺失则委托 provider 自报错
+			const resolvedModel = this.config.defaultModel ?? ''
 
 			let gen: AsyncGenerator<QueryEvent>
 			try {
@@ -971,7 +881,6 @@ export class AgentEngine {
 
 		this.sessionMessages.clear()
 		this.sessionPrompts.clear()
-		this.sessionProviders.clear()
 		this.sessionContexts.clear()
 
 		// 清理 SessionManager 和 SessionStore
@@ -1073,7 +982,6 @@ export class AgentEngine {
 			createdAt: session.createdAt,
 			metadata: session.getMetadata() as Record<string, unknown>,
 			systemPrompt: session.getSystemPrompt(),
-			providerConfig: session.getProviderConfig(),
 		}
 	}
 }

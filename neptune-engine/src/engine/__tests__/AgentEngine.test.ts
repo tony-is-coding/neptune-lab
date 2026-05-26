@@ -77,10 +77,7 @@ describe('AgentEngine', () => {
 					workspaceRoot: '/test/workspace',
 				},
 				memoryRoot: '/test/memory',
-				provider: {
-					type: 'anthropic',
-					config: {apiKey: 'test-key'},
-				},
+				defaultModel: 'claude-sonnet-4-20250514',
 			}
 
 			const engine = AgentEngine.create(config as any, mockRuntime)
@@ -131,31 +128,14 @@ describe('AgentEngine', () => {
 			}).toThrow(EngineError)
 		})
 
-		test('应该拒绝无效的 provider.type', () => {
-			expect(() => {
-				AgentEngine.create(
-					{provider: {type: 'invalid-provider' as any}},
-					mockRuntime
-				)
-			}).toThrow(EngineError)
+		test('应该拒绝无效的 provider.type — DELETED in v6.0 P0.2.C', () => {
+			// 旧 ProviderConfig 已删除，AgentEngineConfig 不再有 provider 字段
+			expect(true).toBe(true)
 		})
 
-		test('应该接受有效的 provider.type', () => {
-			const validTypes = [
-				'anthropic',
-				'bedrock',
-				'vertex',
-				'foundry',
-				'openai',
-				'gemini',
-				'grok',
-			]
-
-			for (const type of validTypes) {
-				expect(() => {
-					AgentEngine.create({provider: {type: type as any}}, mockRuntime)
-				}).not.toThrow()
-			}
+		test('应该接受有效的 provider.type — DELETED in v6.0 P0.2.C', () => {
+			// 旧 ProviderConfig 已删除，AgentEngineConfig 不再有 provider 字段
+			expect(true).toBe(true)
 		})
 
 		test('错误消息应该包含路径信息', () => {
@@ -176,7 +156,6 @@ describe('AgentEngine', () => {
 				AgentEngine.create(
 					{
 						systemPrompt: '   ',
-						provider: {type: 'invalid' as any},
 						extensions: {tools: 'wrong' as any},
 					},
 					mockRuntime
@@ -185,7 +164,6 @@ describe('AgentEngine', () => {
 			} catch (error) {
 				const message = (error as Error).message
 				expect(message).toContain('systemPrompt')
-				expect(message).toContain('provider.type')
 				expect(message).toContain('extensions.tools')
 			}
 		})
@@ -234,15 +212,9 @@ describe('AgentEngine', () => {
 			expect(session?.systemPrompt).toBe(sessionPrompt)
 		})
 
-		test('应该存储 per-session provider', async () => {
-			const engine = AgentEngine.create({}, mockRuntime)
-			const provider = {type: 'openai' as const, config: {apiKey: 'test'}}
-
-			const sessionId = await engine.createSession({provider})
-
-			// 验证 provider 已存储在 Session 实体中
-			const session = await engine.getSession(sessionId)
-			expect(session?.providerConfig).toEqual(provider)
+		test('应该存储 per-session provider — DELETED in v6.0 P0.2.C', async () => {
+			// 旧 ProviderConfig 已删除，createSession 不再接受 provider 参数
+			expect(true).toBe(true)
 		})
 
 		test('应该支持自定义 sessionId', async () => {
@@ -652,7 +624,6 @@ describe('AgentEngine', () => {
 			const engine = createSubstrateEngine(['response'], {}, mockRuntime)
 			const sessionId = await engine.createSession({
 				systemPrompt: 'test',
-				provider: {type: 'openai'},
 			})
 
 			// 执行 query 触发 substrate 路径
@@ -665,7 +636,6 @@ describe('AgentEngine', () => {
 			// 验证所有 per-session Map 都已清理
 			expect((engine as any).sessionMessages.has(sessionId)).toBe(false)
 			expect((engine as any).sessionPrompts.has(sessionId)).toBe(false)
-			expect((engine as any).sessionProviders.has(sessionId)).toBe(false)
 			expect((engine as any).sessionContexts.has(sessionId)).toBe(false)
 			expect((engine as any).activeAbortControllers.has(sessionId)).toBe(false)
 			expect((engine as any).activeQueries.has(sessionId)).toBe(false)
@@ -756,7 +726,6 @@ describe('AgentEngine', () => {
 			expect((engine as any).destroyed).toBe(true)
 			expect((engine as any).sessionMessages.size).toBe(0)
 			expect((engine as any).sessionPrompts.size).toBe(0)
-			expect((engine as any).sessionProviders.size).toBe(0)
 			expect((engine as any).sessionContexts.size).toBe(0)
 		})
 
@@ -985,20 +954,17 @@ describe('AgentEngine', () => {
 			const engine = AgentEngine.create(
 				{
 					systemPrompt: 'engine prompt',
-					provider: {type: 'anthropic'},
 				},
 				mockRuntime
 			)
 
 			const sessionId = await engine.createSession({
 				systemPrompt: 'session prompt',
-				provider: {type: 'openai'},
 			})
 
 			// 验证 session 级配置存储在 Session 实体中
 			const session = await engine.getSession(sessionId)
 			expect(session?.systemPrompt).toBe('session prompt')
-			expect(session?.providerConfig).toEqual({type: 'openai'})
 		})
 	})
 })

@@ -92,16 +92,4 @@ describe('FilesystemSessionStore', () => {
 		const loaded = await store.load('s1')
 		expect(loaded?.getSystemPrompt()).toBeTypeOf('function')
 	})
-
-	it('providerConfig round-trip', async () => {
-		const snap = buildSnapshot('s1', {
-			providerConfig: {type: 'bedrock', config: {region: 'us-east-1'}},
-		})
-		await store.save(Session.restore(snap))
-		const loaded = await store.load('s1')
-		expect(loaded?.getProviderConfig()).toEqual({
-			type: 'bedrock',
-			config: {region: 'us-east-1'},
-		})
-	})
 })
