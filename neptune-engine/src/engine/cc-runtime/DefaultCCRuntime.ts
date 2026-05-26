@@ -15,15 +15,12 @@ import type {
 	CCRuntime,
 	CwdContextFn,
 	MacroDefines,
-	QueryEngineConfig,
-	QueryEngineWrapper,
 	TranscriptLoadResult,
 } from './CCRuntime.js'
 import {DEFAULT_MACROS} from './CCRuntime.js'
 import type {Tools} from '../types/tool.js'
 import type {ToolRegistry} from '../types/tool.js'
 import {HeadlessToolRegistry} from './HeadlessToolRegistry.js'
-import {HeadlessQueryEngine} from './HeadlessQueryEngine.js'
 import {parseTranscript, transcriptToMessages} from '../session/TranscriptParser.js'
 import {getMemoryPath as getSessionMemoryPath} from '../session/SessionContext.js'
 
@@ -63,12 +60,6 @@ export class DefaultCCRuntime implements CCRuntime {
 
 	setupBootstrap(_state: BootstrapState): void {
 		// SessionContext carries cwd/projectRoot for the independent kernel path.
-	}
-
-	// ========== QueryEngine 相关 ==========
-
-	createQueryEngine(config: QueryEngineConfig): QueryEngineWrapper {
-		return new HeadlessQueryEngine(config)
 	}
 
 	// ========== Transcript 相关 ==========
@@ -162,14 +153,6 @@ export class DefaultCCRuntime implements CCRuntime {
 	}
 }
 
-class HeadlessCCRuntime extends DefaultCCRuntime {
-	readonly isHeadless = true
-
-	createQueryEngine(config: QueryEngineConfig): QueryEngineWrapper {
-		return new HeadlessQueryEngine(config)
-	}
-}
-
 // ============================================================
 // 简单 FileStateCache 降级实现
 // ============================================================
@@ -229,18 +212,6 @@ interface CCRuntimeFileStateValue {
 /** 创建默认 CCRuntime 实例 */
 export function createDefaultCCRuntime(): CCRuntime {
 	return new DefaultCCRuntime()
-}
-
-/**
- * Create a server-safe CCRuntime Adapter that uses SDK/headless tools.
- *
- * This keeps host-specific tool selection behind the CCRuntime Seam so product
- * callers do not need to know which builtin tools import UI renderers.
- */
-export function createHeadlessCCRuntime(): DefaultCCRuntime {
-	const runtime = new HeadlessCCRuntime()
-	runtime.setToolRegistry(new HeadlessToolRegistry())
-	return runtime
 }
 
 /** 全局单例（按需使用） */

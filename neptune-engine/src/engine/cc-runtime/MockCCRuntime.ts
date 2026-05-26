@@ -8,26 +8,12 @@ import type {
 	BootstrapState,
 	CCRuntime,
 	CwdContextFn,
-	QueryEngineConfig,
-	QueryEngineWrapper,
 	TranscriptLoadResult,
 	FileStateCache,
 	FileStateValue,
 } from './CCRuntime.js'
 import type {Tools} from '../types/tool.js'
 import type {ToolRegistry} from '../types/tool.js'
-
-// ============================================================
-// Mock QueryEngine
-// ============================================================
-
-/** Mock QueryEngine — 空实现，满足类型要求 */
-class MockQueryEngine implements QueryEngineWrapper {
-	async* submitMessage(..._args: unknown[]): AsyncGenerator<unknown, void, unknown> {
-		// 空实现：返回空消息流
-		yield {type: 'mock_message'}
-	}
-}
 
 // ============================================================
 // MockCCRuntime 实现
@@ -43,8 +29,6 @@ export interface MockCCRuntimeOptions {
 	transcriptResult?: TranscriptLoadResult
 	/** memoryPath（默认 undefined） */
 	memoryPath?: string
-	/** QueryEngine 工厂（默认使用 MockQueryEngine） */
-	queryEngineFactory?: (config: QueryEngineConfig) => QueryEngineWrapper
 }
 
 /** Mock 实现：提供测试桩 */
@@ -54,7 +38,6 @@ export class MockCCRuntime implements CCRuntime {
 	private readonly toolRegistry?: ToolRegistry
 	private readonly transcriptResult: TranscriptLoadResult
 	private readonly memoryPathValue: string | undefined
-	private readonly queryEngineFactory: (config: QueryEngineConfig) => QueryEngineWrapper
 	/** per-workspace 初始化状态跟踪 */
 	private workspaceInitialized = new Set<string>()
 	/** Mock FileStateCache 实例 */
@@ -65,7 +48,6 @@ export class MockCCRuntime implements CCRuntime {
 		this.toolRegistry = options.toolRegistry
 		this.transcriptResult = options.transcriptResult ?? {messages: []}
 		this.memoryPathValue = options.memoryPath
-		this.queryEngineFactory = options.queryEngineFactory ?? ((config) => new MockQueryEngine())
 	}
 
 	// ========== 工具相关 ==========
@@ -96,12 +78,6 @@ export class MockCCRuntime implements CCRuntime {
 
 	setupBootstrap(_state: BootstrapState): void {
 		// Mock：空实现
-	}
-
-	// ========== QueryEngine 相关 ==========
-
-	createQueryEngine(config: QueryEngineConfig): QueryEngineWrapper {
-		return this.queryEngineFactory(config)
 	}
 
 	// ========== Transcript 相关 ==========

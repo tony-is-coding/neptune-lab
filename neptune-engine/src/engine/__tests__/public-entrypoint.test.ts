@@ -6,5 +6,4 @@ test('engine public entrypoint is safe to import in headless server runtime', as
 	expect(engine.AgentEngine).toBeFunction()
 	expect(engine.ProviderRegistry).toBeFunction()
 	expect(engine.LogUtil).toBeFunction()
-	expect(engine.createHeadlessCCRuntime).toBeFunction()
 })

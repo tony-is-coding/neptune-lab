@@ -10,8 +10,6 @@
  */
 
 import type {Tools} from '../types/tool.js'
-/** Inlined from @neptune/engine-product/QueryEngine.js — engine-local opaque type */
-export type QueryEngineConfig = Record<string, unknown>
 import type {ToolRegistry} from '../types/tool.js'
 
 // ============================================================
@@ -41,14 +39,6 @@ export interface MacroDefines {
 	NATIVE_PACKAGE_URL: string
 	PACKAGE_URL: string
 	VERSION_CHANGELOG: string
-}
-
-/** QueryEngine 工厂签名 */
-export type QueryEngineFactory = (config: QueryEngineConfig) => QueryEngineWrapper
-
-/** QueryEngine 最小接口 */
-export interface QueryEngineWrapper {
-	submitMessage: (...args: unknown[]) => AsyncGenerator<unknown, void, unknown>
 }
 
 /** Transcript 加载结果 */
@@ -97,10 +87,9 @@ export type HasPermissionsToUseToolFn = (
  * 职责：
  * 1. 提供 CC 内置工具列表
  * 2. 初始化 CC 运行时（configs、bootstrap state）
- * 3. 创建 QueryEngine 实例
- * 4. 加载 transcript 文件
- * 5. 管理 SessionContext 相关操作
- * 6. 注入 MACRO defines
+ * 3. 加载 transcript 文件
+ * 4. 管理 SessionContext 相关操作
+ * 5. 注入 MACRO defines
  */
 export interface CCRuntime {
 	// ---------- 工具相关 ----------
@@ -119,10 +108,6 @@ export interface CCRuntime {
 
 	/** 设置 bootstrap 单例（cwd/projectRoot） */
 	setupBootstrap(state: BootstrapState): void
-
-	// ---------- QueryEngine 相关 ----------
-	/** 创建 QueryEngine 实例 */
-	createQueryEngine(config: QueryEngineConfig): QueryEngineWrapper
 
 	// ---------- Transcript 相关 ----------
 	/** 加载 transcript 文件 */

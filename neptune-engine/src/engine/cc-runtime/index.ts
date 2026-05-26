@@ -8,10 +8,7 @@ export type {
 	BootstrapState,
 	CwdContextFn,
 	MacroDefines,
-	QueryEngineFactory,
-	QueryEngineWrapper,
 	TranscriptLoadResult,
-	QueryEngineConfig,
 	CCRuntime,
 } from './CCRuntime.js'
 
@@ -20,7 +17,6 @@ export {DEFAULT_MACROS} from './CCRuntime.js'
 export {
 	DefaultCCRuntime,
 	createDefaultCCRuntime,
-	createHeadlessCCRuntime,
 	getGlobalCCRuntime,
 	resetGlobalCCRuntimeForTesting,
 } from './DefaultCCRuntime.js'

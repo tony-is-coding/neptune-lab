@@ -42,12 +42,6 @@ describe('CCRuntime 接口', () => {
 			).not.toThrow()
 		})
 
-		test('应该创建 Mock QueryEngine', () => {
-			const queryEngine = runtime.createQueryEngine({} as any)
-			expect(queryEngine).toBeDefined()
-			expect(typeof queryEngine.submitMessage).toBe('function')
-		})
-
 		test('应该支持 loadTranscriptFromFile', async () => {
 			const result = await runtime.loadTranscriptFromFile('/test/path.jsonl')
 			expect(result).toEqual({messages: []})
@@ -139,23 +133,6 @@ describe('CCRuntime 接口', () => {
 				runtime.resetForTesting()
 				expect(runtime.isWorkspaceInitialized(workspace1)).toBe(false)
 			}
-		})
-	})
-
-	describe('MockCCRuntime 自定义 QueryEngine', () => {
-		test('应该支持自定义 QueryEngine 工厂', () => {
-			const mockEngine = {
-				submitMessage: async function* () {
-					yield {type: 'custom'}
-				},
-			}
-
-			const customRuntime = createMockCCRuntime({
-				queryEngineFactory: () => mockEngine,
-			})
-
-			const engine = customRuntime.createQueryEngine({} as any)
-			expect(engine).toBe(mockEngine)
 		})
 	})
 })
