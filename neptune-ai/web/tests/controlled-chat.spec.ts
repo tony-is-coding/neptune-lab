@@ -1,5 +1,5 @@
 import {test, expect} from '@playwright/test';
-import {API_URL, attachDiagnostics, loginViaApi, printReport} from './helpers';
+import {API_URL, attachDiagnostics, authHeaders, ensureE2EAgent, loginViaApi, printReport} from './helpers';
 
 test.describe('Controlled model chat', () => {
   test.beforeEach(async ({page}) => {
@@ -9,23 +9,11 @@ test.describe('Controlled model chat', () => {
   test('streams model response, tool UI, completion state, and history through Collaborate', async ({page}) => {
     const diag = attachDiagnostics(page);
 
-    const agentsRes = await page.request.get(`${API_URL}/agents`, {
-      headers: await page.evaluate(() => {
-        const stored = JSON.parse(localStorage.getItem('neptune-auth') || '{}');
-        return {Authorization: `Bearer ${stored?.state?.token || ''}`};
-      }),
-    });
-    expect(agentsRes.ok()).toBeTruthy();
-    const agents = await agentsRes.json();
-    const agent = agents.data.find((item: {name: string}) => item.name === 'E2E Assistant') || agents.data[0];
-    expect(agent?.id).toBeTruthy();
-    const authHeaders = await page.evaluate(() => {
-      const stored = JSON.parse(localStorage.getItem('neptune-auth') || '{}');
-      return {Authorization: `Bearer ${stored?.state?.token || ''}`};
-    });
+    const agent = await ensureE2EAgent(page);
+    const headers = await authHeaders(page);
 
     const threadRes = await page.request.post(`${API_URL}/agents/${agent.id}/threads`, {
-      headers: authHeaders,
+      headers,
       data: {title: `Controlled browser ${Date.now()}`},
     });
     expect(threadRes.ok()).toBeTruthy();

@@ -103,7 +103,9 @@ test.describe('客户项目交付台', () => {
 
     await expect(page).toHaveURL(new RegExp(`/governance\\?tab=runs&runId=${createdRun.id}`));
     await expect(page.getByRole('heading', {name: '治理台'})).toBeVisible();
-    await expect(page.getByText(new RegExp(createdRun.id.slice(0, 8)))).toBeVisible();
+    // 治理台头部"运行 ID"短码可能与"请求 ID"短码碰巧前 8 字符相同，
+    // 所以用 .first() 落到第一处即可（运行 ID 比请求 ID 更早渲染）。
+    await expect(page.getByText(new RegExp(createdRun.id.slice(0, 8))).first()).toBeVisible();
   });
 
   test('受控运行表单用中文校验运行输入', async ({ page }) => {

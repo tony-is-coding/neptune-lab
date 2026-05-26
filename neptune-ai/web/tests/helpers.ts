@@ -137,3 +137,59 @@ export async function loginViaApi(page: Page): Promise<void> {
     throw new Error('Failed to set auth in localStorage');
   }
 }
+
+
+/**
+ * 拿到当前 e2e 用户的 auth header；登录态由 loginViaApi 提供，
+ * 该 helper 只是简化下游 spec 的样板代码。
+ */
+export async function authHeaders(page: Page): Promise<{Authorization: string}> {
+    return page.evaluate(() => {
+        const stored = JSON.parse(localStorage.getItem('neptune-auth') || '{}');
+        return {Authorization: `Bearer ${stored?.state?.token || ''}`};
+    });
+}
+
+/**
+ * 确保当前 e2e 用户拥有名为 `E2E Assistant` 的受控 controlled-engine 智能体。
+ * - 第一次调用：通过 POST /agents 创建（provider=controlled, model=neptune-controlled-model）
+ * - 后续调用：返回已存在的同名智能体
+ *
+ * 解决之前 spec 用 `agents.data[0]` 兜底导致随机抓到非-controlled 智能体、
+ * 受控引擎流式断言全部超时的问题。
+ *
+ * 调用前必须已经 loginViaApi。
+ */
+export async function ensureE2EAgent(page: Page): Promise<{
+    id: string;
+    name: string;
+    modelConfig: {provider: string; model: string};
+}> {
+    const headers = await authHeaders(page);
+    const listRes = await page.request.get(`${API_URL}/agents`, {headers});
+    if (!listRes.ok()) {
+        throw new Error(`List agents failed: ${listRes.status()} - ${await listRes.text()}`);
+    }
+    const list = await listRes.json();
+    const existing = list.data.find((agent: {name: string}) => agent.name === E2E_AGENT.name);
+    if (existing) return existing;
+
+    const createRes = await page.request.post(`${API_URL}/agents`, {
+        headers,
+        data: {
+            name: E2E_AGENT.name,
+            description: E2E_AGENT.description,
+            systemPrompt: 'You are a deterministic E2E assistant for browser-acceptance flows.',
+            modelConfig: {
+                provider: 'controlled',
+                model: 'neptune-controlled-model',
+                temperature: 0,
+                maxTokens: 512,
+            },
+        },
+    });
+    if (!createRes.ok()) {
+        throw new Error(`Create E2E agent failed: ${createRes.status()} - ${await createRes.text()}`);
+    }
+    return createRes.json();
+}
