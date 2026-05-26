@@ -17,11 +17,15 @@
  */
 
 import type {
+	AgentRegistry,
 	KernelToolRegistry,
 	MemoryStore,
 	SkillRegistry,
 	TaskQueue,
 	TodoState,
+	TeammateChannel,
+	TeammateBackend,
+	AgentScopedMemoryStore,
 } from '@neptune/engine'
 
 /** Bag of runtime kernel protocol instances injected by the host per session. */
@@ -31,6 +35,14 @@ export interface KernelProtocols {
 	readonly taskQueue?: TaskQueue
 	readonly toolRegistry?: KernelToolRegistry
 	readonly memoryStore?: MemoryStore
+	/** Stage 3.2 — Agent manifest 注册表（substrate 协议）。 */
+	readonly agentRegistry?: AgentRegistry
+	/** Stage B1.1 — Agent-scoped 持久化记忆（三 scope + snapshot 同步）。 */
+	readonly agentScopedMemoryStore?: AgentScopedMemoryStore
+	/** Stage B1.4 — Teammate mailbox 通道（agent teams 通信）。 */
+	readonly teammateChannel?: TeammateChannel
+	/** Stage B1.5 — Teammate spawn 后端（substrate 不绑实现）。 */
+	readonly teammateBackend?: TeammateBackend
 }
 
 /** Runtime context augmented with the kernel protocol bag. */

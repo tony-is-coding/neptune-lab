@@ -38,7 +38,21 @@ import {
 	createShutdownRequestMessage,
 	writeToMailbox,
 } from '../../../../../src/utils/teammateMailbox.js'
-import {resumeAgentBackground} from '../AgentTool/resumeAgent.js'
+// Stage B5 接续：B0 暂时把 resumeAgentBackground 改为 stub（B4 实现 resume protocol，
+// B5 重构 SendMessageTool 用 substrate TeammateChannel + RunStore.loadSnapshot 替代）。
+// import 已经迁出到 product/cc-tools/AgentTool/resumeAgent.ts，不再可达。
+async function resumeAgentBackground(_args: {
+	agentId: string
+	prompt: string
+	toolUseContext: unknown
+	canUseTool: unknown
+	invokingRequestId?: string | undefined
+}): Promise<{outputFile: string}> {
+	throw new Error(
+		'resumeAgentBackground is not yet implemented in substrate (Stage B4/B5). ' +
+			'Use AgentTool.run with run_in_background=true once B4 lands.',
+	)
+}
 import {SEND_MESSAGE_TOOL_NAME} from './constants.js'
 import {DESCRIPTION, getPrompt} from './prompt.js'
 

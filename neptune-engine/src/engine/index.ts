@@ -304,6 +304,67 @@ export {SpanStatus} from './observability/index.js'
 // Bridge 模块（ToolExtension 类型）
 export type {ToolExtension, PermissionConfig} from './bridge/OriginalQueryEngineBridge.js'
 
+// =============================================================================
+// Agent Loop API（v1.0 16 batch — substrate 内部唯一主循环）
+// =============================================================================
+
+export {AgentLoop} from './agent-loop/loop/AgentLoop.js'
+export type {AgentLoopParams} from './agent-loop/loop/AgentLoop.js'
+export type {LoopEvent, LoopResult, GovernanceSnapshot, GovernanceEvent} from './agent-loop/loop/loopEvents.js'
+
+export {createToolUseContext, allowAllCanUseTool} from './agent-loop/dispatcher/ToolUseContext.js'
+export type {
+	ToolUseContext,
+	CanUseToolFn,
+	CanUseToolResult,
+	KernelProtocolBag,
+	CreateToolUseContextOptions,
+} from './agent-loop/dispatcher/ToolUseContext.js'
+export {ToolDispatcher} from './agent-loop/dispatcher/ToolDispatcher.js'
+export type {ToolUpdate, ToolResultBlock, ToolUseBlock} from './agent-loop/dispatcher/ToolDispatcher.js'
+
+export type {
+	StreamingProviderAdapter,
+	StreamingQueryParams,
+} from './agent-loop/provider/StreamingProviderAdapter.js'
+export {AnthropicStreamingProvider} from './agent-loop/provider/AnthropicStreamingProvider.js'
+
+export type {
+	StopReason,
+	UsageSnapshot,
+	CompleteContentBlock,
+	PartialAssistantMessage,
+	ParsedSSEEvent,
+} from './agent-loop/types.js'
+export {EMPTY_USAGE} from './agent-loop/types.js'
+
+// Message types
+export type {
+	Message,
+	AssistantMessage,
+	UserMessage,
+	SystemMessage,
+	AttachmentMessage,
+	ProgressMessage,
+	ContentItem,
+	MessageContent,
+	MessageType,
+	TypedMessageContent,
+} from './types/message.js'
+
+// Tool 类型（让 builtin-tools 用统一定义）
+export type {
+	Tool,
+	Tools,
+	CoreTool,
+	UITool,
+	ToolResult,
+	ToolProgress,
+	ToolProgressData,
+	ToolCallProgress,
+	ToolInputJSONSchema,
+} from './types/tool.js'
+
 // ============================================================
 // 不应导出的内部实现
 // ============================================================
