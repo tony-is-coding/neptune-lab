@@ -155,7 +155,8 @@ describe('RunControl API', () => {
             evidenceType: 'generated_extract',
             sourceSystem: 'runtime_tool',
         });
-        expect(detailBody.policyDecisions.data.map((decision: {policyType: string}) => decision.policyType)).toEqual(expect.arrayContaining(['model', 'tool']));
+        // PolicyDecision 仅记录治理性决策（deny / review_required），成功运行不写 allow 占位。
+        expect(detailBody.policyDecisions.data).toEqual([]);
         expect(detailBody.auditEvents.data.map((event: {action: string}) => event.action)).toEqual(expect.arrayContaining(['run.created', 'run.completed']));
         expect(detailBody.observability.factCounts.artifacts).toBeGreaterThanOrEqual(1);
         expect(detailBody.observability.factCounts.evidenceArtifacts).toBeGreaterThanOrEqual(1);

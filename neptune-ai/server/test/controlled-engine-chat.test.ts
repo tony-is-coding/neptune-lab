@@ -178,15 +178,15 @@ describe('Controlled Engine chat SSE', () => {
             status: 'completed',
         });
 
+        // PolicyDecision 只记录治理性决策（deny / review_required）。
+        // 成功的 controlled run 不写 model/tool allow 占位，避免污染策略事实表。
         const decisions = await db.select()
             .from(policyDecisions)
             .where(and(
                 eq(policyDecisions.tenantId, tenantId),
                 eq(policyDecisions.runId, run.id),
             ));
-        expect(decisions.map(decision => decision.policyType)).toContain('model');
-        expect(decisions.map(decision => decision.policyType)).toContain('tool');
-        expect(decisions.every(decision => decision.decision === 'allow')).toBe(true);
+        expect(decisions).toHaveLength(0);
     });
 
     test('rejects chat before engine dispatch when tenant quota is exhausted', async () => {

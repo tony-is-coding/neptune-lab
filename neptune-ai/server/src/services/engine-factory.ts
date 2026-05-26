@@ -13,6 +13,7 @@
 import {AgentEngine, createHeadlessCCRuntime} from '@neptune/engine';
 import type {EngineFactory, QueryableEngine} from './thread-manager.js';
 import {TenantPermissionDelegate} from './permission-delegate.js';
+import {policyDecisionService} from './policy-decision.js';
 import {createLogger} from '../utils/logger.js';
 import {getTracingProvider, getMetricsProvider} from './observability/index.js';
 import {writeFileSync, mkdirSync, existsSync} from 'fs';
@@ -52,6 +53,10 @@ export class ClaudeCodeEngineFactory implements EngineFactory {
         tools: string[];
         mcpServers: Array<{ name: string; url: string }>;
         tenantId: string;
+        governance?: {
+            runId?: string | null;
+            requestId?: string;
+        };
     }): Promise<{
         engine: QueryableEngine;
         sdkSessionId: string;
@@ -76,7 +81,7 @@ export class ClaudeCodeEngineFactory implements EngineFactory {
             content: s.content,
         }));
 
-        // 3. 创建权限委托
+        // 3. 创建权限委托（注入治理 recorder：每次 deny 都会写 PolicyDecision）
         const permissionDelegate = new TenantPermissionDelegate(
             {
                 tenantId: params.tenantId,
@@ -85,6 +90,11 @@ export class ClaudeCodeEngineFactory implements EngineFactory {
             },
             {
                 tools: params.tools,
+            },
+            {
+                runId: params.governance?.runId ?? null,
+                requestId: params.governance?.requestId,
+                recorder: policyDecisionService,
             },
         );
 
