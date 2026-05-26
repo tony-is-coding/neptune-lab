@@ -1,49 +1,35 @@
-import {feature} from 'bun:bundle'
+/**
+ * SendMessageTool prompt — 教 LLM 如何在 agent teams 内通信
+ *
+ * 设计目的（B5 / P0.5）：
+ * - cc SendMessageTool prompt 充满 swarm/UDS/bridge/TCP 业务路由说明，substrate 不抄
+ * - substrate 仅描述 TeammateChannel 协议的核心 4 类操作：单播 / 广播 / structured shutdown / plan_approval
+ */
 
-export const DESCRIPTION = 'Send a message to another agent'
+import {SEND_MESSAGE_TOOL_NAME} from './constants.js'
+
+export const DESCRIPTION = `Send a message to a teammate in the current agent team.`
 
 export function getPrompt(): string {
-	const udsRow = feature('UDS_INBOX')
-		? `\n| \`"uds:/path/to.sock"\` | Local Claude session's socket (same machine; use \`ListPeers\`) |
-| \`"bridge:session_..."\` | Remote Control peer session (cross-machine; use \`ListPeers\`) |`
-		: ''
-	const udsSection = feature('UDS_INBOX')
-		? `\n\n## Cross-session
+	return `Use the ${SEND_MESSAGE_TOOL_NAME} tool to communicate with other agents in the same team.
 
-Use \`ListPeers\` to discover targets, then:
+Recipients:
+- A specific teammate name (e.g., "alice") → unicast
+- "*" → broadcast to all teammates except yourself
 
-\`\`\`json
-{"to": "uds:/tmp/cc-socks/1234.sock", "message": "check if tests pass over there"}
-{"to": "bridge:session_01AbCd...", "message": "what branch are you on?"}
-\`\`\`
+Message types:
+1. Plain text — typical case. Provide \`message\` as a string and a 5-10 word \`summary\` for the UI.
+2. Structured messages (object form):
+   - {type: 'shutdown_request', request_id, reason?} — ask a teammate to gracefully exit
+   - {type: 'shutdown_response', request_id, approve, reason?} — respond to shutdown_request
+   - {type: 'plan_approval_response', request_id, approve, feedback?} — team lead approves/rejects a plan
 
-A listed peer is alive and will process your message — no "busy" state; messages enqueue and drain at the receiver's next tool round. Your message arrives wrapped as \`<cross-session-message from="...">\`. **To reply to an incoming message, copy its \`from\` attribute as your \`to\`.**`
-		: ''
-	return `
-# SendMessage
+When NOT to use this tool:
+- If you can solve the task yourself with regular tools — don't spam teammates.
+- If the recipient is not in your team's teammate roster (use ListPeers / DiscoverSkills first if available).
 
-Send a message to another agent.
-
-\`\`\`json
-{"to": "researcher", "summary": "assign task 1", "message": "start on task #1"}
-\`\`\`
-
-| \`to\` | |
-|---|---|
-| \`"researcher"\` | Teammate by name |
-| \`"*"\` | Broadcast to all teammates — expensive (linear in team size), use only when everyone genuinely needs it |${udsRow}
-
-Your plain text output is NOT visible to other agents — to communicate, you MUST call this tool. Messages from teammates are delivered automatically; you don't check an inbox. Refer to teammates by name, never by UUID. When relaying, don't quote the original — it's already rendered to the user.${udsSection}
-
-## Protocol responses (legacy)
-
-If you receive a JSON message with \`type: "shutdown_request"\` or \`type: "plan_approval_request"\`, respond with the matching \`_response\` type — echo the \`request_id\`, set \`approve\` true/false:
-
-\`\`\`json
-{"to": "team-lead", "message": {"type": "shutdown_response", "request_id": "...", "approve": true}}
-{"to": "researcher", "message": {"type": "plan_approval_response", "request_id": "...", "approve": false, "feedback": "add error handling"}}
-\`\`\`
-
-Approving shutdown terminates your process. Rejecting plan sends the teammate back to revise. Don't originate \`shutdown_request\` unless asked. Don't send structured JSON status messages — use TaskUpdate.
-`.trim()
+Notes:
+- Plain text messages are read by the recipient's runtime when they next check their inbox.
+- Broadcast skips the sender; the response includes the list of recipients reached.
+- Structured messages cannot be broadcast (must target a single teammate).`
 }
