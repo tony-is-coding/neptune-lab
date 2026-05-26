@@ -31,17 +31,19 @@
  *  7. parent abort → child sub-agent abort 链路 ✅
  *  8. 三类错误 + partial result extraction ✅
  *  9. 一轮内多个 tool_use(AgentTool) → 并行 spawn（AgentLoop 已支持）✅
- * 10. sub-agent runStore 状态外化（继承 parent runStore）⏸️ B4
+ * 10. sub-agent runStore 状态外化（继承 parent runStore）✅ P0.3
  * 11. progress streaming（每 tool_use 后 emit）⏸️ B7（需 hook 注入）
- * 12. async background launch ⏸️ B4
- * 13. run_in_background 字段 + TaskQueue 替代 LocalAgentTask ⏸️ B4
+ * 12. async background launch ✅ P0.3（TaskQueue + RunStore 替代 cc LocalAgentTask）
+ * 13. run_in_background 字段 + TaskQueue 替代 LocalAgentTask ✅ P0.3
  * 14. sub-agent depth 限制（防 spawn 风暴）✅
  * 15. permissionMode 继承 + 覆盖 ⏸️ B7（需 ctx.options 透传）
- * 16-21. SkillTool 路径 ⏸️ B6
+ * 16-21. SkillTool 路径 ✅ P0.2
  * 22. recordSkillUsage P2 可舍弃
  *
  * B2 范围：1-9 + 14（10 项核心 + AgentLoop 已支持的并行 spawn）
- * B4/B7 接续：10-13, 15
+ * P0.3 范围：10, 12, 13 协议化（TaskQueue + RunStore + AgentLoop.runWithStore）
+ * P0.2 范围：16-21（SkillTool 薄壳已落）
+ * B7 接续：11, 15
  */
 
 import {z} from 'zod/v4'
@@ -56,6 +58,7 @@ import {outputSchema, type OutputSchema, type Output} from './outputSchema.js'
 import {getPrompt} from './prompt.js'
 import {mapAgentToolResultToBlock} from './resultMapping.js'
 import {runSubAgent, extractPartialResult} from './runSubAgent.js'
+import {launchSubAgentInBackground} from './runSubAgentBackground.js'
 
 // ============================================================
 // AgentTool ToolUseContext extension
@@ -216,12 +219,52 @@ export const AgentTool = buildTool({
 			ctx.abortController as AbortController | undefined
 		)?.signal
 
-		// 6. async background launch — B4 协议化（这里先抛 NotImplementedError 让 schema 完整）
+		// 6. async background launch — P0.3 协议化（TaskQueue + RunStore）
 		if (input.run_in_background) {
-			throw new Error(
-				'run_in_background is reserved for Stage B4 (TaskQueue + RunStore async path). ' +
-					'Synchronous spawn always works. Set run_in_background=false (or omit) for now.',
-			)
+			const runStoreFromCtx = (ctx.kernel as Record<string, unknown> | undefined)
+				?.runStore as import('@neptune/engine').RunStore | undefined
+			if (!runStoreFromCtx) {
+				throw new Error(
+					'AgentTool run_in_background=true requires ctx.kernel.runStore (RunStore). ' +
+						'Host should inject runStore in the engine config / ToolUseContext kernel bag.',
+				)
+			}
+			const taskQueue = (ctx.kernel as Record<string, unknown> | undefined)
+				?.taskQueue as import('@neptune/engine').TaskQueue | undefined
+
+			const subAgentContextAsync: AgentToolKernelContext = {
+				...ctx,
+				subAgentDepth: depth + 1,
+				subAgentMaxDepth: maxDepth,
+			}
+
+			const launched = await launchSubAgentInBackground({
+				manifest,
+				prompt: input.prompt,
+				model,
+				provider,
+				parentSignal,
+				tools: subTools,
+				parentContext: subAgentContextAsync as unknown as Parameters<
+					typeof launchSubAgentInBackground
+				>[0]['parentContext'],
+				agentId,
+				startTime,
+				runStore: runStoreFromCtx,
+				...(taskQueue && {taskQueue}),
+				createdBy: (ctx as {agentId?: string}).agentId ?? 'parent',
+				description: input.description,
+			})
+
+			const asyncOutput: Output = {
+				status: 'async_launched',
+				agentId: launched.agentId,
+				runId: launched.runId,
+				...(launched.taskId !== undefined && {taskId: launched.taskId}),
+				description: input.description,
+				prompt: input.prompt,
+			}
+			return {data: asyncOutput}
 		}
 
 		// 7. 同步 spawn — depth +1 透传给 sub-agent
