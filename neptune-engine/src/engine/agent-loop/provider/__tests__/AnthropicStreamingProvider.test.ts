@@ -319,4 +319,82 @@ describe('AnthropicStreamingProvider', () => {
 		)
 		expect(capturedClientOptions?.baseURL).toBe('https://proxy.example.com')
 	})
+
+	it('config.authToken 注入 SDK client options（Bearer 第三方网关支持）', async () => {
+		// 第三方 anthropic-compatible 网关（OpenCode Go / Vercel AI Gateway / OpenRouter / 等）
+		// 通常用 Authorization: Bearer <token>，由 SDK 通过 authToken 字段控制
+		let capturedClientOptions: Record<string, unknown> | undefined
+		const provider = new AnthropicStreamingProvider(
+			{authToken: 'oc-go-key-abc', baseURL: 'https://opencode.ai/zen/go/v1'},
+			opts => {
+				capturedClientOptions = opts as Record<string, unknown>
+				return makeMockClient({stream: textOnlyFixture}) as never
+			},
+		)
+		await drain(
+			provider.queryStream({model: 'minimax-m2.7', messages: [userMsg('hi')]}),
+		)
+		expect(capturedClientOptions?.authToken).toBe('oc-go-key-abc')
+		// authToken 路径下不应自动 fallback 到 apiKey（避免 SDK 同时设置两个 header）
+		expect(capturedClientOptions?.apiKey).toBeUndefined()
+		expect(capturedClientOptions?.baseURL).toBe('https://opencode.ai/zen/go/v1')
+	})
+
+	it('env ANTHROPIC_AUTH_TOKEN 兜底（config 未提供）', async () => {
+		const ORIG_AUTH = process.env.ANTHROPIC_AUTH_TOKEN
+		process.env.ANTHROPIC_AUTH_TOKEN = 'env-bearer-token'
+		try {
+			let capturedClientOptions: Record<string, unknown> | undefined
+			const provider = new AnthropicStreamingProvider({}, opts => {
+				capturedClientOptions = opts as Record<string, unknown>
+				return makeMockClient({stream: textOnlyFixture}) as never
+			})
+			await drain(
+				provider.queryStream({model: 'm', messages: [userMsg('hi')]}),
+			)
+			expect(capturedClientOptions?.authToken).toBe('env-bearer-token')
+			expect(capturedClientOptions?.apiKey).toBeUndefined()
+		} finally {
+			if (ORIG_AUTH !== undefined) process.env.ANTHROPIC_AUTH_TOKEN = ORIG_AUTH
+			else delete process.env.ANTHROPIC_AUTH_TOKEN
+		}
+	})
+
+	it('apiKey 与 authToken 同时设时：authToken 优先（与 SDK 行为一致，避免两个认证 header）', async () => {
+		let capturedClientOptions: Record<string, unknown> | undefined
+		const provider = new AnthropicStreamingProvider(
+			{apiKey: 'sk-anth', authToken: 'gw-bearer'},
+			opts => {
+				capturedClientOptions = opts as Record<string, unknown>
+				return makeMockClient({stream: textOnlyFixture}) as never
+			},
+		)
+		await drain(
+			provider.queryStream({model: 'm', messages: [userMsg('hi')]}),
+		)
+		expect(capturedClientOptions?.authToken).toBe('gw-bearer')
+		expect(capturedClientOptions?.apiKey).toBeUndefined()
+	})
+
+	it('authToken / apiKey / env 全部缺失 → emit error (api_error)', async () => {
+		const ORIG_KEY = process.env.ANTHROPIC_API_KEY
+		const ORIG_AUTH = process.env.ANTHROPIC_AUTH_TOKEN
+		delete process.env.ANTHROPIC_API_KEY
+		delete process.env.ANTHROPIC_AUTH_TOKEN
+		try {
+			const provider = new AnthropicStreamingProvider({}, () => makeMockClient({}) as never)
+			const events = await drain(
+				provider.queryStream({model: 'm', messages: [userMsg('hi')]}),
+			)
+			expect(events).toHaveLength(1)
+			expect(events[0]).toMatchObject({type: 'error', source: 'api_error'})
+			if (events[0].type === 'error') {
+				const m = events[0].error.message
+				expect(m).toMatch(/ANTHROPIC_API_KEY|ANTHROPIC_AUTH_TOKEN|authToken|apiKey/)
+			}
+		} finally {
+			if (ORIG_KEY !== undefined) process.env.ANTHROPIC_API_KEY = ORIG_KEY
+			if (ORIG_AUTH !== undefined) process.env.ANTHROPIC_AUTH_TOKEN = ORIG_AUTH
+		}
+	})
 })

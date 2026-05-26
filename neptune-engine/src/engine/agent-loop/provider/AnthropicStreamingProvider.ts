@@ -61,21 +61,28 @@ export class AnthropicStreamingProvider implements StreamingProviderAdapter {
 	async *queryStream(
 		params: StreamingQueryParams,
 	): AsyncGenerator<ParsedSSEEvent, void, unknown> {
-		// 1. 解析 apiKey / baseURL（config 优先于 env，但不污染 env）
+		// 1. 解析认证：authToken（Bearer 第三方网关）优先于 apiKey（Anthropic 官方）
+		//    config 优先于 env，但不污染 process.env
+		const authToken = this.config.authToken ?? process.env.ANTHROPIC_AUTH_TOKEN
 		const apiKey = this.config.apiKey ?? process.env.ANTHROPIC_API_KEY
-		if (!apiKey || typeof apiKey !== 'string' || apiKey.length === 0) {
+		const hasAuthToken = typeof authToken === 'string' && authToken.length > 0
+		const hasApiKey = typeof apiKey === 'string' && apiKey.length > 0
+		if (!hasAuthToken && !hasApiKey) {
 			yield {
 				type: 'error',
 				source: 'api_error',
 				error: new Error(
-					'AnthropicStreamingProvider: ANTHROPIC_API_KEY is required (set config.apiKey or env)',
+					'AnthropicStreamingProvider: authentication required (set config.apiKey/authToken or env ANTHROPIC_API_KEY/ANTHROPIC_AUTH_TOKEN)',
 				),
 			}
 			return
 		}
 		const baseURL = this.config.baseURL ?? process.env.ANTHROPIC_BASE_URL ?? undefined
 
-		const clientOptions: ClientOptions = {apiKey}
+		// authToken 与 apiKey 同时设时只传 authToken，避免 SDK emit 两个认证 header
+		const clientOptions: ClientOptions = hasAuthToken
+			? {authToken}
+			: {apiKey}
 		if (baseURL) clientOptions.baseURL = baseURL
 
 		const client = this.clientFactory(clientOptions)
