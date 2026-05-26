@@ -22,6 +22,7 @@
 // Runtime-side tools that remain in engine
 // =============================================================================
 export {AgentTool, AGENT_TOOL_NAME, LEGACY_AGENT_TOOL_NAME} from './tools/AgentTool/AgentTool.js'
+export {SkillTool, SKILL_TOOL_NAME} from './tools/SkillTool/SkillTool.js'
 export {BashTool} from './tools/BashTool/BashTool.js'
 export {FileEditTool} from './tools/FileEditTool/FileEditTool.js'
 export {FileReadTool} from './tools/FileReadTool/FileReadTool.js'
