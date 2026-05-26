@@ -2,28 +2,26 @@
  * sdk-with-fs-store.ts — SDK + FileRunStore（state 外化 + resume 验证）
  *
  * 用法：
- *   # 第一次跑：创建新 run
- *   ANTHROPIC_API_KEY=sk-... bun run examples/sdk-with-fs-store.ts
+ *   # 第一次跑：创建新 run（真 API）
+ *   ANTHROPIC_API_KEY=sk-ant-... MODEL=claude-sonnet-4-20250514 bun run examples/sdk-with-fs-store.ts
  *   # → 输出 runId
  *
  *   # 用同 runId resume
- *   ANTHROPIC_API_KEY=sk-... bun run examples/sdk-with-fs-store.ts --resume <runId>
+ *   ANTHROPIC_API_KEY=sk-ant-... MODEL=claude-sonnet-4-20250514 \
+ *     bun run examples/sdk-with-fs-store.ts --resume <runId>
+ *
+ *   # CI / 离线 smoke（0 API 消耗）
+ *   USE_SCRIPTED_PROVIDER=true bun run examples/sdk-with-fs-store.ts
  */
 
 import {randomUUID} from 'crypto'
 import {AgentLoop} from '../src/engine/agent-loop/loop/AgentLoop.js'
-import {AnthropicStreamingProvider} from '../src/engine/agent-loop/provider/AnthropicStreamingProvider.js'
 import {createToolUseContext} from '../src/engine/agent-loop/dispatcher/ToolUseContext.js'
 import {FileRunStore} from '../src/engine/run/index.js'
 import type {Message} from '../src/engine/types/message.js'
+import {resolveProvider} from './_provider.js'
 
-const apiKey = process.env.ANTHROPIC_API_KEY
-if (!apiKey) {
-	console.error('Set ANTHROPIC_API_KEY env var')
-	process.exit(1)
-}
-
-const provider = new AnthropicStreamingProvider({apiKey})
+const {provider, model} = resolveProvider()
 const ctx = createToolUseContext()
 const store = new FileRunStore('./runs')
 
@@ -35,7 +33,7 @@ if (isResume) {
 	console.log(`[resume] runId=${runId}`)
 	const gen = AgentLoop.resume(runId, {
 		provider,
-		model: 'claude-sonnet-4-20250514',
+		model,
 		context: ctx,
 		runStore: store,
 	})
@@ -57,7 +55,7 @@ if (isResume) {
 
 	const gen = AgentLoop.runWithStore({
 		provider,
-		model: 'claude-sonnet-4-20250514',
+		model,
 		messages: [userMessage],
 		context: ctx,
 		runStore: store,

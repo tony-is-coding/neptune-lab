@@ -10,28 +10,33 @@
  *   GET  /runs/:id/events → SSE 流：实时 yield events（含历史 + 新）
  *
  * 用法：
- *   ANTHROPIC_API_KEY=sk-... bun run examples/sdk-with-server.ts
+ *   # 真 API（Anthropic）
+ *   ANTHROPIC_API_KEY=sk-ant-... MODEL=claude-sonnet-4-20250514 bun run examples/sdk-with-server.ts
+ *
+ *   # CI / 离线 smoke（0 API 消耗，仅启动后立即退出验证 server 可启）
+ *   USE_SCRIPTED_PROVIDER=true EXIT_AFTER_LISTEN=true bun run examples/sdk-with-server.ts
+ *
+ *   # 调用：
  *   curl -X POST http://localhost:3000/runs -d '{"prompt":"hello"}'
  *   curl http://localhost:3000/runs/<runId>/events
+ *
+ * env：
+ *   PORT                  - 监听端口（默认 3000，0 = 随机）
+ *   EXIT_AFTER_LISTEN     - 'true' 启动后立即 exit(0)（CI smoke 用）
  */
 
 import {createServer, type IncomingMessage, type ServerResponse} from 'node:http'
 import {randomUUID} from 'crypto'
 import {AgentLoop} from '../src/engine/agent-loop/loop/AgentLoop.js'
-import {AnthropicStreamingProvider} from '../src/engine/agent-loop/provider/AnthropicStreamingProvider.js'
 import {createToolUseContext} from '../src/engine/agent-loop/dispatcher/ToolUseContext.js'
 import {FileRunStore} from '../src/engine/run/index.js'
 import type {Message} from '../src/engine/types/message.js'
+import {resolveProvider} from './_provider.js'
 
-const apiKey = process.env.ANTHROPIC_API_KEY
-if (!apiKey) {
-	console.error('Set ANTHROPIC_API_KEY env var')
-	process.exit(1)
-}
-
+const {provider, model} = resolveProvider()
 const port = parseInt(process.env.PORT ?? '3000', 10)
-const provider = new AnthropicStreamingProvider({apiKey})
 const store = new FileRunStore('./runs')
+const exitAfterListen = process.env.EXIT_AFTER_LISTEN === 'true'
 
 async function readBody(req: IncomingMessage): Promise<string> {
 	return new Promise((resolve, reject) => {
@@ -56,7 +61,7 @@ async function runInBackground(runId: string, prompt: string): Promise<void> {
 	const ctx = createToolUseContext()
 	const gen = AgentLoop.runWithStore({
 		provider,
-		model: 'claude-sonnet-4-20250514',
+		model,
 		messages: [userMessage],
 		context: ctx,
 		runStore: store,
@@ -135,8 +140,14 @@ const server = createServer(async (req, res) => {
 })
 
 server.listen(port, () => {
-	console.log(`[server] listening on http://localhost:${port}`)
+	const addr = server.address()
+	const actualPort = typeof addr === 'object' && addr ? addr.port : port
+	console.log(`[server] listening on http://localhost:${actualPort}`)
 	console.log(`  POST /runs            { prompt } → { runId }`)
 	console.log(`  GET  /runs/:id        → { run, eventCount }`)
 	console.log(`  GET  /runs/:id/events → SSE stream`)
+	if (exitAfterListen) {
+		// CI smoke：验证 server 可启动后立即退出
+		server.close(() => process.exit(0))
+	}
 })

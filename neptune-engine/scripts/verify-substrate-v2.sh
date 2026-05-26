@@ -7,7 +7,7 @@
 # - Gate A 干净度（13 项）保留 v2.0 11 项 + 新增 2 项相对反向引用 / 调试残留
 # - Gate B 协议契约（10 项）替代 v1 [-f file.ts] 文件存在 check，跑各模块测试套
 # - Gate C 工具调度（5 项）v1 完全缺失，验证多 tool_use / Permission / Hook
-# - Gate D 端到端功能（9 项）红线 #5 关键 - functional substrate 真验证
+# - Gate D 端到端功能（10 项）红线 #5 关键 - functional substrate 真验证
 # - Gate E 量化基线（4 项）含 packages 测试基线
 #
 # 用法: bash scripts/verify-substrate-v2.sh
@@ -164,7 +164,7 @@ check "C.4 11 kernel tool 协议联动" "bun test packages/builtin-tools/src/too
 check "C.5 ToolDispatcher 测试套" "bun test src/engine/agent-loop/dispatcher > /dev/null 2>&1"
 
 # ============================================================
-# Gate D 端到端功能 (9 项 - 红线 #5 关键)
+# Gate D 端到端功能 (10 项 - 红线 #5 关键)
 # ============================================================
 echo ""
 echo "-- Gate D: 端到端功能 (functional substrate) --"
@@ -192,6 +192,8 @@ check "D.9 AgentLoopBridge LoopEvent → SDK QueryEvent (P0.1a)" "
 	bun test src/engine/bridge/__tests__/AgentLoopBridge.test.ts > /dev/null 2>&1 && \
 	bun test src/engine/bridge/__tests__/runQueryViaAgentLoop.e2e.test.ts > /dev/null 2>&1
 "
+
+check "D.10 examples scripted smoke (sdk-pure / fs-store / server) (v6.0 P0.1.B)" "bun test examples/__tests__/examples.smoke.test.ts > /dev/null 2>&1"
 
 # ============================================================
 # Gate E 量化基线 (4 项)
@@ -232,7 +234,7 @@ echo "  v5.0 substrate v2: ALL GREEN ($pass_count/$total)"
 echo "  - Gate A 干净度: 13/13"
 echo "  - Gate B 协议契约: 10/10"
 echo "  - Gate C 工具调度: 5/5"
-echo "  - Gate D 端到端功能: 9/9 (红线 #5 functional substrate 验证)"
+echo "  - Gate D 端到端功能: 10/10 (红线 #5 functional substrate 验证 + examples smoke)"
 echo "  - Gate E 量化基线: 4/4"
 echo "==========================================================================="
 exit 0
