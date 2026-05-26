@@ -957,12 +957,14 @@ export class AgentEngine {
 
 		const sawErrorEvent = {value: false}
 		try {
+			// substrate 不再硬编码 model：从 config.provider 读取，缺失则委托 provider 自报错
+			const resolvedModel =
+				(this.config.provider as unknown as {config?: {model?: string; defaultModel?: string}})?.config?.model ??
+				(this.config.provider as unknown as {config?: {defaultModel?: string}})?.config?.defaultModel ??
+				''
 			const gen = runQueryViaAgentLoop({
 				input,
-				model:
-					(this.config.provider as unknown as {config?: {model?: string; defaultModel?: string}})?.config?.model ??
-					(this.config.provider as unknown as {config?: {defaultModel?: string}})?.config?.defaultModel ??
-					'claude-sonnet-4-20250514',
+				model: resolvedModel,
 				provider,
 				signal: combinedSignal,
 				...(systemPrompt !== undefined && {systemPrompt: typeof systemPrompt === 'string' ? systemPrompt : undefined}),

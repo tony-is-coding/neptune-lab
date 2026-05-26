@@ -31,8 +31,6 @@ import type {
 	StreamingQueryParams,
 } from './StreamingProviderAdapter.js'
 
-const DEFAULT_MODEL = 'claude-sonnet-4-20250514'
-
 /**
  * AnthropicStreamingProvider
  *
@@ -83,7 +81,18 @@ export class AnthropicStreamingProvider implements StreamingProviderAdapter {
 		const client = this.clientFactory(clientOptions)
 
 		// 2. 序列化请求体（如果 caller 已用 cachePolicy 准备好了 __cachePlanned，直接用，避免重复序列化）
-		const model = params.model || this.config.defaultModel || DEFAULT_MODEL
+		// substrate 不再硬编码默认 model：caller 必须显式传 params.model 或 config.defaultModel
+		const model = params.model || this.config.defaultModel
+		if (!model) {
+			yield {
+				type: 'error',
+				source: 'api_error',
+				error: new Error(
+					'AnthropicStreamingProvider: model is required (set params.model or config.defaultModel)',
+				),
+			}
+			return
+		}
 		const cachePlanned = (params.extra?.__cachePlanned ?? undefined) as
 			| {messages?: unknown; system?: unknown; tools?: unknown}
 			| undefined

@@ -285,6 +285,26 @@ describe('AnthropicStreamingProvider', () => {
 		expect(capturedClientOptions?.apiKey).toBe('sk-env')
 	})
 
+	it('model 完全缺失 → emit error (CONFIGURATION_ERROR)', async () => {
+		// Batch 0.1.A: substrate 不再硬编码默认 model
+		// query.params.model='' && config.defaultModel 缺失 → emit error，禁止隐式兜底
+		const provider = new AnthropicStreamingProvider(
+			{apiKey: 'sk-test'}, // 无 defaultModel
+			() => makeMockClient({stream: textOnlyFixture}) as never,
+		)
+		const events = await drain(
+			provider.queryStream({
+				model: '', // 显式空
+				messages: [userMsg('hi')],
+			}),
+		)
+		expect(events).toHaveLength(1)
+		expect(events[0]).toMatchObject({type: 'error', source: 'api_error'})
+		if (events[0].type === 'error') {
+			expect(events[0].error.message.toLowerCase()).toContain('model')
+		}
+	})
+
 	it('config.baseURL 注入 SDK client options', async () => {
 		let capturedClientOptions: Record<string, unknown> | undefined
 		const provider = new AnthropicStreamingProvider(
