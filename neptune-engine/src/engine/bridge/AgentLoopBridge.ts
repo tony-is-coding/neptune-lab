@@ -55,10 +55,11 @@ export async function* bridgeAgentLoopToSDK(
 		const next = await gen.next()
 		if (next.done) {
 			// LoopResult → 终结事件
-			yield* mapLoopResult(next.value)
+			yield* mapLoopResult(next.value as LoopResult)
 			return
 		}
-		const event = next.value
+		// next.value 是 LoopEvent（done=false 时一定）
+		const event = next.value as LoopEvent
 		yield* mapLoopEvent(event)
 	}
 }
@@ -84,11 +85,12 @@ function* mapLoopEvent(event: LoopEvent): Generator<QueryEvent, void, unknown> {
 		case 'tool_update':
 			// 只 emit 'result' kind（已经是工具完成结果），started/progress 不 emit 给 SDK
 			if (event.update.kind === 'result') {
+				const block = event.update.toolResultBlock
 				yield {
 					type: 'tool_result',
 					toolUseId: event.update.toolUseId,
-					content: event.update.result,
-					isError: event.update.isError ?? false,
+					content: block.content,
+					isError: block.is_error ?? false,
 				} as QueryEvent
 			}
 			return

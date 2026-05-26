@@ -260,6 +260,81 @@ export interface AgentEngineConfig {
 	tracingProvider?: ITracingProvider
 	/** Metrics Provider（可选，默认使用 NoOpMetricsProvider） */
 	metricsProvider?: IMetricsProvider
+
+	// ============================================================
+	// v5.0 P0.1 — substrate 协议注入（解开双轨制）
+	// ============================================================
+
+	/**
+	 * 是否走 substrate AgentLoop（默认 false 保持向后兼容）。
+	 *
+	 * - false: 走 ccRuntime.createQueryEngine（HeadlessQueryEngine 单轮 stub）
+	 * - true:  走 AgentLoop.runWithStore + AgentLoopBridge → SDK QueryEvent
+	 *          自动启用 16 batch 能力（retry/fallback/watchdog/caching/compaction/budget/kernel）
+	 *
+	 * 推荐 SDK 用户显式设 true 以使用完整 substrate 能力。
+	 */
+	useAgentLoop?: boolean
+
+	/**
+	 * Streaming Provider（substrate 直接用 AgentLoop 时必传）。
+	 *
+	 * 与 config.provider（CC bridge 模式用的 ProviderConfig）互补：
+	 * - useAgentLoop=true 时优先用此字段（AnthropicStreamingProvider 实例）
+	 * - 缺失时尝试根据 config.provider 自动构造（仅 anthropic 类型）
+	 */
+	streamingProvider?: import('./agent-loop/provider/StreamingProviderAdapter.js').StreamingProviderAdapter
+
+	/** Run 状态外化存储（可选，注入后启用 runWithStore + 跨实例 resume）。 */
+	runStore?: import('./run/index.js').RunStore
+
+	/** Audit hash chain 存储（可选，注入后所有 LoopEvent 写入合规链）。 */
+	auditStore?: import('./audit/index.js').AuditEventStore
+
+	/** Sandbox 安全护栏（可选，工具调用走此适配器）。 */
+	sandbox?: import('./sandbox/index.js').SandboxAdapter
+
+	/** 4 类治理 Hook（PolicyHook / HumanReviewHook / EvalHook / ArtifactHook）。 */
+	governance?: import('./governance/index.js').GovernanceHooks
+
+	/** Agent 注册表（注入后 SubAgentTool 可查找 manifest）。 */
+	agentRegistry?: import('./agent-registry/index.js').AgentRegistry
+
+	/** Skill 注册表（注入后 SkillTool 可查找 skill manifest）。 */
+	skillRegistry?: import('./skill/index.js').SkillRegistry
+
+	/** Task 队列（多 agent 共享任务）。 */
+	taskQueue?: import('./task-queue/index.js').TaskQueue
+
+	/** Todo 状态（per-Agent）。 */
+	todoState?: import('./todo/index.js').TodoState
+
+	/** Memory 存储（KV 记忆）。 */
+	memoryStore?: import('./memory/index.js').MemoryStore
+
+	/** Agent 专用三 scope 持久化记忆。 */
+	agentScopedMemoryStore?: import('./memory/index.js').AgentScopedMemoryStore
+
+	/** Teammate Mailbox 通道（agent teams 协作）。 */
+	teammateChannel?: import('./teammate/index.js').TeammateChannel
+
+	/** Teammate Spawn 后端（substrate 不绑实现，product 注入）。 */
+	teammateBackend?: import('./teammate/index.js').TeammateBackend
+
+	/** Tool 注册表（关键词搜索 + 注入工具池）。 */
+	toolRegistry?: import('./tool-registry/index.js').ToolRegistry
+
+	/** 单轮最大 token 数（透给 provider，仅 useAgentLoop=true 生效）。 */
+	maxTokensPerTurn?: number
+
+	/** Prompt caching policy（仅 useAgentLoop=true 生效）。 */
+	cachePolicy?: import('./agent-loop/index.js').CacheControlPolicy
+
+	/** History compaction policy（仅 useAgentLoop=true 生效）。 */
+	compactionPolicy?: import('./agent-loop/index.js').CompactionPolicy
+
+	/** Budget tracker（token 上限保护）。 */
+	budgetTracker?: import('./agent-loop/index.js').BudgetTracker
 }
 
 /**
@@ -681,6 +756,13 @@ export class AgentEngine {
 				throw new EngineError(EngineErrorCode.SESSION_PAUSED, `Session '${sessionId}' is paused`)
 			}
 
+			// v5.0 P0.1c — useAgentLoop 路径分支（默认 false 保持向后兼容）
+			// 走 substrate AgentLoop + AgentLoopBridge 解开双轨制
+			if (this.config.useAgentLoop === true) {
+				yield* this.queryViaAgentLoop(sessionId, input, session, options)
+				return
+			}
+
 			// 2. 获取或创建 SessionContext
 			let sessionCtx = this.sessionContexts.get(sessionId)
 			if (!sessionCtx) {
@@ -810,6 +892,130 @@ export class AgentEngine {
 			// 释放 session 互斥锁
 			this.activeQueries.delete(sessionId)
 		}
+	}
+
+	// ============================================================
+	// v5.0 P0.1c — useAgentLoop 路径
+	// ============================================================
+
+	/**
+	 * 走 substrate AgentLoop 跑一次 query。
+	 *
+	 * 用 sessionId 作为 runId（一个 session 对应一个长 run），
+	 * 每次 query 把新 input 追加到历史 + 走 AgentLoop.runWithStore（注入了 runStore 时）。
+	 *
+	 * 注入项（来自 AgentEngineConfig）：
+	 * - streamingProvider（必传）
+	 * - runStore / auditStore / sandbox / governance（可选，注入即生效）
+	 * - kernel bag（agentRegistry / skillRegistry / taskQueue / etc.）
+	 * - cachePolicy / compactionPolicy / budgetTracker（自动启用 16 batch 能力）
+	 *
+	 * 注：useAgentLoop=true 路径暂不接 SessionContext / cwd 上下文（保持薄）；
+	 *     若 product 需要 cwd 隔离，可通过 ctx.cwd 透传或自己 wrap runWithCwd。
+	 */
+	private async *queryViaAgentLoop(
+		sessionId: string,
+		input: string,
+		session: Session,
+		options?: QueryOptions,
+	): AsyncGenerator<QueryEvent> {
+		const provider = this.config.streamingProvider
+		if (!provider) {
+			throw new EngineError(
+				EngineErrorCode.CONFIGURATION_ERROR,
+				'config.streamingProvider is required when useAgentLoop=true',
+			)
+		}
+
+		// 系统提示词解析（per-session 优先 → engine 级）
+		const sessionPrompt = this.sessionPrompts.get(sessionId)
+		const effectivePromptSource = sessionPrompt ?? this.config.systemPrompt
+		const systemPrompt =
+			typeof effectivePromptSource === 'function'
+				? await effectivePromptSource()
+				: effectivePromptSource
+
+		// 历史消息（resume 场景从 sessionMessages cache 取，与 HeadlessQueryEngine 路径一致）
+		const cachedHistory = this.sessionMessages.get(sessionId)
+		if (cachedHistory) {
+			this.sessionMessages.delete(sessionId)
+		}
+
+		// AbortController 注册（caller signal abort + AgentEngine 内部联动）
+		const abortController = new AbortController()
+		this.activeAbortControllers.set(sessionId, abortController)
+		const combinedSignal = options?.signal
+			? AbortSignal.any([options.signal, abortController.signal])
+			: abortController.signal
+
+		// 动态导入避免循环依赖（runQueryViaAgentLoop 反过来 import bridge / AgentLoop）
+		const {runQueryViaAgentLoop} = await import('./bridge/runQueryViaAgentLoop.js')
+
+		const tools = (this.config.extensions?.tools ?? []) as unknown as
+			| import('./types/tool.js').Tool[]
+			| undefined
+
+		const sawErrorEvent = {value: false}
+		try {
+			const gen = runQueryViaAgentLoop({
+				input,
+				model:
+					(this.config.provider as unknown as {config?: {model?: string; defaultModel?: string}})?.config?.model ??
+					(this.config.provider as unknown as {config?: {defaultModel?: string}})?.config?.defaultModel ??
+					'claude-sonnet-4-20250514',
+				provider,
+				signal: combinedSignal,
+				...(systemPrompt !== undefined && {systemPrompt: typeof systemPrompt === 'string' ? systemPrompt : undefined}),
+				...(cachedHistory && {historyMessages: cachedHistory as unknown as import('./types/message.js').Message[]}),
+				...(tools && {tools}),
+				...(this.config.runStore && {runStore: this.config.runStore, runId: sessionId}),
+				...(this.config.auditStore && {auditStore: this.config.auditStore}),
+				...(this.config.sandbox && {sandbox: this.config.sandbox}),
+				...(this.config.governance && {governance: this.config.governance}),
+				...(this.config.agentRegistry && {agentRegistry: this.config.agentRegistry}),
+				...(this.config.skillRegistry && {skillRegistry: this.config.skillRegistry}),
+				...(this.config.taskQueue && {taskQueue: this.config.taskQueue}),
+				...(this.config.todoState && {todoState: this.config.todoState}),
+				...(this.config.memoryStore && {memoryStore: this.config.memoryStore}),
+				...(this.config.agentScopedMemoryStore && {agentScopedMemoryStore: this.config.agentScopedMemoryStore}),
+				...(this.config.teammateChannel && {teammateChannel: this.config.teammateChannel}),
+				...(this.config.teammateBackend && {teammateBackend: this.config.teammateBackend}),
+				...(this.config.toolRegistry && {toolRegistry: this.config.toolRegistry}),
+				...(this.config.cachePolicy && {cachePolicy: this.config.cachePolicy}),
+				...(this.config.compactionPolicy && {compactionPolicy: this.config.compactionPolicy}),
+				...(this.config.budgetTracker && {budgetTracker: this.config.budgetTracker}),
+				...(this.config.tracingProvider && {tracingProvider: this.config.tracingProvider}),
+				...(this.config.metricsProvider && {metricsProvider: this.config.metricsProvider}),
+				...(this.config.options?.maxTurns !== undefined && {maxTurns: this.config.options.maxTurns}),
+				...(this.config.maxTokensPerTurn !== undefined && {maxTokensPerTurn: this.config.maxTokensPerTurn}),
+			})
+
+			for await (const event of gen) {
+				try {
+					this.eventBus.emit(event.type, event, sessionId)
+				} catch (emitError) {
+					LogUtil.debug('EventBus emit 异常', {sessionId, error: String(emitError)})
+				}
+				if (event.type === 'error' || event.type === 'assistant_error') {
+					sawErrorEvent.value = true
+				}
+				yield event
+			}
+		} catch (error) {
+			const err = error instanceof Error ? error : new Error(String(error))
+			throw new EngineError(
+				EngineErrorCode.EXECUTION_ERROR,
+				`Query execution failed: ${err.message}`,
+				{cause: err},
+			)
+		} finally {
+			if (sawErrorEvent.value) {
+				this.metricsProvider.counter('query.failed').increment()
+			}
+			this.activeAbortControllers.delete(sessionId)
+		}
+		// session.workspace 等 metadata 保持不变（useAgentLoop 路径不操作 SessionContext / cwd）
+		void session
 	}
 
 	// ========== 事件监听（委托 EventBus） ==========

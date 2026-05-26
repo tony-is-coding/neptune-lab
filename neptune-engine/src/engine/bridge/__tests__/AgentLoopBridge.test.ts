@@ -181,8 +181,13 @@ describe('AgentLoopBridge — LoopEvent 映射', () => {
 							update: {
 								kind: 'result',
 								toolUseId: 'tu_1',
-								result: {output: 'ok'},
-								isError: false,
+								toolName: 'Bash',
+								toolResultBlock: {
+									type: 'tool_result',
+									tool_use_id: 'tu_1',
+									content: 'ok',
+									is_error: false,
+								},
 							} as unknown as LoopEvent extends infer E ? E extends {update: infer U} ? U : never : never,
 						} as LoopEvent,
 					],
@@ -408,8 +413,13 @@ describe('AgentLoopBridge — 完整流', () => {
 							update: {
 								kind: 'result',
 								toolUseId: 'tu_1',
-								result: 'file1.txt\nfile2.txt',
-								isError: false,
+								toolName: 'Bash',
+								toolResultBlock: {
+									type: 'tool_result',
+									tool_use_id: 'tu_1',
+									content: 'file1.txt\nfile2.txt',
+									is_error: false,
+								},
 							} as unknown as LoopEvent extends infer E ? E extends {update: infer U} ? U : never : never,
 						} as LoopEvent,
 					],
