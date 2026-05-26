@@ -7,7 +7,13 @@ import {
 	link,
 } from 'fs/promises'
 // React/JSX import removed in S1.2 — substrate 主体不再渲染 React。
-import type {CanUseToolFn} from '../../../../../src/ui/hooks/useCanUseTool'
+// P0.7 — 内联 CanUseToolFn 类型（替代反向 import 'src/ui/hooks/useCanUseTool'）
+type CanUseToolFn = (
+	tool: unknown,
+	input: Record<string, unknown>,
+	context: unknown,
+	toolUseId: string,
+) => Promise<{behavior: 'allow'; updatedInput?: Record<string, unknown>} | {behavior: 'deny'; message: string}>
 import type {AppState} from '../../utils/cc-shim/misc.js'
 import {z} from 'zod/v4'
 import {getKairosActive} from '../../utils/cc-shim/misc.js'
@@ -66,7 +72,17 @@ import {semanticNumber} from '../../utils/semanticNumber.js'
 import {EndTruncatingAccumulator} from '../../utils/cc-shim/misc.js'
 import {getTaskOutputPath} from '../../utils/cc-shim/misc.js'
 import {TaskOutput} from '../../utils/cc-shim/misc.js'
-import {isOutputLineTruncated} from '../../../../../src/ui/terminal'
+// P0.7 — 内联 isOutputLineTruncated（替代反向 import 'src/ui/terminal'）
+const MAX_OUTPUT_LINES_TO_SHOW = 3
+function isOutputLineTruncated(content: string): boolean {
+	let pos = 0
+	for (let i = 0; i <= MAX_OUTPUT_LINES_TO_SHOW; i++) {
+		pos = content.indexOf('\n', pos)
+		if (pos === -1) return false
+		pos++
+	}
+	return pos < content.length
+}
 import {
 	buildLargeToolResultMessage,
 	ensureToolResultsDir,
