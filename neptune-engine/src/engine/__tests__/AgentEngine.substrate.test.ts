@@ -1,15 +1,14 @@
 /**
- * AgentEngine.useAgentLoop.test.ts — P0.1c 端到端集成测试
+ * AgentEngine.substrate.test.ts — substrate 路径端到端集成测试
  *
- * 验证 AgentEngine.query 走 useAgentLoop=true 路径：
- * 1. 默认 useAgentLoop=false → 走 HeadlessQueryEngine（向后兼容）
- * 2. useAgentLoop=true → 走 AgentLoop + bridge → SDK QueryEvent
- * 3. streamingProvider 缺失 → 抛 CONFIGURATION_ERROR
- * 4. 注入 RunStore + AgentRegistry → 完整能力上线
- * 5. 多次 query → 历史消息累积（resume 场景）
+ * 验证 AgentEngine.query 永远走 substrate AgentLoop + bridge → SDK QueryEvent：
+ * 1. streamingProvider 缺失 → 抛 CONFIGURATION_ERROR
+ * 2. streamingProvider 注入 → SDK QueryEvent 流
+ * 3. 注入 RunStore + AgentRegistry → 完整能力上线
+ * 4. caller signal abort → 立即退出 + 释放锁
  */
 
-import {describe, expect, it, afterEach, beforeEach} from 'bun:test'
+import {describe, expect, it, afterEach} from 'bun:test'
 import {AgentEngine} from '../AgentEngine.js'
 import {ScriptedProvider, textTurn} from '../agent-loop/loop/__tests__/scriptedProvider.js'
 import {InMemoryRunStore} from '../run/index.js'
@@ -25,28 +24,15 @@ async function collect(
 	return out
 }
 
-describe('AgentEngine.useAgentLoop — 路径切换', () => {
+describe('AgentEngine.query — 路径切换', () => {
 	let engine: AgentEngine
 
 	afterEach(async () => {
 		if (engine) await engine.destroy()
 	})
 
-	it('默认 useAgentLoop=undefined → 走 HeadlessQueryEngine（向后兼容）', async () => {
+	it('streamingProvider 缺失 → CONFIGURATION_ERROR', async () => {
 		engine = AgentEngine.create({
-			// 不设 useAgentLoop
-			provider: {type: 'anthropic', config: {apiKey: 'sk-test', defaultModel: 'm'}},
-		})
-		const sessionId = await engine.createSession()
-		// 走 HeadlessQueryEngine 路径会请求外部 API（无 ANTHROPIC_API_KEY 会出错）
-		// 我们仅验证不进入 useAgentLoop 路径（不抛 streamingProvider 缺失错误）
-		const session = await engine.getSession(sessionId)
-		expect(session).toBeDefined()
-	})
-
-	it('useAgentLoop=true 但 streamingProvider 缺失 → CONFIGURATION_ERROR', async () => {
-		engine = AgentEngine.create({
-			useAgentLoop: true,
 			// streamingProvider 缺失
 		})
 		const sessionId = await engine.createSession()
@@ -57,10 +43,9 @@ describe('AgentEngine.useAgentLoop — 路径切换', () => {
 		}).toThrow(EngineError)
 	})
 
-	it('useAgentLoop=true + streamingProvider → SDK QueryEvent 流', async () => {
+	it('streamingProvider 注入 → SDK QueryEvent 流', async () => {
 		const provider = new ScriptedProvider([textTurn('Hello from substrate')])
 		engine = AgentEngine.create({
-			useAgentLoop: true,
 			streamingProvider: provider,
 			systemPrompt: 'You are a test agent.',
 		})
@@ -79,7 +64,7 @@ describe('AgentEngine.useAgentLoop — 路径切换', () => {
 	})
 })
 
-describe('AgentEngine.useAgentLoop — substrate 协议注入', () => {
+describe('AgentEngine.query — substrate 协议注入', () => {
 	let engine: AgentEngine
 
 	afterEach(async () => {
@@ -90,7 +75,6 @@ describe('AgentEngine.useAgentLoop — substrate 协议注入', () => {
 		const provider = new ScriptedProvider([textTurn('persisted')])
 		const runStore = new InMemoryRunStore()
 		engine = AgentEngine.create({
-			useAgentLoop: true,
 			streamingProvider: provider,
 			runStore,
 		})
@@ -107,7 +91,6 @@ describe('AgentEngine.useAgentLoop — substrate 协议注入', () => {
 		const registry = new InMemoryAgentRegistry()
 		await registry.registerBuiltIns()
 		engine = AgentEngine.create({
-			useAgentLoop: true,
 			streamingProvider: provider,
 			agentRegistry: registry,
 		})
@@ -120,7 +103,7 @@ describe('AgentEngine.useAgentLoop — substrate 协议注入', () => {
 	})
 })
 
-describe('AgentEngine.useAgentLoop — Cancellation', () => {
+describe('AgentEngine.query — Cancellation', () => {
 	let engine: AgentEngine
 
 	afterEach(async () => {
@@ -130,7 +113,6 @@ describe('AgentEngine.useAgentLoop — Cancellation', () => {
 	it('caller signal abort → 立即退出 + 释放锁', async () => {
 		const provider = new ScriptedProvider([textTurn('text')])
 		engine = AgentEngine.create({
-			useAgentLoop: true,
 			streamingProvider: provider,
 		})
 		const sessionId = await engine.createSession()

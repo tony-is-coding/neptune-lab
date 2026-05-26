@@ -1,8 +1,8 @@
 /**
  * runQueryViaAgentLoop — AgentEngine.query 走 AgentLoop 的实现 helper
  *
- * 设计目的（v5.0 P0.1b）：
- * - AgentEngine.query 双轨保留：useAgentLoop=true 走此函数，false 走 HeadlessQueryEngine
+ * 设计目的（v5.0 P0.1b → v6.0 P0.2.A）：
+ * - AgentEngine.query 永远走此函数（v6.0 一刀切去掉 useAgentLoop 双轨制）
  * - 把 AgentEngineConfig + sessionId + input 转成 AgentLoop.run* 调用
  * - LoopEvent → SDK QueryEvent 走 AgentLoopBridge
  * - 让 16 batch agent-loop 能力（retry/fallback/cache/compaction/budget/governance/runStore/audit）

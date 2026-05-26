@@ -16,25 +16,27 @@
 
 import {describe, test, expect, beforeEach, afterEach} from 'bun:test'
 import {AgentEngine} from '../AgentEngine'
+import type {AgentEngineConfig} from '../AgentEngine'
 import {EngineError, EngineErrorCode} from '../errors'
 import {createMockCCRuntime} from '../cc-runtime/MockCCRuntime'
 import type {CCRuntime} from '../cc-runtime/CCRuntime'
-import type {QueryEngineWrapper} from '../cc-runtime/CCRuntime'
+import {ScriptedProvider, textTurn} from '../agent-loop/loop/__tests__/scriptedProvider'
+import type {ParsedSSEEvent} from '../agent-loop/types'
 
-// 创建 mock QueryEngine 的辅助函数
-function createMockQueryEngine(messages: unknown[] = []): QueryEngineWrapper {
-	return {
-		async* submitMessage(..._args: unknown[]) {
-			// Yield 模拟消息
-			for (const msg of messages) {
-				yield msg
-			}
-			// 默认至少 yield 一个消息
-			if (messages.length === 0) {
-				yield {type: 'text', content: 'mock response'}
-			}
-		},
-	}
+/**
+ * 创建一个走 substrate AgentLoop 路径的 AgentEngine 测试实例。
+ * 每条 textContent 对应模型的一轮回复（end_turn）。
+ */
+function createSubstrateEngine(
+	textContents: string[],
+	overrides: Partial<AgentEngineConfig> = {},
+	runtime?: CCRuntime,
+): AgentEngine {
+	const turns: ParsedSSEEvent[][] = textContents.length > 0
+		? textContents.map(t => textTurn(t))
+		: [textTurn('mock response')]
+	const provider = new ScriptedProvider(turns)
+	return AgentEngine.create({streamingProvider: provider, ...overrides}, runtime)
 }
 
 describe('AgentEngine', () => {
@@ -392,14 +394,7 @@ describe('AgentEngine', () => {
 		})
 
 		test('应该 yield 消息', async () => {
-			const mockMessages = [
-				{type: 'text', content: 'Hello'},
-				{type: 'text', content: 'World'},
-			]
-			const runtime = createMockCCRuntime({
-				queryEngineFactory: () => createMockQueryEngine(mockMessages),
-			})
-			const engine = AgentEngine.create({}, runtime)
+			const engine = createSubstrateEngine(['Hello'], {}, mockRuntime)
 			const sessionId = await engine.createSession()
 
 			const messages: unknown[] = []
@@ -407,7 +402,11 @@ describe('AgentEngine', () => {
 				messages.push(msg)
 			}
 
-			expect(messages).toEqual(mockMessages)
+			// substrate 路径会 yield system + assistant + system{result} 事件
+			const types = messages.map(m => (m as {type: string}).type)
+			expect(types).toContain('assistant')
+			const assistant = messages.find(m => (m as {type: string}).type === 'assistant') as Record<string, unknown>
+			expect(assistant.content).toBe('Hello')
 		})
 
 		test('不存在的 Session 应该抛出错误', async () => {
@@ -469,15 +468,11 @@ describe('AgentEngine', () => {
 		})
 
 		test('应该发送消息到 EventBus', async () => {
-			const runtime = createMockCCRuntime({
-				queryEngineFactory: () =>
-					createMockQueryEngine([{type: 'message', content: 'message'}]),
-			})
-			const engine = AgentEngine.create({}, runtime)
+			const engine = createSubstrateEngine(['Hello'], {}, mockRuntime)
 			const sessionId = await engine.createSession()
 
 			const events: unknown[] = []
-			engine.on('message', (payload) => {
+			engine.on('assistant', (payload) => {
 				events.push(payload)
 			})
 
@@ -485,20 +480,16 @@ describe('AgentEngine', () => {
 				// 消费所有消息
 			}
 
-			expect(events).toHaveLength(1)
-			expect(events[0]).toMatchObject({type: 'message'})
+			expect(events.length).toBeGreaterThanOrEqual(1)
+			expect(events[0]).toMatchObject({type: 'assistant'})
 		})
 
 		test('EventBus 发送失败不影响 query', async () => {
-			const runtime = createMockCCRuntime({
-				queryEngineFactory: () =>
-					createMockQueryEngine([{type: 'message', content: 'message'}]),
-			})
-			const engine = AgentEngine.create({}, runtime)
+			const engine = createSubstrateEngine(['Hello'], {}, mockRuntime)
 			const sessionId = await engine.createSession()
 
 			// 添加一个会抛出错误的监听器
-			engine.on('message', () => {
+			engine.on('assistant', () => {
 				throw new Error('EventBus error')
 			})
 
@@ -508,7 +499,7 @@ describe('AgentEngine', () => {
 				messages.push(msg)
 			}
 
-			expect(messages).toHaveLength(1)
+			expect(messages.length).toBeGreaterThanOrEqual(1)
 		})
 
 		test('destroyed 的引擎不能 query', async () => {
@@ -584,20 +575,20 @@ describe('AgentEngine', () => {
 			expect(eventReceived).toBe(true)
 		})
 
-		test('暂停后应该清除 QueryEngine 缓存', async () => {
-			const engine = AgentEngine.create({}, mockRuntime)
+		test('暂停后应该清理消息缓存（resume 场景将由 sessionMessages 提供历史）', async () => {
+			const engine = createSubstrateEngine(['response'], {}, mockRuntime)
 			const sessionId = await engine.createSession()
 
-			// 执行一次 query 创建 QueryEngine
+			// 执行一次 query
 			for await (const _ of engine.query(sessionId, 'test')) {
 				break
 			}
 
-			expect((engine as any).queryEngines.has(sessionId)).toBe(true)
-
 			await engine.pauseSession(sessionId)
 
-			expect((engine as any).queryEngines.has(sessionId)).toBe(false)
+			// pauseSession 后 session 状态应为 paused
+			const session = await engine.getSession(sessionId)
+			expect(session?.status).toBe('paused')
 		})
 
 		test('destroyed 后不能暂停', async () => {
@@ -658,13 +649,13 @@ describe('AgentEngine', () => {
 		})
 
 		test('destroySession 应该清理所有 per-session Map', async () => {
-			const engine = AgentEngine.create({}, mockRuntime)
+			const engine = createSubstrateEngine(['response'], {}, mockRuntime)
 			const sessionId = await engine.createSession({
 				systemPrompt: 'test',
 				provider: {type: 'openai'},
 			})
 
-			// 执行 query 创建 QueryEngine
+			// 执行 query 触发 substrate 路径
 			for await (const _ of engine.query(sessionId, 'test')) {
 				break
 			}
@@ -672,7 +663,6 @@ describe('AgentEngine', () => {
 			await engine.destroySession(sessionId)
 
 			// 验证所有 per-session Map 都已清理
-			expect((engine as any).queryEngines.has(sessionId)).toBe(false)
 			expect((engine as any).sessionMessages.has(sessionId)).toBe(false)
 			expect((engine as any).sessionPrompts.has(sessionId)).toBe(false)
 			expect((engine as any).sessionProviders.has(sessionId)).toBe(false)
@@ -764,7 +754,6 @@ describe('AgentEngine', () => {
 			await engine.destroy()
 
 			expect((engine as any).destroyed).toBe(true)
-			expect((engine as any).queryEngines.size).toBe(0)
 			expect((engine as any).sessionMessages.size).toBe(0)
 			expect((engine as any).sessionPrompts.size).toBe(0)
 			expect((engine as any).sessionProviders.size).toBe(0)
@@ -941,11 +930,7 @@ describe('AgentEngine', () => {
 
 	describe('复杂场景', () => {
 		test('多 Session 并发查询', async () => {
-			const runtime = createMockCCRuntime({
-				queryEngineFactory: () =>
-					createMockQueryEngine([{type: 'text', content: 'response'}]),
-			})
-			const engine = AgentEngine.create({}, runtime)
+			const engine = createSubstrateEngine(['response', 'response'], {}, mockRuntime)
 
 			const id1 = await engine.createSession({workspace: getUniqueWorkspace('concurrent-1')})
 			const id2 = await engine.createSession({workspace: getUniqueWorkspace('concurrent-2')})
@@ -966,16 +951,12 @@ describe('AgentEngine', () => {
 				})(),
 			])
 
-			expect(results1).toHaveLength(1)
-			expect(results2).toHaveLength(1)
+			expect(results1.length).toBeGreaterThan(0)
+			expect(results2.length).toBeGreaterThan(0)
 		})
 
 		test('Session 生命周期：创建 -> 查询 -> 暂停 -> 恢复 -> 销毁', async () => {
-			const runtime = createMockCCRuntime({
-				queryEngineFactory: () =>
-					createMockQueryEngine([{type: 'text', content: 'response'}]),
-			})
-			const engine = AgentEngine.create({}, runtime)
+			const engine = createSubstrateEngine(['response'], {}, mockRuntime)
 
 			const sessionId = await engine.createSession({workspace: getUniqueWorkspace('lifecycle')})
 
@@ -984,7 +965,7 @@ describe('AgentEngine', () => {
 			for await (const msg of engine.query(sessionId, 'test')) {
 				messages.push(msg)
 			}
-			expect(messages).toHaveLength(1)
+			expect(messages.length).toBeGreaterThan(0)
 
 			// 暂停
 			await engine.pauseSession(sessionId)

@@ -186,7 +186,7 @@ check "D.6 跨实例 resume e2e: AgentLoopRunStore + resumeSubAgent (P0.3)" "
 
 check "D.7 Async background launch e2e (P0.3)" "bun test packages/builtin-tools/src/tools/AgentTool/__tests__/runSubAgentBackground.e2e.test.ts > /dev/null 2>&1"
 
-check "D.8 AgentEngine.useAgentLoop 集成 e2e (P0.1)" "bun test src/engine/__tests__/AgentEngine.useAgentLoop.test.ts > /dev/null 2>&1"
+check "D.8 AgentEngine.query substrate 集成 e2e (P0.1)" "bun test src/engine/__tests__/AgentEngine.substrate.test.ts > /dev/null 2>&1"
 
 check "D.9 AgentLoopBridge LoopEvent → SDK QueryEvent (P0.1a)" "
 	bun test src/engine/bridge/__tests__/AgentLoopBridge.test.ts > /dev/null 2>&1 && \

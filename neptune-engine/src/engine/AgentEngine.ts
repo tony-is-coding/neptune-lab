@@ -27,22 +27,14 @@
 import {SessionManager} from './SessionManager'
 import type {Session} from './Session'
 import type {SessionInfo} from './types'
-import {EngineError, EngineErrorCode, type EngineErrorCodeType} from './errors'
+import {EngineError, EngineErrorCode} from './errors'
 import {EventBus} from './events/EventBus'
 import type {SessionStatus, SessionMetadata} from './types'
-import type {ToolExtension} from './bridge/OriginalQueryEngineBridge'
-import {
-	initializeRuntime,
-	buildQueryEngineConfig,
-	buildQueryEngineConfigFromOptions,
-	type BridgeOptions,
-	type PermissionConfig,
-} from './bridge/OriginalQueryEngineBridge'
+import type {ToolExtension, PermissionConfig} from './bridge/OriginalQueryEngineBridge'
 import {loadSkillsToWorkspace, cleanupEngineSkills, type SkillExtension} from './skill/SkillLoader'
 import {parseTranscript, transcriptToMessages} from './session/TranscriptParser'
 import {
 	createDefaultSessionContext,
-	runInSessionContextAsync,
 	type SessionContext,
 } from './session/index.js'
 import {clearTokenBudgetState} from './session/TokenBudgetManager.js'
@@ -154,14 +146,6 @@ function validateAgentEngineConfig(config: AgentEngineConfig): ConfigValidationR
 }
 
 /**
- * QueryEngine 接口抽象
- * 使用 any 是有意为之——QueryEngine 是 CC 原始代码，其 submitMessage
- * 签名依赖 Anthropic SDK 类型，强类型会导致耦合。框架只需调用它。
- */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type QueryEngineWrapper = { submitMessage: (...args: any[]) => AsyncGenerator<any, void, unknown> }
-
-/**
  * Provider 配置项 — discriminated union 类型
  *
  * 支持在引擎级别或会话级别配置不同的 Provider（如 Anthropic、OpenAI 等）。
@@ -262,26 +246,15 @@ export interface AgentEngineConfig {
 	metricsProvider?: IMetricsProvider
 
 	// ============================================================
-	// v5.0 P0.1 — substrate 协议注入（解开双轨制）
+	// v6.0 — substrate 协议注入（永远走 AgentLoop 路径）
 	// ============================================================
 
 	/**
-	 * 是否走 substrate AgentLoop（默认 false 保持向后兼容）。
+	 * Streaming Provider（substrate AgentLoop 必传）。
 	 *
-	 * - false: 走 ccRuntime.createQueryEngine（HeadlessQueryEngine 单轮 stub）
-	 * - true:  走 AgentLoop.runWithStore + AgentLoopBridge → SDK QueryEvent
-	 *          自动启用 16 batch 能力（retry/fallback/watchdog/caching/compaction/budget/kernel）
-	 *
-	 * 推荐 SDK 用户显式设 true 以使用完整 substrate 能力。
-	 */
-	useAgentLoop?: boolean
-
-	/**
-	 * Streaming Provider（substrate 直接用 AgentLoop 时必传）。
-	 *
-	 * 与 config.provider（CC bridge 模式用的 ProviderConfig）互补：
-	 * - useAgentLoop=true 时优先用此字段（AnthropicStreamingProvider 实例）
-	 * - 缺失时尝试根据 config.provider 自动构造（仅 anthropic 类型）
+	 * 与 config.provider（model 元信息）互补：
+	 * - AgentLoop 路径走此字段（如 AnthropicStreamingProvider 实例）
+	 * - 缺失时由 provider 自报 CONFIGURATION_ERROR
 	 */
 	streamingProvider?: import('./agent-loop/provider/StreamingProviderAdapter.js').StreamingProviderAdapter
 
@@ -324,13 +297,13 @@ export interface AgentEngineConfig {
 	/** Tool 注册表（关键词搜索 + 注入工具池）。 */
 	toolRegistry?: import('./tool-registry/index.js').ToolRegistry
 
-	/** 单轮最大 token 数（透给 provider，仅 useAgentLoop=true 生效）。 */
+	/** 单轮最大 token 数（透给 provider）。 */
 	maxTokensPerTurn?: number
 
-	/** Prompt caching policy（仅 useAgentLoop=true 生效）。 */
+	/** Prompt caching policy。 */
 	cachePolicy?: import('./agent-loop/index.js').CacheControlPolicy
 
-	/** History compaction policy（仅 useAgentLoop=true 生效）。 */
+	/** History compaction policy。 */
 	compactionPolicy?: import('./agent-loop/index.js').CompactionPolicy
 
 	/** Budget tracker（token 上限保护）。 */
@@ -389,9 +362,7 @@ export class AgentEngine {
 	private eventBus: EventBus
 	private destroyed = false
 	private config: AgentEngineConfig
-	/** per-session 缓存 QueryEngine 实例，保持多轮对话上下文 */
-	private queryEngines = new Map<string, QueryEngineWrapper>()
-	/** per-session 缓存历史消息（会话恢复时填充，QueryEngine 创建时消费） */
+	/** per-session 缓存历史消息（会话恢复时填充，AgentLoop 启动时消费） */
 	private sessionMessages = new Map<string, SDKMessage[]>()
 	/** per-session 系统提示词覆盖（优先于 engine 级 systemPrompt） */
 	private sessionPrompts = new Map<string, string | (() => Promise<string>)>()
@@ -568,8 +539,7 @@ export class AgentEngine {
 			}
 		}
 
-		// 清理 QueryEngine 资源（sessionMessages 已保存，恢复时可用）
-		this.queryEngines.delete(sessionId)
+		// 清理 SessionContext，sessionMessages 已保存，恢复时可用
 		await this.sessionManager.pauseSession(sessionId)
 
 		// 生命周期事件：Session 暂停成功
@@ -599,7 +569,6 @@ export class AgentEngine {
 			cleanupEngineSkills(workspace)
 		}
 
-		this.queryEngines.delete(sessionId)
 		this.sessionMessages.delete(sessionId)
 		this.sessionPrompts.delete(sessionId)
 		this.sessionProviders.delete(sessionId)
@@ -743,6 +712,7 @@ export class AgentEngine {
 		// Metrics: query.started
 		this.metricsProvider.counter('query.started').increment()
 
+		let sawErrorEvent = false
 		try {
 			// 1. 验证 session 存在且可用
 			const session = this.sessionManager.getSession(sessionId)
@@ -755,126 +725,113 @@ export class AgentEngine {
 			if (session.status === 'paused') {
 				throw new EngineError(EngineErrorCode.SESSION_PAUSED, `Session '${sessionId}' is paused`)
 			}
+			// session.workspace 等 metadata 保持不变（substrate 路径不操作 SessionContext / cwd）
+			void session
 
-			// v5.0 P0.1c — useAgentLoop 路径分支（默认 false 保持向后兼容）
-			// 走 substrate AgentLoop + AgentLoopBridge 解开双轨制
-			if (this.config.useAgentLoop === true) {
-				yield* this.queryViaAgentLoop(sessionId, input, session, options)
-				return
+			// 2. streamingProvider 必传（与 model 一致：缺失委托 provider 自报错或在此校验）
+			const provider = this.config.streamingProvider
+			if (!provider) {
+				throw new EngineError(
+					EngineErrorCode.CONFIGURATION_ERROR,
+					'config.streamingProvider is required',
+				)
 			}
 
-			// 2. 获取或创建 SessionContext
-			let sessionCtx = this.sessionContexts.get(sessionId)
-			if (!sessionCtx) {
-				sessionCtx = createDefaultSessionContext(asSessionId(sessionId), session.workspace, session.workspace)
-				this.sessionContexts.set(sessionId, sessionCtx)
+			// 3. 系统提示词解析（per-session 优先 → engine 级）
+			const sessionPrompt = this.sessionPrompts.get(sessionId)
+			const effectivePromptSource = sessionPrompt ?? this.config.systemPrompt
+			const systemPrompt =
+				typeof effectivePromptSource === 'function'
+					? await effectivePromptSource()
+					: effectivePromptSource
+
+			// 4. 历史消息（resume 场景从 sessionMessages cache 取）
+			const cachedHistory = this.sessionMessages.get(sessionId)
+			if (cachedHistory) {
+				this.sessionMessages.delete(sessionId)
 			}
 
-			// 恢复 memoryPath（如果之前通过 setMemoryPath 设置过）
-			const memoryPath = session.getMetadata('memoryPath') as string | undefined
-			if (memoryPath) {
-				sessionCtx.memoryPath = memoryPath
-			}
-
-			// 3. 初始化运行时（per-workspace，支持多 workspace 并发）
-			initializeRuntime(this.ccRuntime, session.workspace)
-
-			// 4. 获取或创建 per-session QueryEngine（保持多轮对话上下文）
-			let qe = this.queryEngines.get(sessionId)
-			if (!qe) {
-				// 从缓存中取出历史消息（会话恢复场景），取后删除避免重复
-				const initialMessages = this.sessionMessages.get(sessionId)
-				if (initialMessages) {
-					this.sessionMessages.delete(sessionId)
-				}
-
-				// 优先使用 per-session systemPrompt，fallback 到 engine 级
-				const effectiveSystemPrompt = this.sessionPrompts.get(sessionId) ?? this.config.systemPrompt
-
-				// 优先使用 per-session provider，fallback 到 engine 级
-				const effectiveProvider = this.sessionProviders.get(sessionId) ?? this.config.provider
-
-				const bridgeOptions: BridgeOptions = {
-					cwd: session.workspace,
-					systemPrompt: effectiveSystemPrompt,
-					identityOverride: this.config.identityOverride,
-					tools: this.config.extensions?.tools as ToolExtension[] | undefined,
-					signal: options?.signal,
-					initialMessages,
-					permissions: this.config.extensions?.permissions,
-					provider: effectiveProvider,
-					maxTurns: this.config.options?.maxTurns,
-					maxBudgetUsd: this.config.options?.maxBudgetUsd,
-					onSystemPromptResolved: options?.onSystemPromptResolved ?? this._onSystemPromptResolved,
-				}
-				const queryEngineConfig = await buildQueryEngineConfigFromOptions(bridgeOptions, this.ccRuntime)
-				const queryEngine = this.ccRuntime.createQueryEngine(queryEngineConfig)
-				this.queryEngines.set(sessionId, queryEngine)
-				qe = queryEngine
-			}
-
-			// qe 已确保非 undefined（上方逻辑要么从 Map 取，要么创建新的）
-			const engine = qe!
-
-			// 5. 创建 AbortController 用于取消查询
+			// 5. AbortController 注册（caller signal abort + AgentEngine 内部联动）
 			const abortController = new AbortController()
 			this.activeAbortControllers.set(sessionId, abortController)
-
-			// 组合外部 signal 和内部 abortController
 			const combinedSignal = options?.signal
 				? AbortSignal.any([options.signal, abortController.signal])
 				: abortController.signal
 
-			// 6. 在正确的 cwd 上下文中执行查询（多 workspace 支持）
-			const eventBus = this.eventBus
-			const ccRuntime = this.ccRuntime
-			const workspace = session.workspace
-			const engineInstance = this
+			// 6. 动态导入避免循环依赖（runQueryViaAgentLoop 反过来 import bridge / AgentLoop）
+			const {runQueryViaAgentLoop} = await import('./bridge/runQueryViaAgentLoop.js')
 
-			// 使用 runWithCwd 确保所有 getCwd/pwd() 调用返回正确的 workspace 路径
-			// 注意：runWithCwd 的返回值需要通过 yield* 传播
-			let sawErrorEvent = false
-			yield* ccRuntime.runWithCwd(workspace, () =>
-				runInSessionContextAsync(sessionCtx, async function* () {
+			const tools = (this.config.extensions?.tools ?? []) as unknown as
+				| import('./types/tool.js').Tool[]
+				| undefined
+
+			// substrate 不再硬编码 model：从 config.provider 读取，缺失则委托 provider 自报错
+			const resolvedModel =
+				(this.config.provider as unknown as {config?: {model?: string; defaultModel?: string}})?.config?.model ??
+				(this.config.provider as unknown as {config?: {defaultModel?: string}})?.config?.defaultModel ??
+				''
+
+			let gen: AsyncGenerator<QueryEvent>
+			try {
+				gen = runQueryViaAgentLoop({
+					input,
+					model: resolvedModel,
+					provider,
+					signal: combinedSignal,
+					...(systemPrompt !== undefined && {systemPrompt: typeof systemPrompt === 'string' ? systemPrompt : undefined}),
+					...(cachedHistory && {historyMessages: cachedHistory as unknown as import('./types/message.js').Message[]}),
+					...(tools && {tools}),
+					...(this.config.runStore && {runStore: this.config.runStore, runId: sessionId}),
+					...(this.config.auditStore && {auditStore: this.config.auditStore}),
+					...(this.config.sandbox && {sandbox: this.config.sandbox}),
+					...(this.config.governance && {governance: this.config.governance}),
+					...(this.config.agentRegistry && {agentRegistry: this.config.agentRegistry}),
+					...(this.config.skillRegistry && {skillRegistry: this.config.skillRegistry}),
+					...(this.config.taskQueue && {taskQueue: this.config.taskQueue}),
+					...(this.config.todoState && {todoState: this.config.todoState}),
+					...(this.config.memoryStore && {memoryStore: this.config.memoryStore}),
+					...(this.config.agentScopedMemoryStore && {agentScopedMemoryStore: this.config.agentScopedMemoryStore}),
+					...(this.config.teammateChannel && {teammateChannel: this.config.teammateChannel}),
+					...(this.config.teammateBackend && {teammateBackend: this.config.teammateBackend}),
+					...(this.config.toolRegistry && {toolRegistry: this.config.toolRegistry}),
+					...(this.config.cachePolicy && {cachePolicy: this.config.cachePolicy}),
+					...(this.config.compactionPolicy && {compactionPolicy: this.config.compactionPolicy}),
+					...(this.config.budgetTracker && {budgetTracker: this.config.budgetTracker}),
+					...(this.config.tracingProvider && {tracingProvider: this.config.tracingProvider}),
+					...(this.config.metricsProvider && {metricsProvider: this.config.metricsProvider}),
+					...(this.config.options?.maxTurns !== undefined && {maxTurns: this.config.options.maxTurns}),
+					...(this.config.maxTokensPerTurn !== undefined && {maxTokensPerTurn: this.config.maxTokensPerTurn}),
+				})
+
+				for await (const event of gen) {
 					try {
-						for await (const message of engine.submitMessage(input)) {
-							// 检查是否被取消
-							if (combinedSignal.aborted) {
-								throw new EngineError(EngineErrorCode.EXECUTION_ERROR, 'Query was aborted')
-							}
-
-							// 在 yield 之前将消息发送到 EventBus
-							try {
-								const messageType = (message as { type: string }).type || 'message'
-								eventBus.emit(messageType, message, sessionId)
-							} catch (emitError) {
-								// emit 异常不影响 yield，确保消息流继续
-								LogUtil.debug('EventBus emit 异常', {sessionId, error: String(emitError)})
-							}
-							const messageType = (message as { type?: string }).type
-							if (messageType === 'error' || messageType === 'assistant_error') {
-								sawErrorEvent = true
-							}
-							yield message
-						}
-					} catch (error: any) {
-						if (error instanceof EngineError) throw error
-						// 使用错误分类器确定错误类型
-						const errorCode = engineInstance.classifyQueryError(error)
-						throw new EngineError(
-							errorCode,
-							`Query execution failed: ${error.message}`,
-							{cause: error},
-						)
+						this.eventBus.emit(event.type, event, sessionId)
+					} catch (emitError) {
+						// emit 异常不影响 yield，确保消息流继续
+						LogUtil.debug('EventBus emit 异常', {sessionId, error: String(emitError)})
 					}
-				}),
-			)
+					if (event.type === 'error' || event.type === 'assistant_error') {
+						sawErrorEvent = true
+					}
+					yield event
+				}
+			} catch (error) {
+				if (error instanceof EngineError) throw error
+				const err = error instanceof Error ? error : new Error(String(error))
+				throw new EngineError(
+					EngineErrorCode.EXECUTION_ERROR,
+					`Query execution failed: ${err.message}`,
+					{cause: err},
+				)
+			}
 			if (sawErrorEvent) {
 				// query 通过事件流报告失败：补记 query.failed 计数
 				this.metricsProvider.counter('query.failed').increment()
 			}
 		} catch (error) {
-			this.metricsProvider.counter('query.failed').increment()
+			if (!sawErrorEvent) {
+				this.metricsProvider.counter('query.failed').increment()
+			}
 			throw error
 		} finally {
 			const ctx = this.sessionContexts.get(sessionId)
@@ -892,132 +849,6 @@ export class AgentEngine {
 			// 释放 session 互斥锁
 			this.activeQueries.delete(sessionId)
 		}
-	}
-
-	// ============================================================
-	// v5.0 P0.1c — useAgentLoop 路径
-	// ============================================================
-
-	/**
-	 * 走 substrate AgentLoop 跑一次 query。
-	 *
-	 * 用 sessionId 作为 runId（一个 session 对应一个长 run），
-	 * 每次 query 把新 input 追加到历史 + 走 AgentLoop.runWithStore（注入了 runStore 时）。
-	 *
-	 * 注入项（来自 AgentEngineConfig）：
-	 * - streamingProvider（必传）
-	 * - runStore / auditStore / sandbox / governance（可选，注入即生效）
-	 * - kernel bag（agentRegistry / skillRegistry / taskQueue / etc.）
-	 * - cachePolicy / compactionPolicy / budgetTracker（自动启用 16 batch 能力）
-	 *
-	 * 注：useAgentLoop=true 路径暂不接 SessionContext / cwd 上下文（保持薄）；
-	 *     若 product 需要 cwd 隔离，可通过 ctx.cwd 透传或自己 wrap runWithCwd。
-	 */
-	private async *queryViaAgentLoop(
-		sessionId: string,
-		input: string,
-		session: Session,
-		options?: QueryOptions,
-	): AsyncGenerator<QueryEvent> {
-		const provider = this.config.streamingProvider
-		if (!provider) {
-			throw new EngineError(
-				EngineErrorCode.CONFIGURATION_ERROR,
-				'config.streamingProvider is required when useAgentLoop=true',
-			)
-		}
-
-		// 系统提示词解析（per-session 优先 → engine 级）
-		const sessionPrompt = this.sessionPrompts.get(sessionId)
-		const effectivePromptSource = sessionPrompt ?? this.config.systemPrompt
-		const systemPrompt =
-			typeof effectivePromptSource === 'function'
-				? await effectivePromptSource()
-				: effectivePromptSource
-
-		// 历史消息（resume 场景从 sessionMessages cache 取，与 HeadlessQueryEngine 路径一致）
-		const cachedHistory = this.sessionMessages.get(sessionId)
-		if (cachedHistory) {
-			this.sessionMessages.delete(sessionId)
-		}
-
-		// AbortController 注册（caller signal abort + AgentEngine 内部联动）
-		const abortController = new AbortController()
-		this.activeAbortControllers.set(sessionId, abortController)
-		const combinedSignal = options?.signal
-			? AbortSignal.any([options.signal, abortController.signal])
-			: abortController.signal
-
-		// 动态导入避免循环依赖（runQueryViaAgentLoop 反过来 import bridge / AgentLoop）
-		const {runQueryViaAgentLoop} = await import('./bridge/runQueryViaAgentLoop.js')
-
-		const tools = (this.config.extensions?.tools ?? []) as unknown as
-			| import('./types/tool.js').Tool[]
-			| undefined
-
-		const sawErrorEvent = {value: false}
-		try {
-			// substrate 不再硬编码 model：从 config.provider 读取，缺失则委托 provider 自报错
-			const resolvedModel =
-				(this.config.provider as unknown as {config?: {model?: string; defaultModel?: string}})?.config?.model ??
-				(this.config.provider as unknown as {config?: {defaultModel?: string}})?.config?.defaultModel ??
-				''
-			const gen = runQueryViaAgentLoop({
-				input,
-				model: resolvedModel,
-				provider,
-				signal: combinedSignal,
-				...(systemPrompt !== undefined && {systemPrompt: typeof systemPrompt === 'string' ? systemPrompt : undefined}),
-				...(cachedHistory && {historyMessages: cachedHistory as unknown as import('./types/message.js').Message[]}),
-				...(tools && {tools}),
-				...(this.config.runStore && {runStore: this.config.runStore, runId: sessionId}),
-				...(this.config.auditStore && {auditStore: this.config.auditStore}),
-				...(this.config.sandbox && {sandbox: this.config.sandbox}),
-				...(this.config.governance && {governance: this.config.governance}),
-				...(this.config.agentRegistry && {agentRegistry: this.config.agentRegistry}),
-				...(this.config.skillRegistry && {skillRegistry: this.config.skillRegistry}),
-				...(this.config.taskQueue && {taskQueue: this.config.taskQueue}),
-				...(this.config.todoState && {todoState: this.config.todoState}),
-				...(this.config.memoryStore && {memoryStore: this.config.memoryStore}),
-				...(this.config.agentScopedMemoryStore && {agentScopedMemoryStore: this.config.agentScopedMemoryStore}),
-				...(this.config.teammateChannel && {teammateChannel: this.config.teammateChannel}),
-				...(this.config.teammateBackend && {teammateBackend: this.config.teammateBackend}),
-				...(this.config.toolRegistry && {toolRegistry: this.config.toolRegistry}),
-				...(this.config.cachePolicy && {cachePolicy: this.config.cachePolicy}),
-				...(this.config.compactionPolicy && {compactionPolicy: this.config.compactionPolicy}),
-				...(this.config.budgetTracker && {budgetTracker: this.config.budgetTracker}),
-				...(this.config.tracingProvider && {tracingProvider: this.config.tracingProvider}),
-				...(this.config.metricsProvider && {metricsProvider: this.config.metricsProvider}),
-				...(this.config.options?.maxTurns !== undefined && {maxTurns: this.config.options.maxTurns}),
-				...(this.config.maxTokensPerTurn !== undefined && {maxTokensPerTurn: this.config.maxTokensPerTurn}),
-			})
-
-			for await (const event of gen) {
-				try {
-					this.eventBus.emit(event.type, event, sessionId)
-				} catch (emitError) {
-					LogUtil.debug('EventBus emit 异常', {sessionId, error: String(emitError)})
-				}
-				if (event.type === 'error' || event.type === 'assistant_error') {
-					sawErrorEvent.value = true
-				}
-				yield event
-			}
-		} catch (error) {
-			const err = error instanceof Error ? error : new Error(String(error))
-			throw new EngineError(
-				EngineErrorCode.EXECUTION_ERROR,
-				`Query execution failed: ${err.message}`,
-				{cause: err},
-			)
-		} finally {
-			if (sawErrorEvent.value) {
-				this.metricsProvider.counter('query.failed').increment()
-			}
-			this.activeAbortControllers.delete(sessionId)
-		}
-		// session.workspace 等 metadata 保持不变（useAgentLoop 路径不操作 SessionContext / cwd）
-		void session
 	}
 
 	// ========== 事件监听（委托 EventBus） ==========
@@ -1138,7 +969,6 @@ export class AgentEngine {
 		// 生命周期事件：Engine 停止（在设置 destroyed 标志后发送）
 		this.eventBus.emit('engine:stopped', {})
 
-		this.queryEngines.clear()
 		this.sessionMessages.clear()
 		this.sessionPrompts.clear()
 		this.sessionProviders.clear()
@@ -1245,76 +1075,5 @@ export class AgentEngine {
 			systemPrompt: session.getSystemPrompt(),
 			providerConfig: session.getProviderConfig(),
 		}
-	}
-
-	/**
-	 * 分类查询执行错误
-	 *
-	 * 根据 Error 类型和属性映射到对应的 EngineErrorCode。
-	 * 此方法复用 BaseProvider 的分类逻辑。
-	 *
-	 * @param error 错误对象
-	 * @returns 错误码
-	 */
-	private classifyQueryError(error: unknown): EngineErrorCodeType {
-		// 1. 优先检查是否为 EngineError（直接使用 error.code）
-		if (error instanceof EngineError) {
-			return error.code
-		}
-
-		// 2. 检查 HTTP 状态码（error.status 或 error.statusCode）
-		const err = error as { status?: number; statusCode?: number; message?: string }
-		const httpStatus = err.status ?? err.statusCode
-
-		if (httpStatus === 401 || httpStatus === 403) {
-			return EngineErrorCode.AUTH_ERROR
-		}
-		if (httpStatus === 429 || httpStatus === 529) {
-			return EngineErrorCode.RATE_LIMIT
-		}
-		if (httpStatus === 404) {
-			return EngineErrorCode.PROVIDER_NOT_FOUND
-		}
-		if (httpStatus === 503 || httpStatus === 502) {
-			return EngineErrorCode.NETWORK_ERROR
-		}
-
-		// 3. Fallback 到 message 文本匹配
-		const errorMessage = error instanceof Error ? error.message : String(error)
-
-		// 网络连接错误
-		if (
-			errorMessage.toLowerCase().includes('timeout') ||
-			errorMessage.toLowerCase().includes('econnrefused') ||
-			errorMessage.toLowerCase().includes('enotfound') ||
-			errorMessage.toLowerCase().includes('network') ||
-			errorMessage.toLowerCase().includes('fetch')
-		) {
-			return EngineErrorCode.NETWORK_ERROR
-		}
-
-		// 认证错误
-		if (
-			errorMessage.toLowerCase().includes('unauthorized') ||
-			errorMessage.toLowerCase().includes('401') ||
-			errorMessage.toLowerCase().includes('403') ||
-			errorMessage.toLowerCase().includes('forbidden') ||
-			errorMessage.toLowerCase().includes('invalid api key')
-		) {
-			return EngineErrorCode.AUTH_ERROR
-		}
-
-		// 速率限制错误
-		if (
-			errorMessage.toLowerCase().includes('rate limit') ||
-			errorMessage.toLowerCase().includes('429') ||
-			errorMessage.toLowerCase().includes('529') ||
-			errorMessage.toLowerCase().includes('too many requests')
-		) {
-			return EngineErrorCode.RATE_LIMIT
-		}
-
-		// 默认执行错误
-		return EngineErrorCode.EXECUTION_ERROR
 	}
 }
