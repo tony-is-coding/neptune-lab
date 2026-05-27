@@ -32,9 +32,11 @@ test.describe('Advanced Agent workflow', () => {
     await textarea.press('Enter');
 
     await expect(page.getByText('请选择下一步执行策略')).toBeVisible({timeout: 30000});
-    await page.getByRole('button', {name: /继续生成报告/}).click();
-    await page.getByRole('button', {name: '提交回答'}).click();
-    await expect(page.getByText('已回答')).toBeVisible({timeout: 15000});
+    // 当前 ask_user 是预览卡片：engine 公开 API 不支持 tool_result 注入，
+    // 用户回答暂不进入下一轮（详见 docs/governance/engine-contract.md §3.1）。
+    // 验证降级 UI 行为：渲染 ask-user-preview，并显式提示"暂不进入下一轮"。
+    await expect(page.getByTestId('ask-user-preview')).toBeVisible({timeout: 5000});
+    await expect(page.getByText(/当前回答暂不进入下一轮推理/)).toBeVisible({timeout: 5000});
 
     await expect(page.getByText('任务列表')).toBeVisible({timeout: 30000});
     await expect(page.getByText('梳理当前工作流状态')).toBeVisible({timeout: 30000});
