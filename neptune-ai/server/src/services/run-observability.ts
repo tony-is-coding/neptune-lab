@@ -49,6 +49,7 @@ export class RunObservabilityService {
 
         const inputTokens = run.inputTokens ?? 0;
         const outputTokens = run.outputTokens ?? 0;
+        const costCents = run.costCents ?? 0;
 
         return {
             tenantId,
@@ -64,6 +65,7 @@ export class RunObservabilityService {
                 inputTokens,
                 outputTokens,
                 totalTokens: inputTokens + outputTokens,
+                costCents,
             },
             factCounts: {
                 events: eventCount,

@@ -14,6 +14,8 @@ export interface RunDto {
   model: string | null;
   inputTokens: number;
   outputTokens: number;
+  /** Run 级成本（分）；在 run.complete 时基于 input/output token + 模型定价计算 */
+  costCents: number;
   startedAt: IsoDateString;
   completedAt: IsoDateString | null;
   retryOfRunId?: string | null;
@@ -180,6 +182,8 @@ export interface RunObservabilityDto {
     inputTokens: number;
     outputTokens: number;
     totalTokens: number;
+    /** Run 级成本（分），按 inputTokens/outputTokens 与模型定价计算 */
+    costCents: number;
   };
   factCounts: {
     events: number;

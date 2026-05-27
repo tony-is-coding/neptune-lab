@@ -85,6 +85,13 @@
       "when": 1779449176946,
       "tag": "0011_sleepy_photon",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1779862246498,
+      "tag": "0012_optimal_bastion",
+      "breakpoints": true
     }
   ]
 }
