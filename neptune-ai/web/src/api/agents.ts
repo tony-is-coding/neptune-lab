@@ -193,46 +193,5 @@ export async function deleteAgentDocument(id: string, docId: string): Promise<vo
   if (!res.ok) throw new Error(`deleteAgentDocument failed: ${res.status}`)
 }
 
-// === Skills API ===
-
-export interface Skill {
-  id: string
-  tenantId: string
-  name: string
-  description: string | null
-  content: string | null
-  status: string
-  createdAt: string
-  updatedAt: string
-}
-
-/** 获取当前租户的 Skills 列表 */
-export async function listSkills(): Promise<Skill[]> {
-  const res = await fetch(`${API_BASE}/skills`, {
-    headers: getAuthHeaders(),
-  })
-  if (res.status === 401) { handleUnauthorized(res); throw new Error('Unauthorized'); }
-  if (!res.ok) throw new Error(`listSkills failed: ${res.status}`)
-  const json = await res.json()
-  return json.data ?? json
-}
-
-/** 分配 Skill 给 Agent */
-export async function assignSkillToAgent(skillId: string, agentId: string): Promise<void> {
-  const res = await fetch(`${API_BASE}/skills/${skillId}/agents/${agentId}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-  })
-  if (res.status === 401) { handleUnauthorized(res); throw new Error('Unauthorized'); }
-  if (!res.ok) throw new Error(`assignSkillToAgent failed: ${res.status}`)
-}
-
-/** 从 Agent 移除 Skill */
-export async function removeSkillFromAgent(skillId: string, agentId: string): Promise<void> {
-  const res = await fetch(`${API_BASE}/skills/${skillId}/agents/${agentId}`, {
-    method: 'DELETE',
-    headers: getAuthHeaders(),
-  })
-  if (res.status === 401) { handleUnauthorized(res); throw new Error('Unauthorized'); }
-  if (!res.ok) throw new Error(`removeSkillFromAgent failed: ${res.status}`)
-}
+// Skills API 在 ./skills.ts 中维护（含分页 / CRUD / 上下架 / Agent 关联）。
+// 历史上这里有重复实现，已在 P1-3 wave 2 整合并删除。

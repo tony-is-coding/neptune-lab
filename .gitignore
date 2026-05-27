@@ -61,3 +61,7 @@ neptune-ai/server/data/
 # Playwright/test artifacts (auto-generated, must not be committed)
 **/test-results/
 **/playwright-report/
+
+# 本地协作临时文件（commit message / PR body 草稿）
+.commit-msg-tmp
+.pr-body-tmp
