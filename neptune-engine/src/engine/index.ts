@@ -250,10 +250,6 @@ export {waitForResult, waitForResultWithTimeout, waitForEventType} from './helpe
 // CoreAppState 类型（v6.0 P0.4: state/CoreAppStateFactory 已删，仅保留类型）
 export type {CoreAppState, EffortValue} from './types/CoreAppState.js'
 
-// Compat 模块（非 Bun 环境兼容）
-export {isEnabled, isEnabledSync, createFeatureChecker} from './compat/index.js'
-export type {FeatureOverride} from './compat/index.js'
-
 // Analytics 模块（SDK 模式零开销 analytics）
 export {NoOpAnalyticsSink, noOpAnalyticsSink, attachNoOpAnalytics} from './analytics/index.js'
 // Stage 1.1: 短命名 Analytics 接口（builtin-tools 注入用）

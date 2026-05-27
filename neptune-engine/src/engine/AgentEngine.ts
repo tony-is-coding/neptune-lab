@@ -42,8 +42,6 @@ import {clearTokenBudgetState} from './session/TokenBudgetManager.js'
 import {getSessionStoragePath} from './session/SessionStoragePath'
 import {existsSync, mkdirSync, readdirSync} from 'fs'
 import {join, resolve} from 'path'
-import type {FeatureOverride} from './compat/featureCompat.js'
-import {isEnabledSync} from './compat/featureCompat.js'
 import type {ISessionStore} from './storage/ISessionStore.js'
 import type {ISessionContentStore} from './storage/ISessionContentStore.js'
 import {InMemorySessionContentStore} from './storage/InMemorySessionContentStore.js'
@@ -139,8 +137,6 @@ export interface AgentEngineConfig {
 		maxConcurrentSessions?: number
 		/** 工作区根目录 */
 		workspaceRoot?: string
-		/** Feature flag 覆盖配置（用于 SDK 模式） */
-		features?: FeatureOverride
 		/** 是否启用 analytics（默认 false，SDK 模式下使用 NoOpAnalytics） */
 		enableAnalytics?: boolean
 		/** 每个 session 最大消息数（默认 10000），超过时截断最早的消息 */

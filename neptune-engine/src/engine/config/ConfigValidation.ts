@@ -11,7 +11,15 @@
  */
 
 import type {PermissionMode} from '../types/permissions.js'
-import type {FeatureOverride} from '../compat/featureCompat.js'
+
+/**
+ * Feature flag 覆盖配置（v6.0 P0.4.C：compat 模块已删除，类型保留为 inline 定义）
+ *
+ * @deprecated 与 EngineConfig 一起将在下一轮清理中移除（substrate 已不再使用 feature flag 系统）
+ */
+export interface FeatureOverride {
+	[flagName: string]: boolean | undefined
+}
 
 /**
  * 引擎初始化配置接口

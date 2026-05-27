@@ -419,15 +419,10 @@ export function normalizeConfig(
 		summary.add('memoryRoot', memoryRootValue, 'agentConfig')
 	}
 
-	// ===== Feature Flag 配置 =====
-	const featuresDiag = new ConfigDiagnostics('features')
-	const featuresValue = engineConfig.options?.features
-	const featuresCount = featuresValue ? Object.keys(featuresValue).length : 0
-	featuresDiag.record('agentConfig', `${featuresCount} features`)
-	featuresDiag.finalize()
-	if (featuresCount > 0) {
-		summary.add('features', `${featuresCount} features`, 'agentConfig')
-	}
+	// ===== Feature Flag 配置（v6.0 P0.4.C：compat 已删，substrate 不再使用 feature flag）=====
+	// 保留字段定义供 cc-bridge 时代外部 caller 使用，substrate 内部 noop。
+	const featuresValue = undefined as Record<string, boolean | string> | undefined
+	const featuresCount = 0
 
 	// ===== 构建统一配置对象 =====
 	const unified: UnifiedConfig = {
@@ -468,8 +463,8 @@ export function normalizeConfig(
 		memoryRoot: engineConfig.memoryRoot,
 		sessionStore: engineConfig.sessionStore,
 
-		// Feature Flag 配置
-		features: engineConfig.options?.features as Record<string, boolean | string> | undefined,
+		// Feature Flag 配置（v6.0 P0.4.C：substrate 已不使用，固定 undefined）
+		features: undefined,
 	}
 
 	// 合并 settings.json 配置（低优先级）
