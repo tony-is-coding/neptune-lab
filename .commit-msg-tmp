@@ -1,0 +1,43 @@
+refactor(server,web): 清理 5 项已废弃死代码 [P1-3]
+
+# 删除项
+
+## 1. AgentChat 孤儿页（web）
+- 删 `pages/AgentChat.tsx` — App.tsx 从未注册 `/agent-chat/:id` 路由，
+  全工程仅自身定义处出现一次的孤儿组件，占位文案 "Chat interface for {id}"
+
+## 2. session.ts + sessions.ts 旧兼容层（server）
+- 删 `services/session.ts` —— 自承"目前没有其他文件导入此模块"
+- 删 `routes/sessions.ts` —— 旧 `/agents/:id/chat` + `/agents/:id/history`，
+  全前端零引用，已被 `routes/threads.ts` 的 thread-scoped 版本完整取代
+- `index.ts` 移除 sessionRoutes 注册和 import
+- 删配套兼容测试：`test/threads-compat.test.ts`、`test/threads-chat.test.ts`
+- `test/api.test.ts` 移除 "SSE 端点格式验证" describe 块（93 行）
+
+## 3. api/threads.ts 死导出（web）
+- 删 `getThread` `updateThread` `deleteThread` `getThreadTasks` 四个函数
+- 全工程零调用方
+- 同步移除未使用的 `ThreadTasksResponse` 类型导入
+
+## 4. api/auth.ts: getMe 死导出（web）
+- 删 `getMe(token)` 函数
+- 登录态由 `/auth/login` 返回直接设置，没人取 `/auth/me`
+
+## 5. PrimarySidebar /settings 链接（web）
+- 删用户菜单"设置"链接 — App.tsx 未注册 `/settings` 路由，点击进 fallback
+- 当前没有 settings 页设计需求，删链接而不是建占位页
+
+# 不删的项（与 subagent 建议不一致）
+
+- 保留 `services/knowledge-service.ts`：本轮未确认 prompt-assembler
+  是否依赖未连通的知识库注入逻辑，需独立判断（留 P1-3 第二波处理）
+- 保留 `api/agents.ts` 与 `api/skills.ts` 重复的 Skill API：
+  AgentConfig.tsx 当前用 `api/agents` 版（无分页 meta），先要把消费方
+  切到 `api/skills` 版才能删——独立两步操作（留 P1-3 第三波处理）
+
+# 验证
+
+- server: 326/326 passed（之前 348 - 22 已删兼容测试 = 326）
+- web e2e: 49/49 passed
+- 净删除 963 行
+- 无 neptune-engine 修改

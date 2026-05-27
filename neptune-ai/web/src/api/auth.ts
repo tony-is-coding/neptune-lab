@@ -41,11 +41,3 @@ export async function register(name: string, email: string, password: string): P
   const data: AuthResponse = await res.json();
   return mapResponse(data);
 }
-
-export async function getMe(token: string): Promise<User> {
-  const res = await fetch(`${API_BASE}/auth/me`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!res.ok) throw new Error(`getMe failed: ${res.status}`);
-  return res.json();
-}
