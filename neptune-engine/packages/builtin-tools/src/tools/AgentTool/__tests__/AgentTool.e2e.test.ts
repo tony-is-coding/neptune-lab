@@ -23,7 +23,7 @@ import {
 	BUILT_IN_AGENT_MANIFESTS,
 	type AgentManifest,
 } from '@neptune/engine'
-import {ScriptedProvider, textTurn, toolUseTurn} from '../../../../../../src/engine/agent-loop/loop/__tests__/scriptedProvider.js'
+import {ScriptedProvider, textTurn, toolUseTurn} from '@neptune/engine/testing'
 import {AgentTool} from '../AgentTool.js'
 import {AGENT_TOOL_NAME} from '../constants.js'
 import type {KernelProtocols, KernelToolContext} from '../../../kernel-context.js'

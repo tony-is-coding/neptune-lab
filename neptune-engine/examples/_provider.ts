@@ -28,7 +28,7 @@ import type {StreamingProviderAdapter} from '../src/engine/agent-loop/provider/S
 import {
 	ScriptedProvider,
 	textTurn,
-} from '../src/engine/agent-loop/loop/__tests__/scriptedProvider.js'
+} from '../src/testing.js'
 
 export interface ResolvedProviderEnv {
 	provider: StreamingProviderAdapter

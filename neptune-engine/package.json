@@ -9,15 +9,13 @@
   },
   "exports": {
     ".": "./src/index.ts",
-    "./bootstrap": "./src/bootstrap.ts",
     "./provider": "./src/provider.ts",
-    "./context": "./src/context.ts",
     "./session": "./src/session.ts",
     "./log": "./src/log.ts",
-    "./hooks": "./src/hooks.ts",
     "./permissions": "./src/permissions.ts",
     "./storage": "./src/storage.ts",
     "./events": "./src/events.ts",
+    "./testing": "./src/testing.ts",
     "./*": "./src/engine/*"
   },
   "dependencies": {

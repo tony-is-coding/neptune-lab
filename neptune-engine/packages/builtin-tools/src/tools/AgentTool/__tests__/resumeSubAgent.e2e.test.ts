@@ -19,7 +19,7 @@ import {InMemoryAgentRegistry} from '../../../../../../src/engine/agent-registry
 import type {AgentManifest} from '../../../../../../src/engine/agent-registry/index.js'
 import type {Tool} from '../../../../../../src/engine/types/tool.js'
 import {createToolUseContext} from '../../../../../../src/engine/agent-loop/dispatcher/ToolUseContext.js'
-import {ScriptedProvider, textTurn} from '../../../../../../src/engine/agent-loop/loop/__tests__/scriptedProvider.js'
+import {ScriptedProvider, textTurn} from '@neptune/engine/testing'
 import {launchSubAgentInBackground} from '../runSubAgentBackground.js'
 import {resumeSubAgent} from '../resumeSubAgent.js'
 

@@ -18,7 +18,7 @@
 import {describe, expect, it} from 'bun:test'
 import {randomUUID} from 'crypto'
 import {InMemorySkillRegistry, type SkillManifest} from '@neptune/engine'
-import {ScriptedProvider, textTurn} from '../../../../../../src/engine/agent-loop/loop/__tests__/scriptedProvider.js'
+import {ScriptedProvider, textTurn} from '@neptune/engine/testing'
 import {SkillTool} from '../SkillTool.js'
 import {SKILL_TOOL_NAME} from '../constants.js'
 import type {KernelProtocols, KernelToolContext} from '../../../kernel-context.js'

@@ -18,7 +18,7 @@ import type {AgentManifest} from '../../../../../../src/engine/agent-registry/in
 import type {Tool, ToolResult} from '../../../../../../src/engine/types/tool.js'
 import type {ToolUseContext as EngineToolUseContext} from '../../../../../../src/engine/agent-loop/dispatcher/ToolUseContext.js'
 import {createToolUseContext} from '../../../../../../src/engine/agent-loop/dispatcher/ToolUseContext.js'
-import {ScriptedProvider, textTurn, toolUseTurn} from '../../../../../../src/engine/agent-loop/loop/__tests__/scriptedProvider.js'
+import {ScriptedProvider, textTurn, toolUseTurn} from '@neptune/engine/testing'
 import {launchSubAgentInBackground} from '../runSubAgentBackground.js'
 import {mkdtemp, rm} from 'node:fs/promises'
 import {tmpdir} from 'node:os'
