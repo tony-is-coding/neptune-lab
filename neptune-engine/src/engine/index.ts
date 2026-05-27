@@ -187,15 +187,6 @@ export {InMemoryChannel} from './channel/index.js'
 // Local artifact store（Stage 4.4 — content-addressable filesystem 实现 ArtifactHook）
 export {LocalArtifactStore} from './artifact/index.js'
 
-// CCRuntime
-export type {CCRuntime} from './cc-runtime/index.js'
-export {
-	DefaultCCRuntime,
-	createDefaultCCRuntime,
-	getGlobalCCRuntime,
-} from './cc-runtime/index.js'
-export {MockCCRuntime, createMockCCRuntime} from './cc-runtime/index.js'
-
 // 事件系统
 export {EventBus} from './events/EventBus.js'
 

@@ -35,14 +35,13 @@ import {loadSkillsToWorkspace, cleanupEngineSkills, type SkillExtension} from '.
 import {parseTranscript, transcriptToMessages} from './session/TranscriptParser'
 import {
 	createDefaultSessionContext,
+	getMemoryPath as getSessionMemoryPath,
 	type SessionContext,
 } from './session/index.js'
 import {clearTokenBudgetState} from './session/TokenBudgetManager.js'
 import {getSessionStoragePath} from './session/SessionStoragePath'
 import {existsSync, mkdirSync, readdirSync} from 'fs'
 import {join, resolve} from 'path'
-import type {CCRuntime} from './cc-runtime/CCRuntime.js'
-import {getGlobalCCRuntime} from './cc-runtime/DefaultCCRuntime.js'
 import type {FeatureOverride} from './compat/featureCompat.js'
 import {isEnabledSync} from './compat/featureCompat.js'
 import type {ISessionStore} from './storage/ISessionStore.js'
@@ -297,8 +296,6 @@ export class AgentEngine {
 	private activeAbortControllers = new Map<string, AbortController>()
 	/** per-session 互斥锁，防止并发 query 导致状态混乱 */
 	private activeQueries = new Map<string, boolean>()
-	/** CC 运行时抽象 */
-	private ccRuntime: CCRuntime
 	/** Session 内容存储（用于暂停恢复上下文） */
 	private sessionContentStore: ISessionContentStore
 	/** Session 持久化存储（可选） */
@@ -308,11 +305,10 @@ export class AgentEngine {
 	/** Metrics Provider */
 	private metricsProvider: IMetricsProvider
 
-	private constructor(sessionManager: SessionManager, eventBus: EventBus, config: AgentEngineConfig, ccRuntime: CCRuntime) {
+	private constructor(sessionManager: SessionManager, eventBus: EventBus, config: AgentEngineConfig) {
 		this.sessionManager = sessionManager
 		this.eventBus = eventBus
 		this.config = config
-		this.ccRuntime = ccRuntime
 		this.sessionContentStore = config.sessionContentStore ?? new InMemorySessionContentStore()
 		this.sessionStore = config.sessionStore
 		this.tracingProvider = config.tracingProvider ?? NoOpTracingProvider.getInstance()
@@ -328,9 +324,8 @@ export class AgentEngine {
 	 * 创建 AgentEngine 实例
 	 *
 	 * @param config 引擎配置
-	 * @param ccRuntime CCRuntime 实例（可选，默认使用全局单例）
 	 */
-	static create(config: AgentEngineConfig, ccRuntime?: CCRuntime): AgentEngine {
+	static create(config: AgentEngineConfig): AgentEngine {
 		// SDK 模式配置校验（不依赖 cwd）
 		const validation = validateAgentEngineConfig(config)
 		if (!validation.valid) {
@@ -365,8 +360,7 @@ export class AgentEngine {
 			maxConcurrentSessions: config.options?.maxConcurrentSessions,
 			store: config.sessionStore,
 		})
-		const runtime = ccRuntime ?? getGlobalCCRuntime()
-		return new AgentEngine(sessionManager, eventBus, config, runtime)
+		return new AgentEngine(sessionManager, eventBus, config)
 	}
 
 	// ========== Session 管理 ==========
@@ -574,36 +568,20 @@ export class AgentEngine {
 		// 创建 session
 		const sessionId = await this.createSession({workspace})
 
-		// 使用 CCRuntime 的 loadTranscriptFromFile 解析 JSONL
-		// 失败时 fallback 到简单解析器（兼容非标准 JSONL 格式）
+		// 解析 transcript jsonl 重建消息历史（v6.0 P0.4.B: ccRuntime 已删，直接用 transcript parser）
 		try {
-			const logOption = await this.ccRuntime.loadTranscriptFromFile(jsonlFile)
-
-			// logOption.messages 是 Claude Code 格式的 Message[]（完整对话链）
-			if (logOption.messages && logOption.messages.length > 0) {
-				const messages = this.truncateMessagesIfNeeded(
-					logOption.messages as unknown as SDKMessage[],
+			const transcript = parseTranscript(jsonlFile)
+			const messages = transcriptToMessages(transcript)
+			if (messages.length > 0) {
+				const truncatedMessages = this.truncateMessagesIfNeeded(
+					messages as unknown as SDKMessage[],
 					sessionId,
 				)
-				this.sessionMessages.set(sessionId, messages)
+				this.sessionMessages.set(sessionId, truncatedMessages)
 			}
 		} catch (error) {
-			// Claude Code 解析失败，fallback 到简单解析器
-			LogUtil.debug('CCRuntime TranscriptParser 解析失败，尝试简单解析器', {jsonlFile, error: String(error)})
-			try {
-				const transcript = parseTranscript(jsonlFile)
-				const messages = transcriptToMessages(transcript)
-				if (messages.length > 0) {
-					const truncatedMessages = this.truncateMessagesIfNeeded(
-						messages as unknown as SDKMessage[],
-						sessionId,
-					)
-					this.sessionMessages.set(sessionId, truncatedMessages)
-				}
-			} catch (fallbackError) {
-				// 两种解析都失败，降级为空历史
-				LogUtil.warn('所有 TranscriptParser 解析均失败，使用空历史', {jsonlFile, error: String(fallbackError)})
-			}
+			// transcript 解析失败降级为空历史（不阻塞 session 创建）
+			LogUtil.warn('TranscriptParser 解析失败，使用空历史', {jsonlFile, error: String(error)})
 		}
 
 		return sessionId
@@ -837,7 +815,7 @@ export class AgentEngine {
 	 * 注意：此方法必须在 SessionContext 上下文中调用（即在 query() 执行期间）
 	 */
 	getMemoryPath(): string | undefined {
-		return this.ccRuntime.getMemoryPath()
+		return getSessionMemoryPath()
 	}
 
 	// ========== 生命周期 ==========
