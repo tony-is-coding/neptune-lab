@@ -620,7 +620,7 @@ export class ThreadManager {
             tracingProcessor?.end(usage ? {modelUsage: usage.modelUsage} : undefined, durationMs);
 
             if (usage?.modelUsage) {
-                await this.recordBillingUsage(thread, usage, ctx);
+                await this.recordBillingUsage(thread, usage, {...ctx, runId});
             }
 
             if (runId) {
@@ -930,12 +930,13 @@ export class ThreadManager {
     private async recordBillingUsage(
         thread: Thread,
         usage: QueryUsageResult,
-        ctx: {threadId: string; tenantId: string; agentId: string | null; requestId?: string},
+        ctx: {threadId: string; tenantId: string; agentId: string | null; requestId?: string; runId?: string | null},
     ): Promise<void> {
         try {
             for (const [model, modelUsage] of Object.entries(usage.modelUsage)) {
                 await costAggregator.recordUsage(thread.tenantId, thread.id, thread.userId, {
                     model,
+                    runId: ctx.runId ?? null,
                     inputTokens: modelUsage.inputTokens + modelUsage.cacheReadInputTokens + modelUsage.cacheCreationInputTokens,
                     outputTokens: modelUsage.outputTokens,
                 });

@@ -6,6 +6,7 @@ import {artifactEvidenceService} from './artifact-evidence';
 import {policyDecisionService} from './policy-decision';
 import {humanReviewService} from './human-review';
 import {runObservabilityService} from './run-observability';
+import {costAggregator} from './cost';
 import type {RunDetailDto, RunDto, RunListResponse, RunStatus} from '@shared/neptune-ai';
 
 export interface RunListFilters {
@@ -185,12 +186,23 @@ export class RunService {
         outputTokens?: number;
         metadata?: Record<string, unknown>;
     }): Promise<Run> {
+        const inputTokens = params.inputTokens ?? 0;
+        const outputTokens = params.outputTokens ?? 0;
+        // Run 级成本归因：用 costAggregator 同一公式计算，让 runs.costCents
+        // 与 billing_records.costCents 在同一 Run 上保持口径一致。
+        const costCents = costAggregator.calculateCost({
+            inputTokens,
+            outputTokens,
+            model: params.model,
+        });
+
         const [run] = await db.update(runs)
             .set({
                 status: 'completed',
                 model: params.model,
-                inputTokens: params.inputTokens ?? 0,
-                outputTokens: params.outputTokens ?? 0,
+                inputTokens,
+                outputTokens,
+                costCents,
                 metadata: params.metadata ?? {},
                 completedAt: new Date(),
             })
@@ -206,8 +218,9 @@ export class RunService {
             resourceId: params.runId,
             metadata: {
                 model: params.model,
-                inputTokens: params.inputTokens ?? 0,
-                outputTokens: params.outputTokens ?? 0,
+                inputTokens,
+                outputTokens,
+                costCents,
             },
         });
 
@@ -314,6 +327,7 @@ function toRunDto(run: Run): RunDto {
         model: run.model ?? null,
         inputTokens: run.inputTokens ?? 0,
         outputTokens: run.outputTokens ?? 0,
+        costCents: run.costCents ?? 0,
         startedAt: toIsoString(run.startedAt) ?? new Date(0).toISOString(),
         completedAt: toIsoString(run.completedAt),
         retryOfRunId,
