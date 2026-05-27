@@ -132,14 +132,6 @@ export function PrimarySidebar() {
                 </div>
               </div>
               <div className="p-1">
-                <Link
-                  to="/settings"
-                  onClick={() => setIsUserMenuOpen(false)}
-                  className="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[13px] text-charcoal hover:bg-surface-container-high transition-colors"
-                >
-                  <span className="material-symbols-outlined text-[18px]">settings</span>
-                  <span>设置</span>
-                </Link>
                 <button
                   onClick={handleLogout}
                   className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[13px] text-error hover:bg-surface-container-high transition-colors"
