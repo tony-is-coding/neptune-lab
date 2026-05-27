@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import { useResizableSidebar } from '../hooks/useResizableSidebar';
-import { listAgents, getAgent, updateAgent, deleteAgent, uploadAgentDocument, deleteAgentDocument, getAgentStats, listAgentDocuments, listSkills, assignSkillToAgent, removeSkillFromAgent, type AgentStats, type Skill } from '../api/agents';
+import { listAgents, getAgent, updateAgent, deleteAgent, uploadAgentDocument, deleteAgentDocument, getAgentStats, listAgentDocuments, type AgentStats } from '../api/agents';
+import { listSkills, assignSkillToAgent, removeSkillFromAgent, type Skill } from '../api/skills';
 import { listThreads, createThread } from '../api/threads';
 import type { AgentTemplate } from '../types/chat';
 
@@ -359,8 +360,8 @@ export function AgentConfig() {
     setShowSkillModal(true);
     setSkillsLoading(true);
     try {
-      const skills = await listSkills();
-      setAllSkills(skills);
+      const res = await listSkills();
+      setAllSkills(res.data);
     } catch (err) {
       console.error('加载技能目录失败:', err);
       setAllSkills([]);
