@@ -133,6 +133,7 @@ describe('RightSidebar', () => {
       model: 'neptune-controlled-model',
       inputTokens: 12,
       outputTokens: 34,
+      costCents: 6,
       startedAt: '2026-05-22T10:00:00.000Z',
       completedAt: '2026-05-22T10:01:00.000Z',
       retryOfRunId: null,

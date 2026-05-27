@@ -186,6 +186,8 @@ export const billingRecords = pgTable('billing_records', {
     id: bigserial('id', {mode: 'number'}).primaryKey(),
     tenantId: uuid('tenant_id').notNull().references(() => tenants.id),
     sessionId: text('session_id'), // Session ID（text 类型，与 sessions.id 一致）
+    /** 关联的受控运行（Run）；老数据可能为 null，新写入应当带上以便 Run 级成本归因 */
+    runId: uuid('run_id').references(() => runs.id),
     userId: uuid('user_id').references(() => users.id),
     inputTokens: integer('input_tokens').notNull(),
     outputTokens: integer('output_tokens').notNull(),
@@ -195,6 +197,7 @@ export const billingRecords = pgTable('billing_records', {
 }, (table) => ({
     tenantIdx: index('billing_records_tenant_id_idx').on(table.tenantId),
     sessionIdx: index('billing_records_session_id_idx').on(table.sessionId),
+    runIdx: index('billing_records_run_id_idx').on(table.runId),
 }));
 
 /**
@@ -213,6 +216,9 @@ export const runs = pgTable('runs', {
     model: text('model'),
     inputTokens: integer('input_tokens').default(0),
     outputTokens: integer('output_tokens').default(0),
+    /** Run 级成本归因（分）。从 inputTokens/outputTokens + 当前模型定价计算，
+     *  在 runs 进入 completed 终态时由 thread-manager 写入。 */
+    costCents: integer('cost_cents').default(0),
     error: jsonb('error').$type<Record<string, unknown>>(),
     metadata: jsonb('metadata').$type<Record<string, unknown>>().default({}),
     startedAt: timestamp('started_at').defaultNow(),

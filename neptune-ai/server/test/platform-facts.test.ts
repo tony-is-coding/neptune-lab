@@ -381,6 +381,10 @@ describe('AgentOps platform facts', () => {
             ));
         expect(runRow).toBeTruthy();
 
+        // 设计原则（阶段二 P0-A）：PolicyDecision 只记录治理事实（deny / review_required），
+        // 不记录普通通过的 allow 调用，避免事实表噪声爆炸。
+        // 在 ControlledEngine 测试路径下，permission-delegate 不参与，
+        // 所以这次受控运行不会产生任何 PolicyDecision。
         const decisionRows = await db
             .select()
             .from(policyDecisions)
@@ -388,32 +392,73 @@ describe('AgentOps platform facts', () => {
                 eq(policyDecisions.tenantId, tenantId),
                 eq(policyDecisions.runId, runRow.id),
             ));
-        expect(decisionRows.map(row => row.policyType)).toContain('model');
-        expect(decisionRows.map(row => row.policyType)).toContain('tool');
-        expect(decisionRows.every(row => row.decision === 'allow')).toBe(true);
+        expect(decisionRows).toHaveLength(0);
 
+        // 治理台 API 应当也能正确返回空结果（不报错）。
         const decisionsRes = await app.inject({
             method: 'GET',
-            url: `/api/v1/platform-facts/policy-decisions?runId=${runRow.id}&decision=allow&limit=50`,
+            url: `/api/v1/platform-facts/policy-decisions?runId=${runRow.id}&limit=50`,
             headers: {authorization: `Bearer ${token}`},
         });
         expect(decisionsRes.statusCode).toBe(200);
         const decisionsBody = decisionsRes.json();
-        expect(decisionsBody.data.length).toBeGreaterThanOrEqual(2);
-        expect(decisionsBody.data[0]).toMatchObject({
+        expect(decisionsBody.data).toHaveLength(0);
+        expect(decisionsBody.meta.count).toBe(0);
+
+        // 直接通过 service 注入一条 deny 决策，验证查询接口能召回。
+        const {policyDecisionService} = await import('../src/services/policy-decision.js');
+        await policyDecisionService.recordDeny({
             tenantId,
             runId: runRow.id,
-            requestId: expect.any(String),
-            policyType: expect.any(String),
-            subjectType: expect.any(String),
-            subjectId: expect.any(String),
-            decision: 'allow',
-            reason: expect.any(String),
+            requestId: runRow.requestId,
+            policyType: 'tool',
+            subjectType: 'tool',
+            subjectId: 'TestDeniedTool',
+            reason: '测试 deny 决策',
+            details: {rule: 'test_rule'},
+        });
+
+        const denyRes = await app.inject({
+            method: 'GET',
+            url: `/api/v1/platform-facts/policy-decisions?runId=${runRow.id}&decision=deny&limit=50`,
+            headers: {authorization: `Bearer ${token}`},
+        });
+        expect(denyRes.statusCode).toBe(200);
+        const denyBody = denyRes.json();
+        expect(denyBody.data).toHaveLength(1);
+        expect(denyBody.data[0]).toMatchObject({
+            tenantId,
+            runId: runRow.id,
+            policyType: 'tool',
+            subjectType: 'tool',
+            subjectId: 'TestDeniedTool',
+            decision: 'deny',
+            reason: '测试 deny 决策',
             detailsSummary: expect.any(Object),
             createdAt: expect.any(String),
         });
-        expect(JSON.stringify(decisionsBody.data)).not.toContain('secret');
-        expect(JSON.stringify(decisionsBody.data)).not.toContain('credential');
+        expect(JSON.stringify(denyBody.data)).not.toContain('secret');
+        expect(JSON.stringify(denyBody.data)).not.toContain('credential');
+
+        // PolicyDecision SSE 桥：当决策关联到 runId 时，policy-decision 服务必须
+        // 同步写一条 run_events，让治理台前端的 SSE 流实时看到决策事件。
+        const policyEvents = await db
+            .select()
+            .from(runEvents)
+            .where(and(
+                eq(runEvents.tenantId, tenantId),
+                eq(runEvents.runId, runRow.id),
+                eq(runEvents.eventType, 'policy.decision.recorded'),
+            ));
+        expect(policyEvents).toHaveLength(1);
+        expect(policyEvents[0].payloadSummary).toMatchObject({
+            policyDecisionId: denyBody.data[0].id,
+            policyType: 'tool',
+            subjectType: 'tool',
+            subjectId: 'TestDeniedTool',
+            decision: 'deny',
+            reason: '测试 deny 决策',
+        });
     });
 
     test('human reviews can be requested, listed, approved, audited, and protected by tenant', async () => {

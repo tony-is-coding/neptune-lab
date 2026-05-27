@@ -24,7 +24,6 @@ import {authRoutes} from './routes/auth';
 import {tenantRoutes} from './routes/tenants';
 import {userRoutes} from './routes/users';
 import {agentRoutes} from './routes/agents';
-import {sessionRoutes} from './routes/sessions';
 import {threadRoutes} from './routes/threads';
 import {billingRoutes} from './routes/billing';
 import {skillRoutes} from './routes/skills';
@@ -173,11 +172,8 @@ async function createApp() {
         // Agent 模板路由
         await app.register(agentRoutes, {prefix: '/agents'});
 
-        // Thread CRUD + Chat 路由（必须在 sessionRoutes 之前注册，避免路径冲突）
+        // Thread CRUD + Chat 路由
         await app.register(threadRoutes, {prefix: '/agents'});
-
-        // Agent Chat 路由（旧接口兼容）
-        await app.register(sessionRoutes, {prefix: '/agents'});
 
         // 计费路由
         await app.register(billingRoutes, {prefix: '/tenants'});

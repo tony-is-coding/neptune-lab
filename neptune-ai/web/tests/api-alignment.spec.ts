@@ -14,7 +14,7 @@ test.describe('API 对齐诊断', () => {
     const diag = attachDiagnostics(page);
 
     await page.goto('/skills', { waitUntil: 'domcontentloaded' });
-    await expect(page.locator('body')).toContainText(/Skills|No skills|Search skills/i);
+    await expect(page.locator('body')).toContainText(/技能目录|我的技能|暂无技能/);
 
     // 收集所有 API 请求
     const apiRequests = diag.requests.filter(r => r.includes('/api/'));
@@ -96,7 +96,7 @@ test.describe('API 对齐诊断', () => {
     const diag = attachDiagnostics(page);
 
     await page.goto('/agents', { waitUntil: 'domcontentloaded' });
-    await expect(page.locator('body')).toContainText(/All Agents|Create Agent/i);
+    await expect(page.locator('body')).toContainText(/智能体模板|全部智能体|创建智能体/);
 
     const apiRequests = diag.requests.filter(r => r.includes('/api/'));
 

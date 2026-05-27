@@ -8,7 +8,6 @@ import type {
   ReplyToQuestionRequest,
   ThreadDto as Thread,
   ThreadHistoryResponse,
-  ThreadTasksResponse,
   ThreadRunListResponse,
 } from '@shared/neptune-ai'
 import { API_BASE, getAuthHeaders, handleUnauthorized, readApiErrorEnvelope } from './client'
@@ -55,60 +54,6 @@ export async function createThread(
   return res.json()
 }
 
-/** 获取 Thread 详情 */
-export async function getThread(
-  agentId: string,
-  threadId: string,
-): Promise<Thread> {
-  const res = await fetch(
-    `${API_BASE}/agents/${agentId}/threads/${threadId}`,
-    {
-      headers: getAuthHeaders(),
-    },
-  )
-  if (res.status === 401) { handleUnauthorized(res); throw new Error('Unauthorized'); }
-  if (!res.ok) throw new Error(`getThread failed: ${res.status}`)
-  return res.json()
-}
-
-/** 更新 Thread（标题、状态） */
-export async function updateThread(
-  agentId: string,
-  threadId: string,
-  data: {
-    title?: string
-    status?: string
-  },
-): Promise<Thread> {
-  const res = await fetch(
-    `${API_BASE}/agents/${agentId}/threads/${threadId}`,
-    {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-      body: JSON.stringify(data),
-    },
-  )
-  if (res.status === 401) { handleUnauthorized(res); throw new Error('Unauthorized'); }
-  if (!res.ok) throw new Error(`updateThread failed: ${res.status}`)
-  return res.json()
-}
-
-/** 删除 Thread */
-export async function deleteThread(
-  agentId: string,
-  threadId: string,
-): Promise<void> {
-  const res = await fetch(
-    `${API_BASE}/agents/${agentId}/threads/${threadId}`,
-    {
-      method: 'DELETE',
-      headers: getAuthHeaders(),
-    },
-  )
-  if (res.status === 401) { handleUnauthorized(res); throw new Error('Unauthorized'); }
-  if (!res.ok) throw new Error(`deleteThread failed: ${res.status}`)
-}
-
 /** 获取 Thread 对话历史 */
 export async function getThreadHistory(
   agentId: string,
@@ -122,20 +67,6 @@ export async function getThreadHistory(
   )
   if (res.status === 401) { handleUnauthorized(res); throw new Error('Unauthorized'); }
   if (!res.ok) throw new Error(`getThreadHistory failed: ${res.status}`)
-  return res.json()
-}
-
-/** 获取 Thread 的任务列表 */
-export async function getThreadTasks(
-  agentId: string,
-  threadId: string,
-): Promise<ThreadTasksResponse> {
-  const res = await fetch(
-    `${API_BASE}/agents/${agentId}/threads/${threadId}/tasks`,
-    { headers: getAuthHeaders() },
-  )
-  if (res.status === 401) { handleUnauthorized(res); throw new Error('Unauthorized'); }
-  if (!res.ok) throw new Error(`getThreadTasks failed: ${res.status}`)
   return res.json()
 }
 

@@ -33,7 +33,6 @@ import {costAggregator} from './cost.js';
 import {agentVersionService} from './agent-version.js';
 import {runService} from './run.js';
 import {runFactService} from './run-facts.js';
-import {policyDecisionService} from './policy-decision.js';
 import {artifactEvidenceService} from './artifact-evidence.js';
 import {runAdmissionService} from './run-admission.js';
 import type {ChatRequestContext} from '@shared/neptune-ai';
@@ -94,6 +93,15 @@ export interface EngineFactory {
         tools: string[];
         mcpServers: Array<{ name: string; url: string }>;
         tenantId: string;
+        /**
+         * 治理上下文：让 permission-delegate 在 deny 工具/MCP/路径时
+         * 能够写入 PolicyDecision 并关联到 Run。
+         * 由 dispatch 在 Run 启动后传入。
+         */
+        governance?: {
+            runId?: string | null;
+            requestId?: string;
+        };
     }): Promise<{
         engine: QueryableEngine;
         sdkSessionId: string;
@@ -454,23 +462,11 @@ export class ThreadManager {
                 },
             });
 
+            // 注意：模型策略 PolicyDecision 不在此处写入。
+            // 设计原则：PolicyDecision 只记录治理事实（deny / review_required），
+            // 不记录"通过的常规调用"——否则会产生大量噪声。
+            // 当出现"客户禁用某模型"等真实模型治理决策时再写。
             const modelConfig = template.modelConfig as {provider?: string; model?: string} | null;
-            await policyDecisionService.record({
-                tenantId: thread.tenantId,
-                runId,
-                requestId: requestContext?.requestId ?? run.requestId,
-                policyType: 'model',
-                subjectType: 'model',
-                subjectId: modelConfig?.model || 'unknown',
-                decision: 'allow',
-                reason: '模型策略预检通过',
-                details: {
-                    provider: modelConfig?.provider,
-                    model: modelConfig?.model,
-                    agentId,
-                    agentVersionId: agentVersion.id,
-                },
-            });
 
             // 步骤 2：准备 Agent 配置（结构化数据，不做字符串拼接）
             // - identity: 替换 CC 身份前缀
@@ -528,6 +524,10 @@ export class ThreadManager {
                 tools: (template.tools as string[]) || [],
                 mcpServers,
                 tenantId: thread.tenantId,
+                governance: {
+                    runId,
+                    requestId: requestContext?.requestId ?? run.requestId,
+                },
             });
 
             engine = result.engine;
@@ -620,7 +620,7 @@ export class ThreadManager {
             tracingProcessor?.end(usage ? {modelUsage: usage.modelUsage} : undefined, durationMs);
 
             if (usage?.modelUsage) {
-                await this.recordBillingUsage(thread, usage, ctx);
+                await this.recordBillingUsage(thread, usage, {...ctx, runId});
             }
 
             if (runId) {
@@ -743,26 +743,9 @@ export class ThreadManager {
                 });
             });
 
-            await policyDecisionService.record({
-                tenantId: params.tenantId,
-                runId: params.runId,
-                requestId: params.requestId,
-                policyType: 'tool',
-                subjectType: 'tool',
-                subjectId: toolName,
-                decision: 'allow',
-                reason: '工具调用策略预检通过',
-                details: {
-                    toolUseId,
-                    inputKeys: Object.keys(input),
-                },
-            }).catch(error => {
-                log.warn('Tool policy decision record failed', {
-                    runId: params.runId,
-                    toolUseId,
-                    detail: (error as Error).message,
-                });
-            });
+            // 注意：工具调用 PolicyDecision 不在此处写入。
+            // 工具放行的 deny 决策由 permission-delegate.onToolAccess 在 Engine 进程内回调时写入；
+            // 此处看到的 tool_use 事件已经是被允许执行的工具，无需再写一条 allow（噪声）。
 
             await runFactService.recordEvent({
                 tenantId: params.tenantId,
@@ -947,12 +930,13 @@ export class ThreadManager {
     private async recordBillingUsage(
         thread: Thread,
         usage: QueryUsageResult,
-        ctx: {threadId: string; tenantId: string; agentId: string | null; requestId?: string},
+        ctx: {threadId: string; tenantId: string; agentId: string | null; requestId?: string; runId?: string | null},
     ): Promise<void> {
         try {
             for (const [model, modelUsage] of Object.entries(usage.modelUsage)) {
                 await costAggregator.recordUsage(thread.tenantId, thread.id, thread.userId, {
                     model,
+                    runId: ctx.runId ?? null,
                     inputTokens: modelUsage.inputTokens + modelUsage.cacheReadInputTokens + modelUsage.cacheCreationInputTokens,
                     outputTokens: modelUsage.outputTokens,
                 });

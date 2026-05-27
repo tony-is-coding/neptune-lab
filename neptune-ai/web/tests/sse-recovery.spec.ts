@@ -1,19 +1,9 @@
 import {test, expect} from '@playwright/test';
-import {API_URL, loginViaApi} from './helpers';
-
-async function getAuthHeaders(page: import('@playwright/test').Page) {
-  return page.evaluate(() => {
-    const stored = JSON.parse(localStorage.getItem('neptune-auth') || '{}');
-    return {Authorization: `Bearer ${stored?.state?.token || ''}`};
-  });
-}
+import {API_URL, authHeaders, ensureE2EAgent, loginViaApi} from './helpers';
 
 async function prepareThread(page: import('@playwright/test').Page, title: string) {
-  const headers = await getAuthHeaders(page);
-  const agentsRes = await page.request.get(`${API_URL}/agents`, {headers});
-  expect(agentsRes.ok()).toBeTruthy();
-  const agents = await agentsRes.json();
-  const agent = agents.data.find((item: {name: string}) => item.name === 'E2E Assistant') || agents.data[0];
+  const headers = await authHeaders(page);
+  const agent = await ensureE2EAgent(page);
   const threadRes = await page.request.post(`${API_URL}/agents/${agent.id}/threads`, {
     headers,
     data: {title},
@@ -38,7 +28,7 @@ test.describe('SSE recovery', () => {
       }).catch(() => {});
     });
 
-    await page.goto(`/collaborate/${agent.id}`, {waitUntil: 'domcontentloaded'});
+    await page.goto(`/collaborate/${agent.id}?threadId=${thread.id}`, {waitUntil: 'domcontentloaded'});
 
     const textarea = page.locator('textarea').last();
     await textarea.fill(`slow stream ${Date.now()}`);
@@ -53,7 +43,7 @@ test.describe('SSE recovery', () => {
 
   test('shows recovery messages for 401, 409 running, and 404 missing thread', async ({page}) => {
     const {agent, thread, headers} = await prepareThread(page, `SSE errors ${Date.now()}`);
-    await page.goto(`/collaborate/${agent.id}`, {waitUntil: 'domcontentloaded'});
+    await page.goto(`/collaborate/${agent.id}?threadId=${thread.id}`, {waitUntil: 'domcontentloaded'});
 
     await page.route(`**/api/v1/agents/${agent.id}/threads/${thread.id}/chat`, async route => {
       await route.fulfill({
@@ -116,7 +106,7 @@ test.describe('SSE recovery', () => {
       });
     });
 
-    await page.goto(`/collaborate/${agent.id}`, {waitUntil: 'domcontentloaded'});
+    await page.goto(`/collaborate/${agent.id}?threadId=${thread.id}`, {waitUntil: 'domcontentloaded'});
     await expect(page.locator('textarea').last()).toBeVisible({timeout: 15000});
 
     const textarea = page.locator('textarea').last();
@@ -154,7 +144,7 @@ test.describe('SSE recovery', () => {
       });
     });
 
-    await page.goto(`/collaborate/${agent.id}`, {waitUntil: 'domcontentloaded'});
+    await page.goto(`/collaborate/${agent.id}?threadId=${thread.id}`, {waitUntil: 'domcontentloaded'});
     await expect(page.locator('textarea').last()).toBeVisible({timeout: 15000});
 
     const textarea = page.locator('textarea').last();

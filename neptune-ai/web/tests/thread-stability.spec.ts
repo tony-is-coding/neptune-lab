@@ -1,19 +1,9 @@
 import {test, expect} from '@playwright/test';
-import {API_URL, loginViaApi} from './helpers';
-
-async function authHeaders(page: import('@playwright/test').Page) {
-  return page.evaluate(() => {
-    const stored = JSON.parse(localStorage.getItem('neptune-auth') || '{}');
-    return {Authorization: `Bearer ${stored?.state?.token || ''}`};
-  });
-}
+import {API_URL, authHeaders, ensureE2EAgent, loginViaApi} from './helpers';
 
 async function setupAgentAndThread(page: import('@playwright/test').Page, title: string) {
   const headers = await authHeaders(page);
-  const agentsRes = await page.request.get(`${API_URL}/agents`, {headers});
-  expect(agentsRes.ok()).toBeTruthy();
-  const agents = await agentsRes.json();
-  const agent = agents.data.find((item: {name: string}) => item.name === 'E2E Assistant') || agents.data[0];
+  const agent = await ensureE2EAgent(page);
   const threadRes = await page.request.post(`${API_URL}/agents/${agent.id}/threads`, {
     headers,
     data: {title},

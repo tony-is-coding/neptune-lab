@@ -36,6 +36,10 @@ export class CostAggregator {
 
     /**
      * 记录一次查询的 token 用量
+     *
+     * runId（可选）让 billing_records 能按 Run 反查，是 P1-2 Run 级成本归因的写入面。
+     * 老路径调用方未传 runId 时仍可工作（向后兼容），但治理台 Run detail 的 cost
+     * 显示需要 runId 关联——thread-manager 的 dispatch 链已经传。
      */
     async recordUsage(
         tenantId: string,
@@ -45,6 +49,7 @@ export class CostAggregator {
             inputTokens: number;
             outputTokens: number;
             model?: string;
+            runId?: string | null;
         },
     ): Promise<void> {
         const costCents = this.calculateCost(usage);
@@ -53,6 +58,7 @@ export class CostAggregator {
         await db.insert(billingRecords).values({
             tenantId,
             sessionId,
+            runId: usage.runId ?? null,
             userId,
             inputTokens: usage.inputTokens,
             outputTokens: usage.outputTokens,
@@ -158,8 +164,10 @@ export class CostAggregator {
     /**
      * 简单成本计算（单位：分）
      * 后续可按模型差异化定价
+     *
+     * 公开为公共方法，便于 runService.complete 在写入 runs.costCents 时复用同一公式。
      */
-    private calculateCost(usage: {
+    calculateCost(usage: {
         inputTokens: number;
         outputTokens: number;
         model?: string;

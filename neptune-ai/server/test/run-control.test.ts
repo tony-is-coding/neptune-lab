@@ -110,6 +110,19 @@ describe('RunControl API', () => {
             startedAt: expect.any(String),
             completedAt: expect.any(String),
         });
+        // Run 级成本归因（P1-2）：
+        // 1. runs.costCents 在 complete 时基于 inputTokens/outputTokens + 模型定价计算
+        // 2. billing_records.runId 也指向该 Run，确保按 Run 反查 cost 闭环
+        expect(typeof created.costCents).toBe('number');
+        expect(created.costCents).toBeGreaterThanOrEqual(0);
+        const billingRowsForRun = await db.select()
+            .from(billingRecords)
+            .where(and(eq(billingRecords.tenantId, tenantId), eq(billingRecords.runId, createdRunId)));
+        expect(billingRowsForRun.length).toBeGreaterThan(0);
+        billingRowsForRun.forEach(row => {
+            expect(row.runId).toBe(createdRunId);
+            expect(typeof row.costCents).toBe('number');
+        });
 
         const detailRes = await app.inject({
             method: 'GET',
@@ -155,7 +168,8 @@ describe('RunControl API', () => {
             evidenceType: 'generated_extract',
             sourceSystem: 'runtime_tool',
         });
-        expect(detailBody.policyDecisions.data.map((decision: {policyType: string}) => decision.policyType)).toEqual(expect.arrayContaining(['model', 'tool']));
+        // PolicyDecision 仅记录治理性决策（deny / review_required），成功运行不写 allow 占位。
+        expect(detailBody.policyDecisions.data).toEqual([]);
         expect(detailBody.auditEvents.data.map((event: {action: string}) => event.action)).toEqual(expect.arrayContaining(['run.created', 'run.completed']));
         expect(detailBody.observability.factCounts.artifacts).toBeGreaterThanOrEqual(1);
         expect(detailBody.observability.factCounts.evidenceArtifacts).toBeGreaterThanOrEqual(1);
