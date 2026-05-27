@@ -177,6 +177,44 @@ export {RBACPermissionDelegate} from './permissions/RBACPermissionDelegate.js'
 export {AuditPermissionDelegate} from './permissions/AuditPermissionDelegate.js'
 export type {RolePermissionMap, ToolPermissionRule} from './permissions/RBACPermissionDelegate.js'
 
+// 权限类型（PermissionMode / PermissionRule / 等 — substrate 协议级，从 cc-shim 时代沉淀）
+// 注：PermissionDecision 故意从 permissions/PermissionDecision.js 来（简单枚举），
+//    types/permissions.ts 中的 PermissionDecision<Input> 是 cc 时代复杂泛型，仅 internal 用
+export type {
+	PermissionMode,
+	ExternalPermissionMode,
+	InternalPermissionMode,
+	PermissionBehavior,
+	PermissionRule,
+	PermissionRuleValue,
+	PermissionRuleSource,
+	PermissionUpdate,
+	PermissionUpdateDestination,
+	PermissionAllowDecision,
+	PermissionAskDecision,
+	PermissionDenyDecision,
+	PermissionResult,
+	PermissionDecisionReason,
+	PermissionMetadata,
+	PermissionCommandMetadata,
+	PermissionExplanation,
+	PendingClassifierCheck,
+	ClassifierResult,
+	ClassifierBehavior,
+	ClassifierUsage,
+	YoloClassifierResult,
+	RiskLevel,
+	WorkingDirectorySource,
+	AdditionalWorkingDirectory,
+	ToolPermissionContext,
+	ToolPermissionRulesBySource,
+} from './types/permissions.js'
+export {
+	EXTERNAL_PERMISSION_MODES,
+	INTERNAL_PERMISSION_MODES,
+	PERMISSION_MODES,
+} from './types/permissions.js'
+
 // 通用存储后端
 export type {IBackend} from './storage/IBackend.js'
 export {InMemoryBackend} from './storage/InMemoryBackend.js'

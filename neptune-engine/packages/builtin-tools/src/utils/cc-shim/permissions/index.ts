@@ -29,7 +29,7 @@ export type {
 	PermissionRuleSource,
 	PermissionMode,
 	PendingClassifierCheck,
-} from '@neptune/engine/types/permissions.js'
+} from '@neptune/engine'
 
 // PermissionResult helper（cc 原有于 PermissionResult.ts；纯函数）
 export function getRuleBehaviorDescription(behavior: 'allow' | 'deny' | 'ask'): string {

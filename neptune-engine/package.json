@@ -15,8 +15,7 @@
     "./permissions": "./src/permissions.ts",
     "./storage": "./src/storage.ts",
     "./events": "./src/events.ts",
-    "./testing": "./src/testing.ts",
-    "./*": "./src/engine/*"
+    "./testing": "./src/testing.ts"
   },
   "dependencies": {
     "@neptune/engine-tools": "workspace:*",
