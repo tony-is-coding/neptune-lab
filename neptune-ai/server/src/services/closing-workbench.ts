@@ -724,6 +724,7 @@ export class ClosingWorkbenchService {
                     model: row.model ?? null,
                     inputTokens: row.inputTokens ?? 0,
                     outputTokens: row.outputTokens ?? 0,
+                    costCents: row.costCents ?? 0,
                     startedAt: toIsoString(row.startedAt) ?? new Date(0).toISOString(),
                     completedAt: toIsoString(row.completedAt),
                 })),
