@@ -12,41 +12,13 @@
 // 第一层：核心公共 API（高频使用）
 // ============================================================
 
-// Session 上下文访问器
-export {
-	getSessionId,
-	getIsRemoteMode,
-	getProjectRoot,
-	getOriginalCwd,
-	getCwd,
-	getMemoryPath,
-	getSessionContext,
-	runInSessionContext,
-	runInSessionContextAsync,
-	updateSessionContext,
-	isSessionPersistenceDisabled,
-	getIsNonInteractiveSession,
-	getIsInteractive,
-	getCurrentSessionId,
-	getCurrentCwd,
-	createDefaultSessionContext,
-	type SessionContext,
-	type SessionCronTask,
-} from './session/index.js'
+// (Session 上下文访问器 — v6.0 P0.5.C 已从 public API 隐藏。
+//  这些是 AsyncLocalStorage 包装的内部 accessor，substrate 内部使用。
+//  user 通过 AgentEngine API 操作 session，不需要直接访问 SessionContext。)
 
-// Token Budget
-export {
-	getTokenBudgetState,
-	initTokenBudgetState,
-	getTurnOutputTokens,
-	getCurrentTurnTokenBudget,
-	snapshotOutputTokensForTurn,
-	incrementBudgetContinuationCount,
-	getBudgetContinuationCount,
-	clearTokenBudgetState,
-	tokenBudgetStates,
-	type TokenBudgetState,
-} from './session/index.js'
+// (Token Budget 内部状态管理 — v6.0 P0.5.C 已从 public API 隐藏。
+//  substrate 内部使用，由 AgentEngine 自动管理 session lifecycle。
+//  user 不需要直接操作 token budget 状态。)
 
 // 日志系统
 export {LogUtil} from './log/index.js'
@@ -68,14 +40,10 @@ export type {
 	FileLogStoreOptions,
 } from './log/index.js'
 
-// Config 模块（统一配置系统）
-export type {IConfigProvider, ConfigEntry} from './config/index.js'
-export {ConfigSource} from './config/index.js'
-export {NoOpConfigProvider, noOpConfigProvider} from './config/index.js'
-export type {UnifiedConfig} from './config/index.js'
-export {normalizeConfig} from './config/index.js'
-export {ConfigDiagnostics, ConfigSummary} from './config/index.js'
-export type {ConfigSourceType} from './config/index.js'
+// (Config 模块整删 — v6.0 P0.5.A：config/ 目录的 IConfigProvider / NoOpConfigProvider /
+//  UnifiedConfig / normalizeConfig / ConfigDiagnostics / ConfigSummary / ConfigSourceType /
+//  EngineConfig / validateEngineConfig 全部为 cc CLI 时代遗产，substrate 内 0 真业务 caller，
+//  整目录删除。AgentEngine 的 SDK 模式校验由 validateAgentEngineConfig 自己处理。)
 
 // ============================================================
 // 第二层：AgentEngine 核心 API（SDK 用户）
@@ -101,9 +69,8 @@ export type {EngineEventMap, EngineEventType} from './types/engine-events.js'
 // 第三层：扩展 API
 // ============================================================
 
-// 核心状态管理
-export {EngineState} from './EngineState.js'
-export type {EngineStateData, EngineStateEvent} from './EngineState.js'
+// (EngineState 内部状态聚合 — v6.0 P0.5.C 已从 public API 隐藏。
+//  substrate 内部组装代码，user 不需要直接访问。如需重新暴露，确认有真实业务诉求再加回。)
 
 // Session 存储（engine 只提供 zero-dep 默认；具体后端如 PG/Redis/SQLite 由 product 注入）
 export type {ISessionStore} from './storage/ISessionStore.js'

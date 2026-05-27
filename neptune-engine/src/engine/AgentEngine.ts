@@ -118,8 +118,6 @@ export interface AgentEngineConfig {
 	systemPrompt?: string | (() => Promise<string>)
 	/** Agent 身份覆盖：精确替换 CC 默认身份前缀（"你是谁"） */
 	identityOverride?: string
-	/** CLI 当前工作目录（仅 CLI 模式需要） */
-	cwd?: string
 	/** 扩展配置 */
 	extensions?: {
 		/** 自定义工具列表（使用 ToolExtension 类型） */
@@ -137,8 +135,6 @@ export interface AgentEngineConfig {
 		maxConcurrentSessions?: number
 		/** 工作区根目录 */
 		workspaceRoot?: string
-		/** 是否启用 analytics（默认 false，SDK 模式下使用 NoOpAnalytics） */
-		enableAnalytics?: boolean
 		/** 每个 session 最大消息数（默认 10000），超过时截断最早的消息 */
 		maxMessagesPerSession?: number
 		/** 单次 query 最大 LLM turn 数（防止无限循环，默认无限制） */
@@ -322,7 +318,7 @@ export class AgentEngine {
 	 * @param config 引擎配置
 	 */
 	static create(config: AgentEngineConfig): AgentEngine {
-		// SDK 模式配置校验（不依赖 cwd）
+		// SDK 模式配置校验
 		const validation = validateAgentEngineConfig(config)
 		if (!validation.valid) {
 			const errorMessages = validation.errors.map(e => `${e.path}: ${e.message}`).join('; ')
@@ -330,18 +326,6 @@ export class AgentEngine {
 				EngineErrorCode.CONFIGURATION_ERROR,
 				`Invalid AgentEngine config: ${errorMessages}`,
 			)
-		}
-
-		// CLI 模式配置校验（如果 config 有 cwd 字段，使用 CLI 校验）
-		if (config.cwd) {
-			const {validateEngineConfig} = require('./config/ConfigValidation.js') as typeof import('./config/ConfigValidation.js')
-			const cliValidation = validateEngineConfig(config as any)
-			if (!cliValidation.valid) {
-				throw new EngineError(
-					EngineErrorCode.CONFIGURATION_ERROR,
-					`Invalid engine config: ${cliValidation.errors.join(', ')}`,
-				)
-			}
 		}
 
 		const eventBus = new EventBus()
