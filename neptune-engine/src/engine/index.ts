@@ -211,10 +211,6 @@ export {
 	filterToCoreTools,
 } from './tools/ToolAdapter.js'
 
-// Hook 核心（headless/SDK 模式）
-export {createHookCore, buildBaseHookInput} from './hooks/index.js'
-export type {HookContext, HookResult, HookExecutor} from './hooks/index.js'
-
 // 权限系统（SDK 可编程权限决策）
 export type {PermissionDecision} from './permissions/PermissionDecision.js'
 export type {PermissionDelegate} from './permissions/PermissionDelegate.js'
@@ -260,13 +256,8 @@ export {
 export {collectText, collectTextWithMeta} from './helpers/collectText.js'
 export {waitForResult, waitForResultWithTimeout, waitForEventType} from './helpers/waitForResult.js'
 
-// CoreAppState 类型
+// CoreAppState 类型（v6.0 P0.4: state/CoreAppStateFactory 已删，仅保留类型）
 export type {CoreAppState, EffortValue} from './types/CoreAppState.js'
-export {createDefaultCoreAppState} from './state/CoreAppStateFactory.js'
-
-// Context 模块（上下文卸载机制）
-export type {OffloadStrategy, OffloadResult} from './context/index.js'
-export {DefaultOffloadStrategy} from './context/index.js'
 
 // Compat 模块（非 Bun 环境兼容）
 export {isEnabled, isEnabledSync, createFeatureChecker} from './compat/index.js'
