@@ -250,9 +250,7 @@ export {waitForResult, waitForResultWithTimeout, waitForEventType} from './helpe
 // CoreAppState 类型（v6.0 P0.4: state/CoreAppStateFactory 已删，仅保留类型）
 export type {CoreAppState, EffortValue} from './types/CoreAppState.js'
 
-// Analytics 模块（SDK 模式零开销 analytics）
-export {NoOpAnalyticsSink, noOpAnalyticsSink, attachNoOpAnalytics} from './analytics/index.js'
-// Stage 1.1: 短命名 Analytics 接口（builtin-tools 注入用）
+// Analytics 接口契约（v6.0 P0.4.D：删除 NoOpAnalyticsSink/attachNoOpAnalytics 仪式代码，仅保留 type 契约 + NoOp 默认实现）
 export {NoOpAnalytics, noOpAnalytics, type Analytics} from './analytics/index.js'
 
 // Observability 模块（可观测性：Tracing + Metrics）

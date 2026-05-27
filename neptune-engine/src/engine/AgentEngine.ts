@@ -344,13 +344,6 @@ export class AgentEngine {
 			}
 		}
 
-		// SDK 模式：初始化 NoOpAnalytics（避免 analytics 开销）
-		// 只在没有 cwd（纯 SDK 模式）且没有显式启用 analytics 时使用
-		if (!config.cwd && !config.options?.enableAnalytics) {
-			const {attachNoOpAnalytics} = require('./analytics/index.js') as typeof import('./analytics/index.js')
-			attachNoOpAnalytics()
-		}
-
 		const eventBus = new EventBus()
 		const sessionManager = new SessionManager({
 			maxConcurrentSessions: config.options?.maxConcurrentSessions,
