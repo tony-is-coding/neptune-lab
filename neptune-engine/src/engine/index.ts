@@ -12,41 +12,13 @@
 // 第一层：核心公共 API（高频使用）
 // ============================================================
 
-// Session 上下文访问器
-export {
-	getSessionId,
-	getIsRemoteMode,
-	getProjectRoot,
-	getOriginalCwd,
-	getCwd,
-	getMemoryPath,
-	getSessionContext,
-	runInSessionContext,
-	runInSessionContextAsync,
-	updateSessionContext,
-	isSessionPersistenceDisabled,
-	getIsNonInteractiveSession,
-	getIsInteractive,
-	getCurrentSessionId,
-	getCurrentCwd,
-	createDefaultSessionContext,
-	type SessionContext,
-	type SessionCronTask,
-} from './session/index.js'
+// (Session 上下文访问器 — v6.0 P0.5.C 已从 public API 隐藏。
+//  这些是 AsyncLocalStorage 包装的内部 accessor，substrate 内部使用。
+//  user 通过 AgentEngine API 操作 session，不需要直接访问 SessionContext。)
 
-// Token Budget
-export {
-	getTokenBudgetState,
-	initTokenBudgetState,
-	getTurnOutputTokens,
-	getCurrentTurnTokenBudget,
-	snapshotOutputTokensForTurn,
-	incrementBudgetContinuationCount,
-	getBudgetContinuationCount,
-	clearTokenBudgetState,
-	tokenBudgetStates,
-	type TokenBudgetState,
-} from './session/index.js'
+// (Token Budget 内部状态管理 — v6.0 P0.5.C 已从 public API 隐藏。
+//  substrate 内部使用，由 AgentEngine 自动管理 session lifecycle。
+//  user 不需要直接操作 token budget 状态。)
 
 // 日志系统
 export {LogUtil} from './log/index.js'
@@ -68,22 +40,17 @@ export type {
 	FileLogStoreOptions,
 } from './log/index.js'
 
-// Config 模块（统一配置系统）
-export type {IConfigProvider, ConfigEntry} from './config/index.js'
-export {ConfigSource} from './config/index.js'
-export {NoOpConfigProvider, noOpConfigProvider} from './config/index.js'
-export type {UnifiedConfig} from './config/index.js'
-export {normalizeConfig} from './config/index.js'
-export {ConfigDiagnostics, ConfigSummary} from './config/index.js'
-export type {ConfigSourceType} from './config/index.js'
+// (Config 模块整删 — v6.0 P0.5.A：config/ 目录的 IConfigProvider / NoOpConfigProvider /
+//  UnifiedConfig / normalizeConfig / ConfigDiagnostics / ConfigSummary / ConfigSourceType /
+//  EngineConfig / validateEngineConfig 全部为 cc CLI 时代遗产，substrate 内 0 真业务 caller，
+//  整目录删除。AgentEngine 的 SDK 模式校验由 validateAgentEngineConfig 自己处理。)
 
 // ============================================================
 // 第二层：AgentEngine 核心 API（SDK 用户）
 // ============================================================
 
 export {AgentEngine} from './AgentEngine.js'
-export type {AgentEngineConfig, QueryOptions, EngineStats, ProviderConfig, ProviderType} from './AgentEngine.js'
-export {createHeadlessCCRuntime} from './cc-runtime/DefaultCCRuntime.js'
+export type {AgentEngineConfig, QueryOptions, EngineStats} from './AgentEngine.js'
 export type {
 	SessionStatus,
 	SessionConfig,
@@ -102,24 +69,90 @@ export type {EngineEventMap, EngineEventType} from './types/engine-events.js'
 // 第三层：扩展 API
 // ============================================================
 
-// 核心状态管理
-export {EngineState} from './EngineState.js'
-export type {EngineStateData, EngineStateEvent} from './EngineState.js'
+// (EngineState 内部状态聚合 — v6.0 P0.5.C 已从 public API 隐藏。
+//  substrate 内部组装代码，user 不需要直接访问。如需重新暴露，确认有真实业务诉求再加回。)
 
-// Session 存储
+// Session 存储（engine 只提供 zero-dep 默认；具体后端如 PG/Redis/SQLite 由 product 注入）
 export type {ISessionStore} from './storage/ISessionStore.js'
 export type {Session} from './Session.js'
 export {InMemorySessionStore} from './storage/InMemorySessionStore.js'
-export {SQLiteSessionStore} from './storage/SQLiteSessionStore.js'
+export {FilesystemSessionStore} from './storage/FilesystemSessionStore.js'
 
-// CCRuntime
-export type {CCRuntime} from './cc-runtime/index.js'
+// AgentRegistry（Stage 3.2 — substrate 协议）
+// Stage B1.3 + B3 — getBuiltIns() 协议方法 + 4 baseline manifests
+export type {AgentManifest, AgentRegistry} from './agent-registry/index.js'
 export {
-	DefaultCCRuntime,
-	createDefaultCCRuntime,
-	getGlobalCCRuntime,
-} from './cc-runtime/index.js'
-export {MockCCRuntime, createMockCCRuntime} from './cc-runtime/index.js'
+	InMemoryAgentRegistry,
+	FilesystemAgentRegistry,
+	BUILT_IN_AGENT_MANIFESTS,
+	GENERAL_PURPOSE_AGENT_MANIFEST,
+	EXPLORE_AGENT_MANIFEST,
+	PLAN_AGENT_MANIFEST,
+	VERIFICATION_AGENT_MANIFEST,
+} from './agent-registry/index.js'
+
+// Sandbox（Stage 3.3 — 规则级护栏，secure-by-default）
+export type {
+	SandboxAdapter,
+	SandboxDeny,
+	ExecRequest,
+	ExecResult,
+	ReadFileOptions,
+	ReadFileResult,
+	WriteFileOptions,
+	WriteFileResult,
+	FetchRequest,
+	FetchResult,
+	LocalSandboxConfig,
+} from './sandbox/index.js'
+export {NoOpSandbox, LocalSandbox} from './sandbox/index.js'
+
+// Run + RunStore（Stage 3.4 — stateless 状态外化协议；Stage 4.3 — Checkpoint）
+export type {Run, RunStatus, RunSnapshot, RunStore, Checkpoint} from './run/index.js'
+export {
+	InMemoryRunStore,
+	FileRunStore,
+	rebuildSnapshotFromEvents,
+	rebuildCheckpointFromEvents,
+} from './run/index.js'
+
+// Stage B1.2 — resume 前 messages 清理流水线（cc 等价行为）
+export {
+	filterUnresolvedToolUses,
+	filterOrphanedThinkingOnlyMessages,
+	filterWhitespaceOnlyAssistantMessages,
+	cleanupForResume,
+} from './run/index.js'
+
+// Stage B1.4 — TeammateChannel 协议（agent teams 多 agent 协作）
+// Stage B1.5 — TeammateBackend 协议（spawn 后端接口）
+export type {
+	TeammateChannel,
+	TeammateMessage,
+	TeammateMessageInput,
+	StructuredMessage,
+	TeammateBackend,
+	SpawnTeammateInput,
+	SpawnTeammateResult,
+	TeammateStatus,
+	TeammateInfo,
+} from './teammate/index.js'
+export {
+	InMemoryTeammateChannel,
+	encodeStructuredMessage,
+	decodeStructuredMessage,
+} from './teammate/index.js'
+
+// Audit hash chain（Stage 4.1 — 合规护城河）
+export type {AuditEvent, AuditEventStore, VerifyResult} from './audit/index.js'
+export {GENESIS_HASH, NoopAuditStore, FilesystemAuditStore, canonicalJson, computeHash} from './audit/index.js'
+
+// Channel（Stage 4.2 — 多 agent 通讯协议预留）
+export type {Channel} from './channel/index.js'
+export {InMemoryChannel} from './channel/index.js'
+
+// Local artifact store（Stage 4.4 — content-addressable filesystem 实现 ArtifactHook）
+export {LocalArtifactStore} from './artifact/index.js'
 
 // 事件系统
 export {EventBus} from './events/EventBus.js'
@@ -136,10 +169,6 @@ export {
 	filterToCoreTools,
 } from './tools/ToolAdapter.js'
 
-// Hook 核心（headless/SDK 模式）
-export {createHookCore, buildBaseHookInput} from './hooks/index.js'
-export type {HookContext, HookResult, HookExecutor} from './hooks/index.js'
-
 // 权限系统（SDK 可编程权限决策）
 export type {PermissionDecision} from './permissions/PermissionDecision.js'
 export type {PermissionDelegate} from './permissions/PermissionDelegate.js'
@@ -148,22 +177,52 @@ export {RBACPermissionDelegate} from './permissions/RBACPermissionDelegate.js'
 export {AuditPermissionDelegate} from './permissions/AuditPermissionDelegate.js'
 export type {RolePermissionMap, ToolPermissionRule} from './permissions/RBACPermissionDelegate.js'
 
+// 权限类型（PermissionMode / PermissionRule / 等 — substrate 协议级，从 cc-shim 时代沉淀）
+// 注：PermissionDecision 故意从 permissions/PermissionDecision.js 来（简单枚举），
+//    types/permissions.ts 中的 PermissionDecision<Input> 是 cc 时代复杂泛型，仅 internal 用
+export type {
+	PermissionMode,
+	ExternalPermissionMode,
+	InternalPermissionMode,
+	PermissionBehavior,
+	PermissionRule,
+	PermissionRuleValue,
+	PermissionRuleSource,
+	PermissionUpdate,
+	PermissionUpdateDestination,
+	PermissionAllowDecision,
+	PermissionAskDecision,
+	PermissionDenyDecision,
+	PermissionResult,
+	PermissionDecisionReason,
+	PermissionMetadata,
+	PermissionCommandMetadata,
+	PermissionExplanation,
+	PendingClassifierCheck,
+	ClassifierResult,
+	ClassifierBehavior,
+	ClassifierUsage,
+	YoloClassifierResult,
+	RiskLevel,
+	WorkingDirectorySource,
+	AdditionalWorkingDirectory,
+	ToolPermissionContext,
+	ToolPermissionRulesBySource,
+} from './types/permissions.js'
+export {
+	EXTERNAL_PERMISSION_MODES,
+	INTERNAL_PERMISSION_MODES,
+	PERMISSION_MODES,
+} from './types/permissions.js'
+
 // 通用存储后端
 export type {IBackend} from './storage/IBackend.js'
 export {InMemoryBackend} from './storage/InMemoryBackend.js'
 export {FilesystemBackend} from './storage/FilesystemBackend.js'
 export {CompositeBackend} from './storage/CompositeBackend.js'
 
-// Provider 适配器（多 Provider 支持）
-export type {ProviderAdapter, ProviderQueryParams, ProviderMessage} from './provider/index.js'
-export {ProviderRegistry, getGlobalProviderRegistry} from './provider/index.js'
+// Provider 配置（v6.0 P0.2.C — 旧 provider 双轨删除后仅保留 Anthropic 配置类型）
 export type {AnthropicProviderConfig} from './provider/index.js'
-export type {BedrockProviderConfig} from './provider/index.js'
-export type {VertexProviderConfig} from './provider/index.js'
-export type {FoundryProviderConfig} from './provider/index.js'
-export type {OpenAIProviderConfig} from './provider/index.js'
-export type {GeminiProviderConfig} from './provider/index.js'
-export type {GrokProviderConfig} from './provider/index.js'
 
 // ============================================================
 // 第四层：SDK 便捷 API
@@ -193,20 +252,11 @@ export {
 export {collectText, collectTextWithMeta} from './helpers/collectText.js'
 export {waitForResult, waitForResultWithTimeout, waitForEventType} from './helpers/waitForResult.js'
 
-// CoreAppState 类型
+// CoreAppState 类型（v6.0 P0.4: state/CoreAppStateFactory 已删，仅保留类型）
 export type {CoreAppState, EffortValue} from './types/CoreAppState.js'
-export {createDefaultCoreAppState} from './state/CoreAppStateFactory.js'
 
-// Context 模块（上下文卸载机制）
-export type {OffloadStrategy, OffloadResult} from './context/index.js'
-export {DefaultOffloadStrategy} from './context/index.js'
-
-// Compat 模块（非 Bun 环境兼容）
-export {isEnabled, isEnabledSync, createFeatureChecker} from './compat/index.js'
-export type {FeatureOverride} from './compat/index.js'
-
-// Analytics 模块（SDK 模式零开销 analytics）
-export {NoOpAnalyticsSink, noOpAnalyticsSink, attachNoOpAnalytics} from './analytics/index.js'
+// Analytics 接口契约（v6.0 P0.4.D：删除 NoOpAnalyticsSink/attachNoOpAnalytics 仪式代码，仅保留 type 契约 + NoOp 默认实现）
+export {NoOpAnalytics, noOpAnalytics, type Analytics} from './analytics/index.js'
 
 // Observability 模块（可观测性：Tracing + Metrics）
 export {NoOpTracingProvider} from './observability/index.js'
@@ -223,8 +273,69 @@ export type {
 } from './observability/index.js'
 export {SpanStatus} from './observability/index.js'
 
-// Bridge 模块（ToolExtension 类型）
-export type {ToolExtension, PermissionConfig} from './bridge/OriginalQueryEngineBridge.js'
+// Bridge 模块（ToolExtension / PermissionConfig 类型）
+export type {ToolExtension, PermissionConfig} from './bridge/extensions.js'
+
+// =============================================================================
+// Agent Loop API（v1.0 16 batch — substrate 内部唯一主循环）
+// =============================================================================
+
+export {AgentLoop} from './agent-loop/loop/AgentLoop.js'
+export type {AgentLoopParams} from './agent-loop/loop/AgentLoop.js'
+export type {LoopEvent, LoopResult, GovernanceSnapshot, GovernanceEvent} from './agent-loop/loop/loopEvents.js'
+
+export {createToolUseContext, allowAllCanUseTool} from './agent-loop/dispatcher/ToolUseContext.js'
+export type {
+	ToolUseContext,
+	CanUseToolFn,
+	CanUseToolResult,
+	KernelProtocolBag,
+	CreateToolUseContextOptions,
+} from './agent-loop/dispatcher/ToolUseContext.js'
+export {ToolDispatcher} from './agent-loop/dispatcher/ToolDispatcher.js'
+export type {ToolUpdate, ToolResultBlock, ToolUseBlock} from './agent-loop/dispatcher/ToolDispatcher.js'
+
+export type {
+	StreamingProviderAdapter,
+	StreamingQueryParams,
+} from './agent-loop/provider/StreamingProviderAdapter.js'
+export {AnthropicStreamingProvider} from './agent-loop/provider/AnthropicStreamingProvider.js'
+
+export type {
+	StopReason,
+	UsageSnapshot,
+	CompleteContentBlock,
+	PartialAssistantMessage,
+	ParsedSSEEvent,
+} from './agent-loop/types.js'
+export {EMPTY_USAGE} from './agent-loop/types.js'
+
+// Message types
+export type {
+	Message,
+	AssistantMessage,
+	UserMessage,
+	SystemMessage,
+	AttachmentMessage,
+	ProgressMessage,
+	ContentItem,
+	MessageContent,
+	MessageType,
+	TypedMessageContent,
+} from './types/message.js'
+
+// Tool 类型（让 builtin-tools 用统一定义）
+export type {
+	Tool,
+	Tools,
+	CoreTool,
+	UITool,
+	ToolResult,
+	ToolProgress,
+	ToolProgressData,
+	ToolCallProgress,
+	ToolInputJSONSchema,
+} from './types/tool.js'
 
 // ============================================================
 // 不应导出的内部实现
@@ -232,3 +343,73 @@ export type {ToolExtension, PermissionConfig} from './bridge/OriginalQueryEngine
 // SessionManager / Session / Bridge
 // SessionContextStorage / TokenBudgetManager / TranscriptParser
 // 以上为内部实现，不对外暴露
+
+// =============================================================================
+// Runtime Kernel Protocols (Phase A — see docs/strategy/neptune-engine-runtime-kernel-design.md)
+//
+// Skill / Todo / TaskQueue / ToolRegistry / Memory — per-session protocol
+// surfaces that builtin tools and product hosts both program against.
+// Each module ships a default in-memory implementation; product hosts can
+// substitute persistent or distributed implementations of the same interfaces.
+// =============================================================================
+
+export type {
+	RegisteredSkill,
+	SkillManifest,
+	SkillRegistry,
+	SkillSource,
+} from './skill/index.js'
+export {
+	parseSkillMarkdown,
+	serializeSkillToMarkdown,
+	validateSkillManifest,
+	SkillFormatError,
+	InMemorySkillRegistry,
+} from './skill/index.js'
+
+export type {
+	TodoEvent,
+	TodoItem,
+	TodoState,
+	TodoStatus,
+} from './todo/index.js'
+export {InMemoryTodoState} from './todo/index.js'
+
+export type {
+	AgentRef,
+	Task,
+	TaskEvent,
+	TaskFilter,
+	TaskInput,
+	TaskOutput,
+	TaskPatch,
+	TaskQueue,
+	TaskStatus,
+} from './task-queue/index.js'
+export {InMemoryTaskQueue} from './task-queue/index.js'
+
+export type {
+	ToolFilter,
+	ToolRegistry as KernelToolRegistry,
+	ToolSearchResult,
+} from './tool-registry/index.js'
+export {InMemoryToolRegistry} from './tool-registry/index.js'
+
+export type {
+	MemoryEntry,
+	MemoryEntryInput,
+	MemoryQuery,
+	MemoryRef,
+	MemorySource,
+	MemoryStore,
+} from './memory/index.js'
+export {InMemoryMemoryStore} from './memory/index.js'
+
+// Stage B1.1: AgentScopedMemoryStore（cc agentMemory + agentMemorySnapshot 等价协议）
+export type {
+	AgentMemoryScope,
+	AgentScopedMemoryStore,
+	SnapshotCheckResult,
+	FilesystemAgentScopedMemoryStoreConfig,
+} from './memory/index.js'
+export {FilesystemAgentScopedMemoryStore} from './memory/index.js'

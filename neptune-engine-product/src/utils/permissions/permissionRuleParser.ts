@@ -1,5 +1,5 @@
 import {feature} from 'bun:bundle'
-import {AGENT_TOOL_NAME} from '@neptune/builtin-tools/tools/AgentTool/constants.js'
+import {AGENT_TOOL_NAME} from '@neptune/engine-product/cc-tools/AgentTool/constants.js'
 import {TASK_OUTPUT_TOOL_NAME} from '@neptune/builtin-tools/tools/TaskOutputTool/constants.js'
 import {TASK_STOP_TOOL_NAME} from '@neptune/builtin-tools/tools/TaskStopTool/prompt.js'
 import type {PermissionRuleValue} from './PermissionRule.js'

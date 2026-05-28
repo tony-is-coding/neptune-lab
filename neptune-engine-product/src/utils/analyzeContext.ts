@@ -32,12 +32,12 @@ import {
 import type {
 	AgentDefinition,
 	AgentDefinitionsResult,
-} from '@neptune/builtin-tools/tools/AgentTool/loadAgentsDir.js'
-import {SKILL_TOOL_NAME} from '@neptune/builtin-tools/tools/SkillTool/constants.js'
+} from '@neptune/engine-product/cc-tools/AgentTool/loadAgentsDir.js'
+import {SKILL_TOOL_NAME} from '@neptune/engine-product/cc-tools/SkillTool/constants.js'
 import {
 	getLimitedSkillToolCommands,
 	getSkillToolInfo as getSlashCommandInfo,
-} from '@neptune/builtin-tools/tools/SkillTool/prompt.js'
+} from '@neptune/engine-product/cc-tools/SkillTool/prompt.js'
 import type {
 	AssistantMessage,
 	AttachmentMessage,

@@ -1,20 +1,20 @@
 import {dirname, isAbsolute, sep} from 'path'
-import {logEvent} from 'src/services/analytics/index.js'
-import {diagnosticTracker} from 'src/services/diagnosticTracking.js'
-import {clearDeliveredDiagnosticsForFile} from 'src/services/lsp/LSPDiagnosticRegistry.js'
-import {getLspServerManager} from 'src/services/lsp/manager.js'
-import {notifyVscodeFileUpdated} from 'src/services/mcp/vscodeSdkMcp.js'
-import {checkTeamMemSecrets} from 'src/services/teamMemorySync/teamMemSecretGuard.js'
+import {logEvent} from '../../utils/cc-shim/analytics.js'
+import {diagnosticTracker} from '../../utils/cc-shim/misc.js'
+import {clearDeliveredDiagnosticsForFile} from '../../utils/cc-shim/misc.js'
+import {getLspServerManager} from '../../utils/cc-shim/misc.js'
+import {notifyVscodeFileUpdated} from '../../utils/cc-shim/misc.js'
+import {checkTeamMemSecrets} from '../../utils/cc-shim/misc.js'
 import {
 	activateConditionalSkillsForPaths,
 	addSkillDirectories,
 	discoverSkillDirsForPaths,
-} from 'src/skills/loadSkillsDir.js'
+} from '../../utils/cc-shim/misc.js'
 import type {ToolUseContext} from '../../tool.js'
 import {buildTool, type ToolDef} from '../../tool.js'
-import {getCwd} from 'src/utils/cwd.js'
-import {logForDebugging} from 'src/utils/debug.js'
-import {countLinesChanged} from 'src/utils/diff.js'
+import {getCwd} from '../../utils/cc-shim/cwd.js'
+import {logForDebugging} from '../../utils/cc-shim/log.js'
+import {countLinesChanged} from '../../utils/cc-shim/file.js'
 import {isEnvTruthy} from '../../utils/env.js'
 import {isENOENT} from '../../utils/errors.js'
 import {
@@ -23,27 +23,27 @@ import {
 	getFileModificationTime,
 	suggestPathUnderCwd,
 	writeTextContent,
-} from 'src/utils/file.js'
+} from '../../utils/cc-shim/file.js'
 import {
 	fileHistoryEnabled,
 	fileHistoryTrackEdit,
-} from 'src/utils/fileHistory.js'
-import {logFileOperation} from 'src/utils/fileOperationAnalytics.js'
+} from '../../utils/cc-shim/file.js'
+import {logFileOperation} from '../../utils/cc-shim/analytics.js'
 import {
 	type LineEndingType,
 	readFileSyncWithMetadata,
-} from 'src/utils/fileRead.js'
+} from '../../utils/cc-shim/file.js'
 import {formatFileSize} from '../../utils/format.js'
-import {getFsImplementation} from 'src/utils/fsOperations.js'
-import {logError} from 'src/utils/log.js'
-import {expandPath} from 'src/utils/path.js'
+import {getFsImplementation} from '../../utils/cc-shim/file.js'
+import {logError} from '../../utils/cc-shim/log.js'
+import {expandPath} from '../../utils/cc-shim/path.js'
 import {
 	checkWritePermissionForTool,
 	matchingRuleForInput,
-} from 'src/utils/permissions/filesystem.js'
-import type {PermissionDecision} from 'src/utils/permissions/PermissionResult.js'
-import {matchWildcardPattern} from 'src/utils/permissions/shellRuleMatching.js'
-import {validateInputForSettingsFileEdit} from 'src/utils/settings/validateEditTool.js'
+} from '../../utils/cc-shim/permissions/index.js'
+import type {PermissionDecision} from '../../utils/cc-shim/permissions/index.js'
+import {matchWildcardPattern} from '../../utils/cc-shim/permissions/index.js'
+import {validateInputForSettingsFileEdit} from '../../utils/cc-shim/misc.js'
 import {NOTEBOOK_EDIT_TOOL_NAME} from '../NotebookEditTool/constants.js'
 import {
 	FILE_EDIT_TOOL_NAME,

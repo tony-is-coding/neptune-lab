@@ -1,13 +1,13 @@
-import {logEvent} from 'src/services/analytics/index.js'
-import {extractHeredocs} from 'src/utils/bash/heredoc.js'
-import {ParsedCommand} from 'src/utils/bash/ParsedCommand.js'
+import {logEvent} from '../../utils/cc-shim/analytics.js'
+import {extractHeredocs} from '../../utils/cc-shim/bash/heredoc.js'
+import {ParsedCommand} from '../../utils/cc-shim/bash/ParsedCommand.js'
 import {
 	hasMalformedTokens,
 	hasShellQuoteSingleQuoteBug,
 	tryParseShellCommand,
-} from 'src/utils/bash/shellQuote.js'
-import type {TreeSitterAnalysis} from 'src/utils/bash/treeSitterAnalysis.js'
-import type {PermissionResult} from 'src/utils/permissions/PermissionResult.js'
+} from '../../utils/cc-shim/bash/shellQuote.js'
+import type {TreeSitterAnalysis} from '../../utils/cc-shim/bash/treeSitterAnalysis.js'
+import type {PermissionResult} from '../../utils/cc-shim/permissions/index.js'
 
 const HEREDOC_IN_SUBSTITUTION = /\$\(.*<</
 

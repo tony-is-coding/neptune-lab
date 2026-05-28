@@ -1,4 +1,4 @@
-import type {BuiltInAgentDefinition} from '@neptune/builtin-tools/tools/AgentTool/loadAgentsDir.js'
+import type {BuiltInAgentDefinition} from '@neptune/engine-product/cc-tools/AgentTool/loadAgentsDir.js'
 import {FILE_EDIT_TOOL_NAME, FILE_READ_TOOL_NAME} from '../toolNames.js'
 
 const STATUSLINE_SYSTEM_PROMPT = `You are a status line setup agent for Claude Code. Your job is to create or update the statusLine command in the user's Claude Code settings.

@@ -13,7 +13,7 @@
 import type {TaskContext} from '../../Task.js'
 import {isPoorModeActive} from '../../utils/poorModeState.js'
 import {updateAgentSummary} from '../../tasks/LocalAgentTask/LocalAgentTask.js'
-import {filterIncompleteToolCalls} from '@neptune/builtin-tools/tools/AgentTool/runAgent.js'
+import {filterIncompleteToolCalls} from '@neptune/engine-product/cc-tools/AgentTool/runAgent.js'
 import type {AgentId} from '../../types/ids.js'
 import {logForDebugging} from '../../utils/debug.js'
 import {

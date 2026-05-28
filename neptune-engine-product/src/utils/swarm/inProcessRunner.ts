@@ -44,8 +44,8 @@ import {
 	getProgressUpdate,
 	updateProgressFromMessage,
 } from '../../tasks/LocalAgentTask/LocalAgentTask.js'
-import type {CustomAgentDefinition} from '@neptune/builtin-tools/tools/AgentTool/loadAgentsDir.js'
-import {runAgent} from '@neptune/builtin-tools/tools/AgentTool/runAgent.js'
+import type {CustomAgentDefinition} from '@neptune/engine-product/cc-tools/AgentTool/loadAgentsDir.js'
+import {runAgent} from '@neptune/engine-product/cc-tools/AgentTool/runAgent.js'
 import {awaitClassifierAutoApproval} from '@neptune/builtin-tools/tools/BashTool/bashPermissions.js'
 import {BASH_TOOL_NAME} from '@neptune/builtin-tools/tools/BashTool/toolName.js'
 import {SEND_MESSAGE_TOOL_NAME} from '@neptune/builtin-tools/tools/SendMessageTool/constants.js'

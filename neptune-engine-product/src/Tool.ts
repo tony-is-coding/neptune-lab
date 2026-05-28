@@ -30,7 +30,7 @@ import type {
 import type {
 	AgentDefinition,
 	AgentDefinitionsResult,
-} from '@neptune/builtin-tools/tools/AgentTool/loadAgentsDir.js'
+} from '@neptune/engine-product/cc-tools/AgentTool/loadAgentsDir.js'
 import type {McpResourceRuntime} from '@neptune/builtin-tools/tools/MCPResourceRuntime.js'
 import type {
 	AssistantMessage,

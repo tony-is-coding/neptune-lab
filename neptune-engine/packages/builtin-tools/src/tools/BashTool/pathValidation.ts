@@ -2,24 +2,24 @@ import {homedir} from 'os'
 import {isAbsolute, resolve} from 'path'
 import type {z} from 'zod/v4'
 import type {ToolPermissionContext} from '../../tool.js'
-import type {Redirect, SimpleCommand} from 'src/utils/bash/ast.js'
+import type {Redirect, SimpleCommand} from '../../utils/cc-shim/bash/ast.js'
 import {
 	extractOutputRedirections,
 	splitCommand_DEPRECATED,
-} from 'src/utils/bash/commands.js'
-import {tryParseShellCommand} from 'src/utils/bash/shellQuote.js'
-import {getDirectoryForPath} from 'src/utils/path.js'
-import {allWorkingDirectories} from 'src/utils/permissions/filesystem.js'
-import type {PermissionResult} from 'src/utils/permissions/PermissionResult.js'
-import {createReadRuleSuggestion} from 'src/utils/permissions/PermissionUpdate.js'
-import type {PermissionUpdate} from 'src/utils/permissions/PermissionUpdateSchema.js'
+} from '../../utils/cc-shim/bash/commands.js'
+import {tryParseShellCommand} from '../../utils/cc-shim/bash/shellQuote.js'
+import {getDirectoryForPath} from '../../utils/cc-shim/path.js'
+import {allWorkingDirectories} from '../../utils/cc-shim/permissions/index.js'
+import type {PermissionResult} from '../../utils/cc-shim/permissions/index.js'
+import {createReadRuleSuggestion} from '../../utils/cc-shim/permissions/index.js'
+import type {PermissionUpdate} from '../../utils/cc-shim/permissions/index.js'
 import {
 	expandTilde,
 	type FileOperationType,
 	formatDirectoryList,
 	isDangerousRemovalPath,
 	validatePath,
-} from 'src/utils/permissions/pathValidation.js'
+} from '../../utils/cc-shim/permissions/index.js'
 import type {BashTool} from './BashTool.js'
 import {stripSafeWrappers} from './bashPermissions.js'
 import {sedCommandIsAllowedByAllowlist} from './sedValidation.js'

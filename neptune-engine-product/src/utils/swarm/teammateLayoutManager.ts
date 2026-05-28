@@ -1,5 +1,5 @@
-import type {AgentColorName} from '@neptune/builtin-tools/tools/AgentTool/agentColorManager.js'
-import {AGENT_COLORS} from '@neptune/builtin-tools/tools/AgentTool/agentColorManager.js'
+import type {AgentColorName} from '@neptune/engine-product/cc-tools/AgentTool/agentColorManager.js'
+import {AGENT_COLORS} from '@neptune/engine-product/cc-tools/AgentTool/agentColorManager.js'
 import {detectAndGetBackend} from './backends/registry.js'
 import type {PaneBackend} from './backends/types.js'
 

@@ -1,15 +1,15 @@
 import type {z} from 'zod/v4'
-import {getOriginalCwd} from 'src/bootstrap/state.js'
+import {getOriginalCwd} from '../../utils/cc-shim/misc.js'
 import {
 	extractOutputRedirections,
 	splitCommand_DEPRECATED,
-} from 'src/utils/bash/commands.js'
-import {tryParseShellCommand} from 'src/utils/bash/shellQuote.js'
-import {getCwd} from 'src/utils/cwd.js'
-import {isCurrentDirectoryBareGitRepo} from 'src/utils/git.js'
-import type {PermissionResult} from 'src/utils/permissions/PermissionResult.js'
-import {getPlatform} from 'src/utils/platform.js'
-import {SandboxManager} from 'src/utils/sandbox/sandbox-adapter.js'
+} from '../../utils/cc-shim/bash/commands.js'
+import {tryParseShellCommand} from '../../utils/cc-shim/bash/shellQuote.js'
+import {getCwd} from '../../utils/cc-shim/cwd.js'
+import {isCurrentDirectoryBareGitRepo} from '../../utils/cc-shim/misc.js'
+import type {PermissionResult} from '../../utils/cc-shim/permissions/index.js'
+import {getPlatform} from '../../utils/cc-shim/platform.js'
+import {SandboxManager} from '../../utils/cc-shim/misc.js'
 import {
 	containsVulnerableUncPath,
 	DOCKER_READ_ONLY_COMMANDS,
@@ -20,7 +20,7 @@ import {
 	PYRIGHT_READ_ONLY_COMMANDS,
 	RIPGREP_READ_ONLY_COMMANDS,
 	validateFlags,
-} from 'src/utils/shell/readOnlyCommandValidation.js'
+} from '../../utils/cc-shim/misc.js'
 import type {BashTool} from './BashTool.js'
 import {isNormalizedGitCommand} from './bashPermissions.js'
 import {bashCommandIsSafe_DEPRECATED} from './bashSecurity.js'

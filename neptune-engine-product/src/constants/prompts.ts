@@ -10,7 +10,7 @@ import {getInitialSettings} from '../utils/settings/settings.js'
 import {
 	AGENT_TOOL_NAME,
 	VERIFICATION_AGENT_TYPE,
-} from '@neptune/builtin-tools/tools/AgentTool/constants.js'
+} from '@neptune/engine-product/cc-tools/AgentTool/constants.js'
 import {FILE_WRITE_TOOL_NAME} from '@neptune/builtin-tools/tools/FileWriteTool/prompt.js'
 import {FILE_READ_TOOL_NAME} from '@neptune/builtin-tools/tools/FileReadTool/prompt.js'
 import {FILE_EDIT_TOOL_NAME} from '@neptune/builtin-tools/tools/FileEditTool/constants.js'
@@ -24,7 +24,7 @@ import {
 	getMarketingNameForModel,
 } from '../utils/model/model.js'
 import {getSkillToolCommands} from 'src/commands.js'
-import {SKILL_TOOL_NAME} from '@neptune/builtin-tools/tools/SkillTool/constants.js'
+import {SKILL_TOOL_NAME} from '@neptune/engine-product/cc-tools/SkillTool/constants.js'
 import {getOutputStyleConfig} from './outputStyles.js'
 import type {
 	MCPServerConnection,
@@ -37,8 +37,8 @@ import {ASK_USER_QUESTION_TOOL_NAME} from '@neptune/builtin-tools/tools/AskUserQ
 import {
 	EXPLORE_AGENT,
 	EXPLORE_AGENT_MIN_QUERIES,
-} from '@neptune/builtin-tools/tools/AgentTool/built-in/exploreAgent.js'
-import {areExplorePlanAgentsEnabled} from '@neptune/builtin-tools/tools/AgentTool/builtInAgents.js'
+} from '@neptune/engine-product/cc-tools/AgentTool/built-in/exploreAgent.js'
+import {areExplorePlanAgentsEnabled} from '@neptune/engine-product/cc-tools/AgentTool/builtInAgents.js'
 import {
 	isScratchpadEnabled,
 	getScratchpadDir,
@@ -48,7 +48,7 @@ import {isReplModeEnabled} from '@neptune/builtin-tools/tools/REPLTool/constants
 import {feature} from 'bun:bundle'
 import {getFeatureValue_CACHED_MAY_BE_STALE} from 'src/services/analytics/growthbook.js'
 import {shouldUseGlobalCacheScope} from '../utils/betas.js'
-import {isForkSubagentEnabled} from '@neptune/builtin-tools/tools/AgentTool/forkSubagent.js'
+import {isForkSubagentEnabled} from '@neptune/engine-product/cc-tools/AgentTool/forkSubagent.js'
 import {
 	systemPromptSection,
 	DANGEROUS_uncachedSystemPromptSection,

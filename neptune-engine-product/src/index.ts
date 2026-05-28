@@ -77,7 +77,7 @@ export type {
 
 // AgentEngine 核心
 export {AgentEngine} from '@neptune/engine/AgentEngine.js'
-export type {AgentEngineConfig, QueryOptions, EngineStats, ProviderConfig} from '@neptune/engine/AgentEngine.js'
+export type {AgentEngineConfig, QueryOptions, EngineStats} from '@neptune/engine/AgentEngine.js'
 export type {
 	SessionStatus,
 	SessionConfig,
@@ -90,7 +90,7 @@ export type {
 } from '@neptune/engine/types.js'
 
 // 桥接层类型导出（ToolExtension, PermissionConfig）
-export type {ToolExtension, PermissionConfig} from '@neptune/engine/bridge/OriginalQueryEngineBridge.js'
+export type {ToolExtension, PermissionConfig} from '@neptune/engine/bridge/extensions.js'
 
 // Skill 类型导出（SkillExtension）
 export type {SkillExtension} from '@neptune/engine/skill/SkillLoader.js'
@@ -118,7 +118,12 @@ export type {HookExecutor, HookContext, HookResult} from '@neptune/engine/hooks/
 // Session 存储
 export type {ISessionStore} from '@neptune/engine/storage/ISessionStore.js'
 export {InMemorySessionStore} from '@neptune/engine/storage/InMemorySessionStore.js'
-export {SQLiteSessionStore} from '@neptune/engine/storage/SQLiteSessionStore.js'
+export {FilesystemSessionStore} from '@neptune/engine/storage/FilesystemSessionStore.js'
+// Specific backends live in product layer (Stage 3 decoupling)
+export {SQLiteSessionStore} from './storage/SQLiteSessionStore.js'
+export {PgSessionStore, type PgSessionStoreConfig} from './storage/PgSessionStore.js'
+export {PgContentStore, type PgContentStoreConfig} from './storage/PgContentStore.js'
+export {RedisMemoryStore, type RedisMemoryStoreConfig} from './storage/RedisMemoryStore.js'
 
 // 通用存储后端（新增）
 export type {IBackend} from '@neptune/engine/storage/IBackend.js'
@@ -184,24 +189,8 @@ export type {ICommandProvider} from './types/commandProvider.js'
 // ============================================================
 export {getSystemContext, getUserContext} from './context.js'
 
-// Provider 系统（新增）
-export {ProviderRegistry} from '@neptune/engine/provider/index.js'
-export type {ProviderAdapter, ProviderQueryParams, ProviderMessage} from '@neptune/engine/provider/index.js'
-export type {ProviderType} from '@neptune/engine/AgentEngine.js'
-export {AnthropicProvider} from '@neptune/engine/provider/index.js'
+// Provider 配置（v6.0 P0.2.C — 旧 provider 双轨删除后仅保留 Anthropic 配置类型）
 export type {AnthropicProviderConfig} from '@neptune/engine/provider/index.js'
-export {OpenAIProvider} from '@neptune/engine/provider/index.js'
-export type {OpenAIProviderConfig} from '@neptune/engine/provider/index.js'
-export {GeminiProvider} from '@neptune/engine/provider/index.js'
-export type {GeminiProviderConfig} from '@neptune/engine/provider/index.js'
-export {GrokProvider} from '@neptune/engine/provider/index.js'
-export type {GrokProviderConfig} from '@neptune/engine/provider/index.js'
-export {BedrockProvider} from '@neptune/engine/provider/index.js'
-export type {BedrockProviderConfig} from '@neptune/engine/provider/index.js'
-export {VertexProvider} from '@neptune/engine/provider/index.js'
-export type {VertexProviderConfig} from '@neptune/engine/provider/index.js'
-export {FoundryProvider} from '@neptune/engine/provider/index.js'
-export type {FoundryProviderConfig} from '@neptune/engine/provider/index.js'
 
 // 辅助工具（新增）
 export {waitForResult} from '@neptune/engine/helpers/waitForResult.js'

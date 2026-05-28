@@ -5,7 +5,7 @@ import memoize from 'lodash-es/memoize.js'
 import {homedir, tmpdir} from 'os'
 import {join, normalize, posix, sep} from 'path'
 import {hasAutoMemPathOverride, isAutoMemPath} from 'src/memdir/paths.js'
-import {isAgentMemoryPath} from '@neptune/builtin-tools/tools/AgentTool/agentMemory.js'
+import {isAgentMemoryPath} from '@neptune/engine-product/cc-tools/AgentTool/agentMemory.js'
 import {
 	CLAUDE_FOLDER_PERMISSION_PATTERN,
 	FILE_EDIT_TOOL_NAME,

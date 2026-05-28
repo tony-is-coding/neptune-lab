@@ -13,13 +13,13 @@ import {clearSystemPromptSections} from '../constants/systemPromptSections.js'
 import {restoreCostStateForSession} from '../cost-tracker.js'
 import {applyProductBuiltInAgents} from '../product-agents/productBuiltInAgents.js'
 import type {AppState} from '../state/AppState.js'
-import type {AgentColorName} from '@neptune/builtin-tools/tools/AgentTool/agentColorManager.js'
+import type {AgentColorName} from '@neptune/engine-product/cc-tools/AgentTool/agentColorManager.js'
 import {
 	type AgentDefinition,
 	type AgentDefinitionsResult,
 	getActiveAgentsFromList,
 	getAgentDefinitionsWithOverrides,
-} from '@neptune/builtin-tools/tools/AgentTool/loadAgentsDir.js'
+} from '@neptune/engine-product/cc-tools/AgentTool/loadAgentsDir.js'
 import {TODO_WRITE_TOOL_NAME} from '@neptune/builtin-tools/tools/TodoWriteTool/constants.js'
 import {asSessionId} from '../types/ids.js'
 import type {

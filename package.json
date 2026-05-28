@@ -8,6 +8,7 @@
     "neptune-engine-product/packages/*",
     "neptune-engine-product/packages/@ant/*",
     "neptune-ai/server",
-    "neptune-ai/web"
+    "neptune-ai/web",
+    "shared"
   ]
 }

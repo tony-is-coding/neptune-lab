@@ -18,7 +18,7 @@ import {
 	type Tools,
 	toolMatchesName,
 } from '../Tool.js'
-import type {AgentDefinition} from '@neptune/builtin-tools/tools/AgentTool/loadAgentsDir.js'
+import type {AgentDefinition} from '@neptune/engine-product/cc-tools/AgentTool/loadAgentsDir.js'
 import {
 	formatDeferredToolLine,
 	isDeferredTool,

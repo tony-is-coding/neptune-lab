@@ -9,23 +9,18 @@
   },
   "exports": {
     ".": "./src/index.ts",
-    "./bootstrap": "./src/bootstrap.ts",
     "./provider": "./src/provider.ts",
-    "./context": "./src/context.ts",
     "./session": "./src/session.ts",
     "./log": "./src/log.ts",
-    "./hooks": "./src/hooks.ts",
     "./permissions": "./src/permissions.ts",
     "./storage": "./src/storage.ts",
-    "./events": "./src/events.ts"
+    "./events": "./src/events.ts",
+    "./testing": "./src/testing.ts"
   },
   "dependencies": {
     "@neptune/engine-tools": "workspace:*",
     "@neptune/mcp-client": "workspace:*",
     "@anthropic-ai/sdk": "^0.80.0",
-    "drizzle-orm": "^0.36.4",
-    "ioredis": "^5.5.0",
-    "postgres": "^3.4.5",
     "zod": "^4.3.6"
   },
   "devDependencies": {

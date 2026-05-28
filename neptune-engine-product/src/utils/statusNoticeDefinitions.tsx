@@ -18,7 +18,7 @@ import {
 	getAuthTokenSource,
 	isClaudeAISubscriber,
 } from './auth.js'
-import type {AgentDefinitionsResult} from '@neptune/builtin-tools/tools/AgentTool/loadAgentsDir.js'
+import type {AgentDefinitionsResult} from '@neptune/engine-product/cc-tools/AgentTool/loadAgentsDir.js'
 import {
 	getAgentDescriptionsTotalTokens,
 	AGENT_DESCRIPTIONS_THRESHOLD,

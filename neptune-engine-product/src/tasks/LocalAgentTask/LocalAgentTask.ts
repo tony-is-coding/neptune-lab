@@ -17,8 +17,8 @@ import type {SetAppState, Task, TaskStateBase} from '../../Task.js'
 import {createTaskStateBase} from '../../Task.js'
 import type {Tools} from '../../Tool.js'
 import {findToolByName} from '../../Tool.js'
-import type {AgentToolResult} from '@neptune/builtin-tools/tools/AgentTool/agentToolUtils.js'
-import type {AgentDefinition} from '@neptune/builtin-tools/tools/AgentTool/loadAgentsDir.js'
+import type {AgentToolResult} from '@neptune/engine-product/cc-tools/AgentTool/agentToolUtils.js'
+import type {AgentDefinition} from '@neptune/engine-product/cc-tools/AgentTool/loadAgentsDir.js'
 import {
 	SYNTHETIC_OUTPUT_TOOL_NAME
 } from '../../product-tools/synthetic-output/SyntheticOutputTool.js'

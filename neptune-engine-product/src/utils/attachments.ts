@@ -26,7 +26,7 @@ import {TODO_WRITE_TOOL_NAME} from '@neptune/builtin-tools/tools/TodoWriteTool/c
 import {TASK_CREATE_TOOL_NAME} from '@neptune/builtin-tools/tools/TaskCreateTool/constants.js'
 import {TASK_UPDATE_TOOL_NAME} from '@neptune/builtin-tools/tools/TaskUpdateTool/constants.js'
 import {BASH_TOOL_NAME} from '@neptune/builtin-tools/tools/BashTool/toolName.js'
-import {SKILL_TOOL_NAME} from '@neptune/builtin-tools/tools/SkillTool/constants.js'
+import {SKILL_TOOL_NAME} from '@neptune/engine-product/cc-tools/SkillTool/constants.js'
 import type {TodoList} from './todo/types.js'
 import {
 	type Task,
@@ -83,7 +83,7 @@ import {getSkillToolCommands, getMcpSkillCommands} from '../commands.js'
 import type {Command} from '../types/command.js'
 import uniqBy from 'lodash-es/uniqBy.js'
 import {getProjectRoot} from '../bootstrap/state.js'
-import {formatCommandsWithinBudget} from '@neptune/builtin-tools/tools/SkillTool/prompt.js'
+import {formatCommandsWithinBudget} from '@neptune/engine-product/cc-tools/SkillTool/prompt.js'
 import {getContextWindowForModel} from './context.js'
 import type {DiscoverySignal} from '../services/skillSearch/signals.js'
 // Conditional require for DCE. All skill-search string literals that would
@@ -119,13 +119,13 @@ import {
 	getFileModificationTimeAsync,
 	isFileWithinReadSizeLimit,
 } from './file.js'
-import type {AgentDefinition} from '@neptune/builtin-tools/tools/AgentTool/loadAgentsDir.js'
-import {filterAgentsByMcpRequirements} from '@neptune/builtin-tools/tools/AgentTool/loadAgentsDir.js'
-import {AGENT_TOOL_NAME} from '@neptune/builtin-tools/tools/AgentTool/constants.js'
+import type {AgentDefinition} from '@neptune/engine-product/cc-tools/AgentTool/loadAgentsDir.js'
+import {filterAgentsByMcpRequirements} from '@neptune/engine-product/cc-tools/AgentTool/loadAgentsDir.js'
+import {AGENT_TOOL_NAME} from '@neptune/engine-product/cc-tools/AgentTool/constants.js'
 import {
 	formatAgentLine,
 	shouldInjectAgentListInMessages,
-} from '@neptune/builtin-tools/tools/AgentTool/prompt.js'
+} from '@neptune/engine-product/cc-tools/AgentTool/prompt.js'
 import {filterDeniedAgents} from './permissions/permissions.js'
 import {getSubscriptionType} from './auth.js'
 import {mcpInfoFromString} from '../services/mcp/mcpStringUtils.js'
@@ -232,7 +232,7 @@ import {isAgentSwarmsEnabled} from './agentSwarmsEnabled.js'
 import {findRelevantMemories} from '../memdir/findRelevantMemories.js'
 import {memoryAge, memoryFreshnessText} from '../memdir/memoryAge.js'
 import {getAutoMemPath, isAutoMemoryEnabled} from '../memdir/paths.js'
-import {getAgentMemoryDir} from '@neptune/builtin-tools/tools/AgentTool/agentMemory.js'
+import {getAgentMemoryDir} from '@neptune/engine-product/cc-tools/AgentTool/agentMemory.js'
 import {
 	readUnreadMessages,
 	markMessagesAsReadByPredicate,

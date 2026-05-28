@@ -1,7 +1,7 @@
 import type {
 	AgentDefinition,
 	BuiltInAgentDefinition,
-} from '@neptune/builtin-tools/tools/AgentTool/loadAgentsDir.js'
+} from '@neptune/engine-product/cc-tools/AgentTool/loadAgentsDir.js'
 import {
 	BASH_TOOL_NAME,
 	FILE_READ_TOOL_NAME,

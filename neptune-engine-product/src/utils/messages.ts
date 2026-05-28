@@ -103,10 +103,10 @@ import type {
 	HookEvent,
 	SDKAssistantMessageError,
 } from 'src/entrypoints/agentSdkTypes.js'
-import {EXPLORE_AGENT} from '@neptune/builtin-tools/tools/AgentTool/built-in/exploreAgent.js'
-import {PLAN_AGENT} from '@neptune/builtin-tools/tools/AgentTool/built-in/planAgent.js'
-import {areExplorePlanAgentsEnabled} from '@neptune/builtin-tools/tools/AgentTool/builtInAgents.js'
-import {AGENT_TOOL_NAME} from '@neptune/builtin-tools/tools/AgentTool/constants.js'
+import {EXPLORE_AGENT} from '@neptune/engine-product/cc-tools/AgentTool/built-in/exploreAgent.js'
+import {PLAN_AGENT} from '@neptune/engine-product/cc-tools/AgentTool/built-in/planAgent.js'
+import {areExplorePlanAgentsEnabled} from '@neptune/engine-product/cc-tools/AgentTool/builtInAgents.js'
+import {AGENT_TOOL_NAME} from '@neptune/engine-product/cc-tools/AgentTool/constants.js'
 import {ASK_USER_QUESTION_TOOL_NAME} from '@neptune/builtin-tools/tools/AskUserQuestionTool/prompt.js'
 import {BashTool} from '@neptune/builtin-tools/tools/BashTool/BashTool.js'
 import {ExitPlanModeV2Tool} from '@neptune/builtin-tools/tools/ExitPlanModeTool/ExitPlanModeV2Tool.js'

@@ -2,23 +2,28 @@
 //
 // This barrel file re-exports the runtime-side tools that remain in the
 // engine workspace after the product-tool extraction (see
-// docs/strategy/neptune-engine-decoupling-handover.md). Product-only tools
-// (Task*, Team*, Schedule*, Send*, Verify*, Monitor, Snip, CtxInspect,
-// ToolSearch, Config, ListPeers, PushNotification, TerminalCapture,
-// TodoWrite, DiscoverSkills, etc.) now live under
-// neptune-engine-product/src/product-tools/<domain>/.
+// docs/strategy/neptune-engine-decoupling-handover.md).
 //
-// For specific submodules use deep imports:
-//   '@neptune/builtin-tools/tools/XTool/XTool.js'
+// Product-only tools that have been extracted to
+// `neptune-engine-product/src/product-tools/<domain>/`:
+//   - Plan-mode flow: AskUserQuestion, EnterPlanMode, ExitPlanMode (impl only;
+//     ExitPlanMode/TeamCreate name constants stay in engine as protocol stubs).
+//   - Browser/UI: WebBrowser.
+//   - Task/Team/Schedule/Notify families: Task*, Team*, Schedule*, Send*,
+//     Verify*, Monitor, Snip, CtxInspect, ToolSearch, Config, ListPeers,
+//     PushNotification, TerminalCapture, TodoWrite, DiscoverSkills,
+//     SyntheticOutput, OverflowTest, Tungsten, TestingPermission.
+//
+// Runtime tools that remain in engine: Agent, Bash, FileRead/FileWrite/
+// FileEdit, Glob, Grep, NotebookEdit, LSP, MCP*, Skill, Sleep, REPL,
+// SendMessage, TeamCreate (impl), WebFetch, WebSearch.
 
 // =============================================================================
 // Runtime-side tools that remain in engine
 // =============================================================================
-export {AgentTool} from './tools/AgentTool/AgentTool.js'
-export {AskUserQuestionTool} from './tools/AskUserQuestionTool/AskUserQuestionTool.js'
+export {AgentTool, AGENT_TOOL_NAME, LEGACY_AGENT_TOOL_NAME} from './tools/AgentTool/AgentTool.js'
+export {SkillTool, SKILL_TOOL_NAME} from './tools/SkillTool/SkillTool.js'
 export {BashTool} from './tools/BashTool/BashTool.js'
-export {EnterPlanModeTool} from './tools/EnterPlanModeTool/EnterPlanModeTool.js'
-export {ExitPlanModeV2Tool} from './tools/ExitPlanModeTool/ExitPlanModeV2Tool.js'
 export {FileEditTool} from './tools/FileEditTool/FileEditTool.js'
 export {FileReadTool} from './tools/FileReadTool/FileReadTool.js'
 export {FileWriteTool} from './tools/FileWriteTool/FileWriteTool.js'
@@ -27,17 +32,56 @@ export {GrepTool} from './tools/GrepTool/GrepTool.js'
 export {LSPTool} from './tools/LSPTool/LSPTool.js'
 export {ListMcpResourcesTool} from './tools/ListMcpResourcesTool/ListMcpResourcesTool.js'
 export {ReadMcpResourceTool} from './tools/ReadMcpResourceTool/ReadMcpResourceTool.js'
-export {NotebookEditTool} from './tools/NotebookEditTool/NotebookEditTool.js'
-export {SkillTool} from './tools/SkillTool/SkillTool.js'
 export {WebFetchTool} from './tools/WebFetchTool/WebFetchTool.js'
 export {WebSearchTool} from './tools/WebSearchTool/WebSearchTool.js'
+
+// Stage 7: 以下工具已迁出到 neptune-engine-product/src/cc-tools/（业务深度耦合 cc）：
+// Stage B2 (2026-05-25)：AgentTool 重新落 substrate（薄壳，~580 行 + 22 项功能契约 e2e 覆盖）
+//   - SkillTool（cc frontmatter md 格式 skill；B6 落 substrate 薄壳 ~430 行）
+//   - NotebookEditTool（cc Jupyter 业务，留 product）
+//   - McpAuthTool（cc MCP auth 业务，留 product）
+// 想用 cc 完整版？neptune-engine-product/src/cc-tools/AgentTool/ 仍然保留作为参考实现
 
 // Feature-gated runtime tools
 export {REPLTool} from './tools/REPLTool/REPLTool.js'
 export {SendMessageTool} from './tools/SendMessageTool/SendMessageTool.js'
 export {SleepTool} from './tools/SleepTool/SleepTool.js'
-export {TeamCreateTool} from './tools/TeamCreateTool/TeamCreateTool.js'
-export {WebBrowserTool} from './tools/WebBrowserTool/WebBrowserTool.js'
+
+// =============================================================================
+// Runtime Kernel Protocol-backed tools
+// (See docs/strategy/neptune-engine-runtime-kernel-design.md §10.2 — Phase B)
+// These tools are thin shells over the Phase A protocols. Hosts inject the
+// concrete protocol implementations via ctx.kernel; without injection, calls
+// fail closed with a clear error. Default in-memory implementations live in
+// `@neptune/engine` and are sufficient for SDK-style single-process agents.
+// =============================================================================
+export {
+	DiscoverSkillsTool,
+	DISCOVER_SKILLS_TOOL_NAME,
+	MemoryRecallTool,
+	MEMORY_RECALL_TOOL_NAME,
+	MemoryWriteTool,
+	MEMORY_WRITE_TOOL_NAME,
+	TaskCreateTool,
+	TASK_CREATE_TOOL_NAME,
+	TaskGetTool,
+	TASK_GET_TOOL_NAME,
+	TaskListTool,
+	TASK_LIST_TOOL_NAME,
+	TaskOutputTool,
+	TASK_OUTPUT_TOOL_NAME,
+	TaskStopTool,
+	TASK_STOP_TOOL_NAME,
+	TaskUpdateTool,
+	TASK_UPDATE_TOOL_NAME,
+	TodoWriteTool,
+	TODO_WRITE_TOOL_NAME,
+	ToolSearchTool,
+	TOOL_SEARCH_TOOL_NAME,
+} from './tools/kernel/index.js'
+
+export type {KernelProtocols, KernelToolContext} from './kernel-context.js'
+export {KERNEL_CONTEXT_KEY, requireProtocol} from './kernel-context.js'
 
 // Shared utilities
 export {tagMessagesWithToolUseID, getToolUseIDFromParentMessage} from './tools/utils.js'

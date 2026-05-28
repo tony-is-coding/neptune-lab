@@ -1,131 +1,71 @@
+/**
+ * resultMapping — 把 SubAgentRunResult / async launch result 转 ToolResultBlock
+ *
+ * 设计目的（Stage B2.4）：
+ * - cc resultMapping.ts 122 行的核心 ~70 行（含 usage trailer / 空内容 fallback / one-shot 跳过）
+ * - 三类结果 → 三种 ToolResultBlock 形态
+ *
+ * 与 cc 行为对齐：
+ * - completed + 非 one-shot agent → 含 usage trailer（agentId / total_tokens / tool_uses / duration_ms）
+ * - completed + one-shot agent (Explore/Plan) → 跳过 trailer（节省 token）
+ * - 空内容 → '(Subagent completed but returned no output.)' marker
+ * - async_launched → 'Async agent launched.\nagentId: xxx\nrunId: xxx\noutputFile: xxx'
+ */
+
 import type {ToolResultBlockParam} from '../../tool.js'
+import {ONE_SHOT_BUILTIN_AGENT_TYPES} from './constants.js'
+import type {AsyncLaunchedOutput, CompletedOutput, Output} from './outputSchema.js'
 
-type TextBlock = Extract<
-	NonNullable<ToolResultBlockParam['content']>[number],
-	{type: 'text'}
->
+type ResultContent = NonNullable<ToolResultBlockParam['content']>
+type ContentBlock = Exclude<ResultContent, string>[number]
 
-type AgentContentBlock = NonNullable<ToolResultBlockParam['content']>[number]
-
-export type AgentCompletedResult = {
-	status: 'completed'
-	agentId: string
-	agentType?: string
-	content: AgentContentBlock[]
-	totalTokens: number
-	totalToolUseCount: number
-	totalDurationMs: number
-	worktreePath?: string
-	worktreeBranch?: string
-}
-
-export type AgentAsyncLaunchedResult = {
-	status: 'async_launched'
-	agentId: string
-	outputFile: string
-	canReadOutputFile?: boolean
-}
-
-export type AgentTeammateSpawnedResult = {
-	status: 'teammate_spawned'
-	teammate_id: string
-	name: string
-	team_name?: string
-}
-
-export type AgentRemoteLaunchedResult = {
-	status: 'remote_launched'
-	taskId: string
-	sessionUrl: string
-	outputFile: string
-}
-
-type AgentResult =
-	| AgentCompletedResult
-	| AgentAsyncLaunchedResult
-	| AgentTeammateSpawnedResult
-	| AgentRemoteLaunchedResult
-
-const ONE_SHOT_BUILTIN_AGENT_TYPES = new Set(['Explore', 'Plan'])
-
-function textBlock(text: string): TextBlock {
-	return {
-		type: 'text',
-		text,
-	}
+function textBlock(text: string): ContentBlock {
+	return {type: 'text', text} as ContentBlock
 }
 
 export function mapAgentToolResultToBlock(
-	data: AgentResult,
+	output: Output,
 	toolUseID: string,
 ): ToolResultBlockParam {
-	if (data.status === 'teammate_spawned') {
-		return {
-			tool_use_id: toolUseID,
-			type: 'tool_result',
-			content: [
-				textBlock(`Spawned successfully.
-agent_id: ${data.teammate_id}
-name: ${data.name}
-team_name: ${data.team_name ?? ''}`),
-			],
-		}
-	}
-
-	if (data.status === 'remote_launched') {
+	if ((output as AsyncLaunchedOutput).status === 'async_launched') {
+		const data = output as AsyncLaunchedOutput
+		const taskLine = data.taskId ? `\ntaskId: ${data.taskId}` : ''
 		return {
 			tool_use_id: toolUseID,
 			type: 'tool_result',
 			content: [
 				textBlock(
-					`Remote agent launched.\ntaskId: ${data.taskId}\nsession_url: ${data.sessionUrl}\noutput_file: ${data.outputFile}`,
+					`Async agent launched.\nagentId: ${data.agentId}\nrunId: ${data.runId}${taskLine}`,
 				),
-			],
+			] as ResultContent,
 		}
 	}
 
-	if (data.status === 'async_launched') {
-		const outputFileText = data.canReadOutputFile
-			? `\noutput_file: ${data.outputFile}`
-			: ''
-		return {
-			tool_use_id: toolUseID,
-			type: 'tool_result',
-			content: [
-				textBlock(`Async agent launched.\nagentId: ${data.agentId}${outputFileText}`),
-			],
-		}
-	}
-
-	const worktreeInfoText = data.worktreePath
-		? `\nworktreePath: ${data.worktreePath}\nworktreeBranch: ${data.worktreeBranch ?? ''}`
-		: ''
-	const contentOrMarker =
+	const data = output as CompletedOutput
+	const content: ContentBlock[] =
 		data.content.length > 0
-			? data.content
+			? data.content.map(c => textBlock(c.text))
 			: [textBlock('(Subagent completed but returned no output.)')]
 
-	if (
-		data.agentType &&
-		ONE_SHOT_BUILTIN_AGENT_TYPES.has(data.agentType) &&
-		!worktreeInfoText
-	) {
+	// One-shot built-in agents (Explore / Plan) 不需要 SendMessage 提示 — 跳过 trailer
+	if (data.agentType && ONE_SHOT_BUILTIN_AGENT_TYPES.has(data.agentType)) {
 		return {
 			tool_use_id: toolUseID,
 			type: 'tool_result',
-			content: contentOrMarker,
+			content: content as ResultContent,
 		}
 	}
 
+	// 普通 sub-agent: 附 usage trailer
+	const trailer = textBlock(
+		`agentId: ${data.agentId}
+<usage>total_tokens: ${data.totalTokens}
+tool_uses: ${data.totalToolUseCount}
+duration_ms: ${data.totalDurationMs}</usage>`,
+	)
 	return {
 		tool_use_id: toolUseID,
 		type: 'tool_result',
-		content: [
-			...contentOrMarker,
-			textBlock(`agentId: ${data.agentId}${worktreeInfoText}
-<usage>total_tokens: ${data.totalTokens}
-tool_uses: ${data.totalToolUseCount}
-duration_ms: ${data.totalDurationMs}</usage>`),
-		],
+		content: [...content, trailer] as ResultContent,
 	}
 }

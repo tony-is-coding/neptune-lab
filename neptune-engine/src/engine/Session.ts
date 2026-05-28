@@ -1,6 +1,6 @@
 import {randomUUID} from 'crypto'
 import {EngineError, EngineErrorCode} from './errors.js'
-import type {SessionStatus, SessionConfig, EngineSnapshot, SessionContextSnapshot, ProviderConfig} from './types'
+import type {SessionStatus, SessionConfig, EngineSnapshot, SessionContextSnapshot} from './types'
 import {SERIALIZATION_PROTOCOL_VERSION} from './types'
 
 /** Session 快照数据，用于持久化往返 */
@@ -12,13 +12,11 @@ export interface SessionSnapshot {
 	metadata: Record<string, unknown>
 	/** per-session 系统提示词（可选） */
 	systemPrompt?: string | (() => Promise<string>)
-	/** per-session Provider 配置（可选） */
-	providerConfig?: ProviderConfig
 }
 
 /**
  * Session 纯数据实体
- * 管理 sessionId、workspace、status、metadata、systemPrompt、providerConfig
+ * 管理 sessionId、workspace、status、metadata、systemPrompt
  * 不依赖任何 LLM 或外部服务
  */
 export class Session {
@@ -30,12 +28,9 @@ export class Session {
 	private _metadata: Record<string, unknown>
 	/** per-session 系统提示词（可选） */
 	private _systemPrompt?: string | (() => Promise<string>)
-	/** per-session Provider 配置（可选） */
-	private _providerConfig?: ProviderConfig
 
 	constructor(config: SessionConfig & {
 		systemPrompt?: string | (() => Promise<string>);
-		providerConfig?: ProviderConfig
 	}, sessionId?: string) {
 		this.sessionId = sessionId ?? randomUUID()
 		this.workspace = config.workspace
@@ -43,7 +38,6 @@ export class Session {
 		this._status = 'active'
 		this._metadata = config.metadata ?? {}
 		this._systemPrompt = config.systemPrompt
-		this._providerConfig = config.providerConfig
 	}
 
 	/** 从快照恢复 Session 实例（用于持久化加载） */
@@ -55,7 +49,6 @@ export class Session {
 		session._status = snapshot.status
 		session._metadata = {...snapshot.metadata}
 		session._systemPrompt = snapshot.systemPrompt
-		session._providerConfig = snapshot.providerConfig
 		return session
 	}
 
@@ -68,7 +61,6 @@ export class Session {
 			status: this._status,
 			metadata: {...this._metadata},
 			systemPrompt: this._systemPrompt,
-			providerConfig: this._providerConfig,
 		}
 	}
 
@@ -143,18 +135,5 @@ export class Session {
 			throw new EngineError(EngineErrorCode.SESSION_INVALID_OPERATION, 'Cannot operate on a destroyed session')
 		}
 		this._systemPrompt = systemPrompt
-	}
-
-	// 获取 providerConfig
-	getProviderConfig(): ProviderConfig | undefined {
-		return this._providerConfig
-	}
-
-	// 设置 providerConfig
-	setProviderConfig(providerConfig: ProviderConfig): void {
-		if (this._status === 'destroyed') {
-			throw new EngineError(EngineErrorCode.SESSION_INVALID_OPERATION, 'Cannot operate on a destroyed session')
-		}
-		this._providerConfig = providerConfig
 	}
 }

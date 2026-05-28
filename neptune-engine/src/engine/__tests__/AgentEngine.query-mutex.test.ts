@@ -10,29 +10,37 @@
 import {describe, test, expect, beforeEach, afterEach} from 'bun:test'
 import {AgentEngine} from '../AgentEngine'
 import {EngineErrorCode, EngineError} from '../errors'
-import type {QueryEvent} from '../types/query-events'
-import type {CCRuntime, QueryEngineWrapper} from '../cc-runtime/CCRuntime'
-import {MockCCRuntime, createMockCCRuntime} from '../cc-runtime/MockCCRuntime'
 import {tmpdir} from 'os'
 import {join} from 'path'
 import {rmSync, mkdirSync} from 'fs'
+import type {ParsedSSEEvent} from '../agent-loop/types'
+import type {
+	StreamingProviderAdapter,
+	StreamingQueryParams,
+} from '../agent-loop/provider/StreamingProviderAdapter'
+import {textTurn} from '../agent-loop/loop/__tests__/scriptedProvider'
 
 // ============================================================
-// 测试专用 Mock QueryEngine
+// 测试专用 Controllable Streaming Provider
 // ============================================================
 
-/** 可控的 Mock QueryEngine，用于测试互斥锁 */
-class ControllableMockQueryEngine implements QueryEngineWrapper {
+/**
+ * 可控的 Mock StreamingProvider，用于测试互斥锁。
+ *
+ * - setBlocking(true) → queryStream 在 yield 第一个事件后等待 release()
+ * - setError(true)    → queryStream 直接抛出错误
+ * - release()         → 释放阻塞，让流继续
+ */
+class ControllableStreamingProvider implements StreamingProviderAdapter {
+	readonly type = 'controllable' as const
 	private shouldBlock = false
 	private shouldError = false
 	private releasePromise: Promise<void> | null = null
 	private resolveRelease: (() => void) | null = null
 
-	/** 设置 query 是否阻塞（用于测试并发） */
 	setBlocking(shouldBlock: boolean): void {
 		this.shouldBlock = shouldBlock
 		if (shouldBlock) {
-			// 创建一个不会自动 resolve 的 Promise
 			this.releasePromise = new Promise((resolve) => {
 				this.resolveRelease = resolve
 			})
@@ -42,7 +50,6 @@ class ControllableMockQueryEngine implements QueryEngineWrapper {
 		}
 	}
 
-	/** 释放阻塞的 query */
 	release(): void {
 		if (this.resolveRelease) {
 			this.resolveRelease()
@@ -52,26 +59,30 @@ class ControllableMockQueryEngine implements QueryEngineWrapper {
 		this.releasePromise = null
 	}
 
-	/** 设置 query 是否抛出错误 */
 	setError(shouldError: boolean): void {
 		this.shouldError = shouldError
 	}
 
-	async* submitMessage(..._args: unknown[]): AsyncGenerator<unknown, void, unknown> {
+	async *queryStream(
+		_params: StreamingQueryParams,
+	): AsyncGenerator<ParsedSSEEvent, void, unknown> {
 		if (this.shouldError) {
 			throw new Error('Mock query error')
 		}
 
-		// 先返回一个消息
-		yield {type: 'mock_message'}
+		// 先 yield 一些起始事件，让外层 query() 真正开始消费 generator
+		const events = textTurn('mock')
 
-		// 如果设置了阻塞，等待释放
+		// 拆 events 成两半，中间插入 release 等待，模拟 long-running query
+		yield events[0]! // message_start
+		yield events[1]! // content_block_complete
+
 		if (this.shouldBlock && this.releasePromise) {
 			await this.releasePromise
 		}
 
-		// 再返回一个消息
-		yield {type: 'mock_message_end'}
+		yield events[2]! // message_delta
+		yield events[3]! // message_stop
 	}
 }
 
@@ -83,43 +94,31 @@ describe('AgentEngine.query 互斥锁', () => {
 	let engine: AgentEngine
 	let workspace: string
 	let sessionId: string
-	let mockRuntime: MockCCRuntime
-	let mockQueryEngine: ControllableMockQueryEngine
+	let provider: ControllableStreamingProvider
 
 	beforeEach(async () => {
-		// 创建临时 workspace
 		workspace = join(tmpdir(), `test-workspace-${Date.now()}`)
 		mkdirSync(workspace, {recursive: true})
 
-		// 创建可控的 Mock QueryEngine
-		mockQueryEngine = new ControllableMockQueryEngine()
+		provider = new ControllableStreamingProvider()
 
-		// 创建 MockCCRuntime，注入我们的 Mock QueryEngine
-		mockRuntime = new MockCCRuntime({
-			queryEngineFactory: () => mockQueryEngine,
-		})
-		mockRuntime.injectMacroDefines()
-
-		// 创建 AgentEngine
 		engine = AgentEngine.create({
 			systemPrompt: '你是一个测试助手',
+			streamingProvider: provider,
 			options: {
 				maxConcurrentSessions: 10,
 			},
-		}, mockRuntime)
+		})
 
-		// 创建 session
 		sessionId = await engine.createSession({workspace})
 	})
 
 	afterEach(async () => {
 		// 确保释放所有阻塞
-		mockQueryEngine.release()
+		provider.release()
 
-		// 清理 engine
 		await engine.destroy()
 
-		// 清理临时目录
 		try {
 			rmSync(workspace, {recursive: true, force: true})
 		} catch {
@@ -129,7 +128,7 @@ describe('AgentEngine.query 互斥锁', () => {
 
 	test('同一 session 并发 query 第二次应抛出 SESSION_BUSY', async () => {
 		// 设置第一个 query 阻塞
-		mockQueryEngine.setBlocking(true)
+		provider.setBlocking(true)
 
 		// 启动第一个 query（会阻塞）
 		const firstQueryPromise = (async () => {
@@ -137,15 +136,14 @@ describe('AgentEngine.query 互斥锁', () => {
 			try {
 				for await (const event of engine.query(sessionId, 'first query')) {
 					events.push(event)
-					// 收到第一个消息后继续阻塞
 				}
-			} catch (error) {
+			} catch {
 				// 忽略错误
 			}
 			return events
 		})()
 
-		// 等待第一个 query 开始（接收到第一个消息）
+		// 等待第一个 query 开始
 		await new Promise(resolve => setTimeout(resolve, 50))
 
 		// 第二次并发 query 应该抛出 SESSION_BUSY
@@ -164,7 +162,7 @@ describe('AgentEngine.query 互斥锁', () => {
 		expect((secondQueryError as EngineError).code).toBe(EngineErrorCode.SESSION_BUSY)
 
 		// 释放第一个 query
-		mockQueryEngine.release()
+		provider.release()
 		await firstQueryPromise
 	})
 
@@ -194,22 +192,27 @@ describe('AgentEngine.query 互斥锁', () => {
 
 	test('query 异常后锁自动释放', async () => {
 		// 设置 query 抛出错误
-		mockQueryEngine.setError(true)
+		provider.setError(true)
 
-		// 第一次 query 应该抛出错误
+		// 第一次 query：substrate 路径会把 error 转成 error event 而非 throw
+		// 我们关心的是「锁释放」语义，所以同时接受 throw 或 error event 任一即可
 		let firstError: Error | null = null
+		const firstEvents: unknown[] = []
 		try {
-			for await (const _event of engine.query(sessionId, 'error query')) {
-				// 不应该到达这里（在 submitMessage 时就抛出）
+			for await (const event of engine.query(sessionId, 'error query')) {
+				firstEvents.push(event)
 			}
 		} catch (error) {
 			firstError = error as Error
 		}
 
-		expect(firstError).not.toBeNull()
+		const sawErrorEvent = firstEvents.some(
+			e => (e as {type: string}).type === 'error' || (e as {type: string}).type === 'assistant_error',
+		)
+		expect(firstError !== null || sawErrorEvent).toBe(true)
 
 		// 重置错误状态
-		mockQueryEngine.setError(false)
+		provider.setError(false)
 
 		// 第二次 query 应该成功（不抛出 SESSION_BUSY）
 		const secondQueryEvents: unknown[] = []
@@ -233,8 +236,8 @@ describe('AgentEngine.query 互斥锁', () => {
 
 		const sessionId2 = await engine.createSession({workspace: workspace2})
 
-		// 设置第二个 query 阻塞
-		mockQueryEngine.setBlocking(true)
+		// 设置 provider 阻塞
+		provider.setBlocking(true)
 
 		// 两个 session 并发 query
 		const events1: unknown[] = []
@@ -246,7 +249,6 @@ describe('AgentEngine.query 互斥锁', () => {
 			try {
 				for await (const event of engine.query(sessionId, 'query from session 1')) {
 					events1.push(event)
-					// 收到第一个消息后继续
 				}
 			} catch (error) {
 				error1 = error as Error
@@ -257,7 +259,6 @@ describe('AgentEngine.query 互斥锁', () => {
 			try {
 				for await (const event of engine.query(sessionId2, 'query from session 2')) {
 					events2.push(event)
-					// 收到第一个消息后继续
 				}
 			} catch (error) {
 				error2 = error as Error
@@ -268,7 +269,7 @@ describe('AgentEngine.query 互斥锁', () => {
 		await new Promise(resolve => setTimeout(resolve, 50))
 
 		// 释放阻塞
-		mockQueryEngine.release()
+		provider.release()
 
 		// 等待两个 query 完成
 		await Promise.all([query1Promise, query2Promise])

@@ -1,8 +1,8 @@
-import {AGENT_TOOL_NAME} from '@neptune/builtin-tools/tools/AgentTool/constants.js'
+import {AGENT_TOOL_NAME} from '@neptune/engine-product/cc-tools/AgentTool/constants.js'
 import {ASK_USER_QUESTION_TOOL_NAME} from '@neptune/builtin-tools/tools/AskUserQuestionTool/prompt.js'
 import {ENTER_PLAN_MODE_TOOL_NAME} from '@neptune/builtin-tools/tools/EnterPlanModeTool/constants.js'
 import {EXIT_PLAN_MODE_TOOL_NAME} from '@neptune/builtin-tools/tools/ExitPlanModeTool/constants.js'
-import {SKILL_TOOL_NAME} from '@neptune/builtin-tools/tools/SkillTool/constants.js'
+import {SKILL_TOOL_NAME} from '@neptune/engine-product/cc-tools/SkillTool/constants.js'
 import {getIsGit} from '../../utils/git.js'
 import {registerBundledSkill} from '../bundledSkills.js'
 

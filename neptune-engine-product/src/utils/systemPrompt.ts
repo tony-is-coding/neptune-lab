@@ -4,8 +4,8 @@ import {
 	logEvent,
 } from '../services/analytics/index.js'
 import type {ToolUseContext} from '../Tool.js'
-import type {AgentDefinition} from '@neptune/builtin-tools/tools/AgentTool/loadAgentsDir.js'
-import {isBuiltInAgent} from '@neptune/builtin-tools/tools/AgentTool/loadAgentsDir.js'
+import type {AgentDefinition} from '@neptune/engine-product/cc-tools/AgentTool/loadAgentsDir.js'
+import {isBuiltInAgent} from '@neptune/engine-product/cc-tools/AgentTool/loadAgentsDir.js'
 import {isEnvTruthy} from './envUtils.js'
 import {asSystemPrompt, type SystemPrompt} from './systemPromptType.js'
 

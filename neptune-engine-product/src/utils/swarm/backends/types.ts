@@ -1,4 +1,4 @@
-import type {AgentColorName} from '@neptune/builtin-tools/tools/AgentTool/agentColorManager.js'
+import type {AgentColorName} from '@neptune/engine-product/cc-tools/AgentTool/agentColorManager.js'
 
 /**
  * Types of backends available for teammate execution.

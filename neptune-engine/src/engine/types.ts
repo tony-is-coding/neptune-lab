@@ -1,10 +1,4 @@
 // ============================================================
-// Provider 类型 — import from AgentEngine（单一真相来源）
-// ============================================================
-
-import type {ProviderConfig, ProviderType} from './AgentEngine.js'
-
-// ============================================================
 // Session 相关类型
 // ============================================================
 
@@ -17,12 +11,7 @@ export interface SessionConfig {
 	metadata?: Record<string, unknown>
 	/** per-session 系统提示词（可选） */
 	systemPrompt?: string | (() => Promise<string>)
-	/** per-session Provider 配置（可选） */
-	providerConfig?: ProviderConfig
 }
-
-// Re-export Provider 类型供外部使用
-export type {ProviderConfig, ProviderType}
 
 // SessionManager 配置
 export interface SessionManagerConfig {
@@ -57,8 +46,6 @@ export interface SessionInfo {
 	metadata?: Record<string, unknown>
 	/** per-session 系统提示词（可选） */
 	systemPrompt?: string | (() => Promise<string>)
-	/** per-session Provider 配置（可选） */
-	providerConfig?: ProviderConfig
 }
 
 // ============================================================

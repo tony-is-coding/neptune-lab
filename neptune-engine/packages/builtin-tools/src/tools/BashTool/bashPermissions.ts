@@ -1,13 +1,13 @@
 import {feature} from 'bun:bundle'
 import {APIUserAbortError} from '@anthropic-ai/sdk'
 import type {z} from 'zod/v4'
-import {getFeatureValue_CACHED_MAY_BE_STALE} from 'src/services/analytics/growthbook.js'
+import {getFeatureValue_CACHED_MAY_BE_STALE} from '../../utils/cc-shim/analytics.js'
 import {
 	type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
 	logEvent,
-} from 'src/services/analytics/index.js'
+} from '../../utils/cc-shim/analytics.js'
 import type {ToolPermissionContext, ToolUseContext} from '../../tool.js'
-import type {PendingClassifierCheck} from 'src/types/permissions.js'
+import type {PendingClassifierCheck} from '../../utils/cc-shim/permissions/index.js'
 import {count} from '../../utils/array.js'
 import {
 	checkSemantics,
@@ -16,45 +16,45 @@ import {
 	parseForSecurityFromAst,
 	type Redirect,
 	type SimpleCommand,
-} from 'src/utils/bash/ast.js'
+} from '../../utils/cc-shim/bash/ast.js'
 import {
 	type CommandPrefixResult,
 	extractOutputRedirections,
 	getCommandSubcommandPrefix,
 	splitCommand_DEPRECATED,
-} from 'src/utils/bash/commands.js'
-import {parseCommandRaw} from 'src/utils/bash/parser.js'
-import {tryParseShellCommand} from 'src/utils/bash/shellQuote.js'
-import {getCwd} from 'src/utils/cwd.js'
-import {logForDebugging} from 'src/utils/debug.js'
+} from '../../utils/cc-shim/bash/commands.js'
+import {parseCommandRaw} from '../../utils/cc-shim/bash/parser.js'
+import {tryParseShellCommand} from '../../utils/cc-shim/bash/shellQuote.js'
+import {getCwd} from '../../utils/cc-shim/cwd.js'
+import {logForDebugging} from '../../utils/cc-shim/log.js'
 import {isEnvTruthy} from '../../utils/env.js'
 import {AbortError} from '../../utils/errors.js'
 import type {
 	ClassifierBehavior,
 	ClassifierResult,
-} from 'src/utils/permissions/bashClassifier.js'
+} from '../../utils/cc-shim/permissions/index.js'
 import {
 	classifyBashCommand,
 	getBashPromptAllowDescriptions,
 	getBashPromptAskDescriptions,
 	getBashPromptDenyDescriptions,
 	isClassifierPermissionsEnabled,
-} from 'src/utils/permissions/bashClassifier.js'
+} from '../../utils/cc-shim/permissions/index.js'
 import type {
 	PermissionDecisionReason,
 	PermissionResult,
-} from 'src/utils/permissions/PermissionResult.js'
+} from '../../utils/cc-shim/permissions/index.js'
 import type {
 	PermissionRule,
 	PermissionRuleValue,
-} from 'src/utils/permissions/PermissionRule.js'
-import {extractRules} from 'src/utils/permissions/PermissionUpdate.js'
-import type {PermissionUpdate} from 'src/utils/permissions/PermissionUpdateSchema.js'
-import {permissionRuleValueToString} from 'src/utils/permissions/permissionRuleParser.js'
+} from '../../utils/cc-shim/permissions/index.js'
+import {extractRules} from '../../utils/cc-shim/permissions/index.js'
+import type {PermissionUpdate} from '../../utils/cc-shim/permissions/index.js'
+import {permissionRuleValueToString} from '../../utils/cc-shim/permissions/index.js'
 import {
 	createPermissionRequestMessage,
 	getRuleByContentsForTool,
-} from 'src/utils/permissions/permissions.js'
+} from '../../utils/cc-shim/permissions/index.js'
 import {
 	parsePermissionRule,
 	type ShellPermissionRule,
@@ -62,11 +62,11 @@ import {
 	permissionRuleExtractPrefix as sharedPermissionRuleExtractPrefix,
 	suggestionForExactCommand as sharedSuggestionForExactCommand,
 	suggestionForPrefix as sharedSuggestionForPrefix,
-} from 'src/utils/permissions/shellRuleMatching.js'
-import {getPlatform} from 'src/utils/platform.js'
-import {SandboxManager} from 'src/utils/sandbox/sandbox-adapter.js'
+} from '../../utils/cc-shim/permissions/index.js'
+import {getPlatform} from '../../utils/cc-shim/platform.js'
+import {SandboxManager} from '../../utils/cc-shim/misc.js'
 import {jsonStringify} from '../../utils/json.js'
-import {windowsPathToPosixPath} from 'src/utils/windowsPaths.js'
+import {windowsPathToPosixPath} from '../../utils/cc-shim/misc.js'
 import {BashTool} from './BashTool.js'
 import {checkCommandOperatorPermissions} from './bashCommandHelpers.js'
 import {
