@@ -1,32 +1,50 @@
 #!/usr/bin/env bash
-# smoke-real-api.sh — examples 的真 API smoke（手动触发，需要 API key）
+# smoke-real-api.sh — examples 真 API smoke（手动触发，需要 API key）
 #
 # 不进守门。仅本地手动跑用于验证 substrate 与真 LLM API 端到端兼容。
 #
-# 默认配置：DeepSeek anthropic-compatible endpoint + deepseek-v4-flash
-# （DeepSeek 完整支持 Anthropic 协议的 system/messages/tools/tool_use/tool_result/stream）
+# ════════════════════════════════════════════════════════════════════════
+# 设计原则
+# ════════════════════════════════════════════════════════════════════════
+# 该脚本不识别任何 vendor 名（无 OPENCODE_API_KEY / DEEPSEEK_API_KEY 之类的
+# vendor 专属变量）。Vendor 知识 = 配置（env），不是代码。
 #
-# 切换到 Anthropic 官方：
-#   ANTHROPIC_API_KEY=sk-ant-... MODEL=claude-sonnet-4-20250514 \
+# 所有 anthropic-compatible provider 都通过 3 类正交 env 配置：
+#   AUTH_MODE   = apikey | bearer  (default apikey)
+#   认证值       = API_KEY=... 或 AUTH_TOKEN=...
+#   端点+模型    = BASE_URL=... + MODEL=...
+#
+# 也接受 Anthropic SDK 标准 env（ANTHROPIC_API_KEY / ANTHROPIC_AUTH_TOKEN /
+# ANTHROPIC_BASE_URL），方便 0 改动接入 cc-switch / claude code 等已有工具链。
+#
+# ════════════════════════════════════════════════════════════════════════
+# 配置场景示例
+# ════════════════════════════════════════════════════════════════════════
+#
+#   # Anthropic 官方 (x-api-key)
+#   API_KEY=<api-key> MODEL=claude-sonnet-4-20250514 \
 #     bash scripts/smoke-real-api.sh
 #
-# DeepSeek（默认）：
-#   DEEPSEEK_API_KEY=sk-... bash scripts/smoke-real-api.sh
-#
-# OpenCode Go anthropic endpoint（含 Bearer 认证）：
-#   OPENCODE_API_KEY=oc-... bash scripts/smoke-real-api.sh
-#   # 默认 model=minimax-m2.7（当下最强 anthropic-compat），可改 MODEL=qwen3.5-plus 等
-#
-# 自定义 anthropic-compatible 第三方（Bearer 认证）：
-#   AUTH_TOKEN=... BASE_URL=https://your-gateway/v1 MODEL=... bash scripts/smoke-real-api.sh
-#
-# 自定义 anthropic-compatible 第三方（x-api-key 认证）：
-#   API_KEY=... BASE_URL=https://your-proxy.example.com/anthropic MODEL=... \
+#   # DeepSeek 官方 anthropic endpoint (x-api-key)
+#   API_KEY=<api-key> \
+#     BASE_URL=https://api.deepseek.com/anthropic \
+#     MODEL=deepseek-v4-flash \
 #     bash scripts/smoke-real-api.sh
 #
-# 输出：
-#   - 三个 example 各跑一次 + 实际 LLM 输出
-#   - 第三个 example（server）会真 POST + GET SSE 验证完整 HTTP/SSE 转发链路
+#   # 任意 Bearer 认证网关 (含 Vercel AI Gateway / OpenRouter 等)
+#   AUTH_MODE=bearer AUTH_TOKEN=... \
+#     BASE_URL=https://gateway.example/v1 \
+#     MODEL=anthropic/claude-sonnet-4-5 \
+#     bash scripts/smoke-real-api.sh
+#
+#   # 本地协议转换代理 (cc-switch 等)
+#   API_KEY=... BASE_URL=http://127.0.0.1:15721 MODEL=... \
+#     bash scripts/smoke-real-api.sh
+#
+#   # 或复用 cc-switch / claude code 已注入的 ANTHROPIC_* env (0 改动)
+#   AUTH_MODE=bearer MODEL=deepseek-v4-flash bash scripts/smoke-real-api.sh
+#
+# ════════════════════════════════════════════════════════════════════════
 
 set -euo pipefail
 
@@ -35,55 +53,48 @@ ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 cd "$ROOT_DIR"
 
-# 决定走哪个真 API（优先级：AUTH_TOKEN > API_KEY > vendor 专属 key）
-if [[ -z "${API_KEY:-}" && -z "${AUTH_TOKEN:-}" \
-   && -z "${ANTHROPIC_API_KEY:-}" && -z "${ANTHROPIC_AUTH_TOKEN:-}" \
-   && -z "${DEEPSEEK_API_KEY:-}" && -z "${OPENCODE_API_KEY:-}" ]]; then
-	echo "❌ Set one of: AUTH_TOKEN / API_KEY / ANTHROPIC_API_KEY / ANTHROPIC_AUTH_TOKEN / DEEPSEEK_API_KEY / OPENCODE_API_KEY"
-	echo ""
-	echo "Quick start:"
-	echo "  # OpenCode Go (你已订阅的)："
-	echo "  export OPENCODE_API_KEY=oc-..."
-	echo "  bash scripts/smoke-real-api.sh"
-	echo ""
-	echo "  # DeepSeek 直 API (最便宜)："
-	echo "  export DEEPSEEK_API_KEY=sk-..."
-	echo "  bash scripts/smoke-real-api.sh"
+AUTH_MODE_RESOLVED="${AUTH_MODE:-apikey}"
+AUTH_MODE_LOWER="$(printf '%s' "$AUTH_MODE_RESOLVED" | tr '[:upper:]' '[:lower:]')"
+
+# 校验认证：根据 AUTH_MODE 检查对应的认证值是否存在
+case "$AUTH_MODE_LOWER" in
+	bearer)
+		if [[ -z "${AUTH_TOKEN:-}" && -z "${ANTHROPIC_AUTH_TOKEN:-}" ]]; then
+			echo "❌ AUTH_MODE=bearer requires AUTH_TOKEN (or ANTHROPIC_AUTH_TOKEN)"
+			exit 1
+		fi
+		;;
+	apikey|*)
+		if [[ -z "${API_KEY:-}" && -z "${ANTHROPIC_API_KEY:-}" ]]; then
+			echo "❌ AUTH_MODE=apikey requires API_KEY (or ANTHROPIC_API_KEY)"
+			echo ""
+			echo "Configure 3 orthogonal env to point substrate at any anthropic-compatible provider:"
+			echo "  AUTH_MODE=apikey|bearer        (default: apikey)"
+			echo "  API_KEY=...   or  AUTH_TOKEN=..."
+			echo "  BASE_URL=...                    (optional; defaults to Anthropic official)"
+			echo "  MODEL=...                       (required)"
+			echo ""
+			echo "See header comment for ready-to-copy scenarios."
+			exit 1
+		fi
+		;;
+esac
+
+# MODEL 必填（substrate 不硬编码默认 model）
+if [[ -z "${MODEL:-}" ]]; then
+	echo "❌ MODEL env var is required. Substrate does not hardcode any default model name."
 	exit 1
 fi
 
-# 默认 endpoint：自动识别 vendor key
-if [[ -z "${BASE_URL:-}" && -n "${OPENCODE_API_KEY:-}" \
-   && -z "${ANTHROPIC_API_KEY:-}" && -z "${API_KEY:-}" \
-   && -z "${ANTHROPIC_AUTH_TOKEN:-}" && -z "${AUTH_TOKEN:-}" \
-   && -z "${DEEPSEEK_API_KEY:-}" ]]; then
-	# OpenCode Go 路径（Bearer 认证）
-	export BASE_URL="https://opencode.ai/zen/go/v1"
-	export MODEL="${MODEL:-minimax-m2.7}"
-	echo "==> Using OpenCode Go anthropic-compatible endpoint"
-	echo "    BASE_URL=$BASE_URL"
-	echo "    MODEL=$MODEL  (Anthropic-compat models on OpenCode Go: minimax-m2.7 / minimax-m2.5 / qwen3.6-plus / qwen3.5-plus)"
-elif [[ -z "${BASE_URL:-}" && -n "${DEEPSEEK_API_KEY:-}" \
-     && -z "${ANTHROPIC_API_KEY:-}" && -z "${API_KEY:-}" \
-     && -z "${ANTHROPIC_AUTH_TOKEN:-}" && -z "${AUTH_TOKEN:-}" ]]; then
-	# DeepSeek 直 API 路径（x-api-key 认证）
-	export BASE_URL="https://api.deepseek.com/anthropic"
-	export MODEL="${MODEL:-deepseek-v4-flash}"
-	echo "==> Using DeepSeek anthropic-compatible endpoint"
-	echo "    BASE_URL=$BASE_URL"
-	echo "    MODEL=$MODEL"
-elif [[ -n "${ANTHROPIC_API_KEY:-}" || -n "${API_KEY:-}" \
-     || -n "${ANTHROPIC_AUTH_TOKEN:-}" || -n "${AUTH_TOKEN:-}" ]]; then
-	# Anthropic 官方或自定义网关
-	export MODEL="${MODEL:-claude-sonnet-4-20250514}"
-	echo "==> Using endpoint: ${BASE_URL:-default Anthropic}"
-	echo "    MODEL=$MODEL"
-fi
+echo "==> real API smoke config"
+echo "    AUTH_MODE = ${AUTH_MODE_RESOLVED}"
+echo "    BASE_URL  = ${BASE_URL:-${ANTHROPIC_BASE_URL:-(default Anthropic)}}"
+echo "    MODEL     = ${MODEL}"
+echo ""
 
 # ----------------------------------------------------------------
 # Step 1/3: sdk-pure.ts
 # ----------------------------------------------------------------
-echo ""
 echo "============================================================"
 echo "==> [1/3] sdk-pure.ts (in-process, no store)"
 echo "============================================================"
@@ -120,7 +131,7 @@ echo ""
 echo "============================================================"
 echo "==> [3/3] sdk-with-server.ts (real HTTP server + SSE)"
 echo "============================================================"
-SERVER_PORT="${SERVER_PORT:-3789}"
+SERVER_PORT="${SERVER_PORT:-$((20000 + RANDOM % 30000))}"
 SERVER_LOG="$(mktemp -t smoke-server.XXXXXX)"
 SERVER_RUNS_DIR="$(mktemp -d -t smoke-server-runs.XXXXXX)"
 
@@ -130,8 +141,7 @@ echo "[server] pid=$SERVER_PID port=$SERVER_PORT logs=$SERVER_LOG"
 
 # 等 server 起来
 for i in 1 2 3 4 5 6 7 8 9 10; do
-	if curl -sS "http://localhost:$SERVER_PORT/" > /dev/null 2>&1 || \
-	   grep -q "listening" "$SERVER_LOG" 2>/dev/null; then
+	if grep -q "listening" "$SERVER_LOG" 2>/dev/null; then
 		break
 	fi
 	sleep 0.3
@@ -142,7 +152,7 @@ if ! grep -q "listening" "$SERVER_LOG" 2>/dev/null; then
 	cat "$SERVER_LOG"
 	exit 1
 fi
-echo "[server] listening confirmed"
+echo "[server] listening confirmed on port $SERVER_PORT"
 
 # POST /runs
 echo ""

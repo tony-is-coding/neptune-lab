@@ -1,13 +1,15 @@
 /**
  * sdk-with-fs-store.ts — SDK + FileRunStore（state 外化 + resume 验证）
  *
- * 用法：
+ * Provider 配置完全由 env 注入，见 _provider.ts 的 ASCII 全景图与场景示例。
+ *
+ * 快速用法：
  *   # 第一次跑：创建新 run（真 API）
- *   ANTHROPIC_API_KEY=sk-ant-... MODEL=claude-sonnet-4-20250514 bun run examples/sdk-with-fs-store.ts
+ *   API_KEY=... [BASE_URL=...] MODEL=... bun run examples/sdk-with-fs-store.ts
  *   # → 输出 runId
  *
  *   # 用同 runId resume
- *   ANTHROPIC_API_KEY=sk-ant-... MODEL=claude-sonnet-4-20250514 \
+ *   API_KEY=... [BASE_URL=...] MODEL=... \
  *     bun run examples/sdk-with-fs-store.ts --resume <runId>
  *
  *   # CI / 离线 smoke（0 API 消耗）
@@ -50,7 +52,8 @@ if (isResume) {
 	const userMessage: Message = {
 		type: 'user',
 		uuid: randomUUID() as unknown as Message['uuid'],
-		message: {role: 'user', content: 'List 3 prime numbers under 20.'},
+		// content blocks 数组形式（OpenCode Go 等严格 anthropic-compat 网关只接受此形式）
+		message: {role: 'user', content: [{type: 'text', text: 'List 3 prime numbers under 20.'}]} as never,
 	}
 
 	const gen = AgentLoop.runWithStore({

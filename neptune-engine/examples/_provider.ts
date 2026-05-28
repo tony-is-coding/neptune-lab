@@ -1,34 +1,101 @@
 /**
- * _provider.ts — examples 共享的 provider factory
+ * _provider.ts — 共享 provider factory（substrate-agnostic 配置抽象）
  *
- * 设计目的（v6.0 P0.1.B + P0.3）：
- * - 提取三个 example 共用的 provider 选择 + env 解析逻辑
- * - 双模式：
- *   - USE_SCRIPTED_PROVIDER=true → ScriptedProvider（CI 友好，0 API 消耗）
- *   - 否则 → AnthropicStreamingProvider，可指向：
- *     · Anthropic 官方 endpoint（不传 BASE_URL）
- *     · DeepSeek anthropic endpoint（BASE_URL=https://api.deepseek.com/anthropic）
- *     · OpenCode Go anthropic endpoint（BASE_URL=https://opencode.ai/zen/go/v1，需 AUTH_TOKEN）
- *     · 任何 anthropic-compatible 第三方
+ * ════════════════════════════════════════════════════════════════════════
+ * 设计原则（第一性原理）
+ * ════════════════════════════════════════════════════════════════════════
  *
- * env：
- *   USE_SCRIPTED_PROVIDER  - 'true' 走 mock，否则走真 API
- *   AUTH_TOKEN            - Bearer 认证 token（第三方网关首选，OpenCode Go / Vercel AI Gateway / 等）
- *   API_KEY               - x-api-key 认证（Anthropic 官方风格；优先级低于 AUTH_TOKEN）
- *   ANTHROPIC_AUTH_TOKEN  - AUTH_TOKEN 的兜底 env
- *   ANTHROPIC_API_KEY     - API_KEY 的兜底 env（兼容 Anthropic SDK 习惯）
- *   DEEPSEEK_API_KEY      - 当 BASE_URL 含 deepseek 时优先用此 key
- *   OPENCODE_API_KEY      - 当 BASE_URL 含 opencode 时优先用此 key（作为 AUTH_TOKEN 用）
- *   BASE_URL              - 自定义 anthropic-compatible endpoint，不设默认走官方
- *   MODEL                 - 模型 ID（必填，substrate 不再硬编码默认）
+ * SDK example 不应该感知任何 vendor 知识（DeepSeek / OpenCode Go /
+ * Anthropic / etc.）。Vendor 知识 = 配置（env），不是代码。
+ *
+ * 用户接入 anthropic-compatible LLM provider 真正需要的 3 类正交配置：
+ *
+ *   1. 认证值     = API_KEY / AUTH_TOKEN
+ *   2. 认证模式   = x-api-key (Anthropic 原生) | Authorization Bearer (网关惯例)
+ *   3. 端点 + 模型 = BASE_URL + MODEL
+ *
+ * 只要这 3 类配置正确，substrate 可与任意 anthropic-compatible 端点对接。
+ *
+ * ════════════════════════════════════════════════════════════════════════
+ * Provider 路由全景图
+ * ════════════════════════════════════════════════════════════════════════
+ *
+ *                            user-supplied env
+ *                                    │
+ *                                    ▼
+ *  ┌───────────────────────────────────────────────────────────────────┐
+ *  │                    resolveProvider() (this file)                  │
+ *  │                                                                   │
+ *  │  ┌──────────────────────────┐    ┌────────────────────────────┐   │
+ *  │  │ USE_SCRIPTED_PROVIDER=1? │───▶│ ScriptedProvider (mock)    │   │
+ *  │  └─────────┬────────────────┘    │  - 0 API 消耗，CI 友好     │   │
+ *  │            │ no                  │  - 预设 SSE 流，确定性     │   │
+ *  │            ▼                     └────────────────────────────┘   │
+ *  │  ┌──────────────────────────────────────────────────────────────┐ │
+ *  │  │ AnthropicStreamingProvider (真 API)                          │ │
+ *  │  │                                                              │ │
+ *  │  │  config from env:                                            │ │
+ *  │  │    apiKey    ◀── API_KEY | ANTHROPIC_API_KEY                 │ │
+ *  │  │    authToken ◀── AUTH_TOKEN | ANTHROPIC_AUTH_TOKEN           │ │
+ *  │  │    baseURL   ◀── BASE_URL | ANTHROPIC_BASE_URL               │ │
+ *  │  │    model     ◀── MODEL                                       │ │
+ *  │  │                                                              │ │
+ *  │  │  AUTH_MODE 决定使用 apiKey 还是 authToken：                  │ │
+ *  │  │    apikey (默认) → x-api-key header                          │ │
+ *  │  │    bearer        → Authorization: Bearer header              │ │
+ *  │  │  (若两者都设了，AUTH_MODE 决定哪个生效，避免双 header)       │ │
+ *  │  └──────────────────────────────────────────────────────────────┘ │
+ *  └───────────────────────────────────────────────────────────────────┘
+ *                                    │
+ *                                    ▼
+ *                    StreamingProviderAdapter 实例
+ *                    (substrate AgentLoop 消费，不关心来源)
+ *
+ * ════════════════════════════════════════════════════════════════════════
+ * 配置场景示例（仅注释，代码完全 vendor-agnostic）
+ * ════════════════════════════════════════════════════════════════════════
+ *
+ *   Anthropic 官方:
+ *     AUTH_MODE=apikey
+ *     API_KEY=<api-key>
+ *     # BASE_URL 不设 → 默认 https://api.anthropic.com
+ *     MODEL=claude-sonnet-4-20250514
+ *
+ *   DeepSeek 官方 anthropic endpoint:
+ *     AUTH_MODE=apikey
+ *     API_KEY=<api-key>
+ *     BASE_URL=https://api.deepseek.com/anthropic
+ *     MODEL=deepseek-v4-flash
+ *
+ *   OpenCode Go via cc-switch 本地代理:
+ *     AUTH_MODE=apikey
+ *     API_KEY=<api-key>
+ *     BASE_URL=http://127.0.0.1:15721
+ *     MODEL=deepseek-v4-flash
+ *
+ *   Vercel AI Gateway 等 Bearer 网关:
+ *     AUTH_MODE=bearer
+ *     AUTH_TOKEN=xxx
+ *     BASE_URL=https://ai-gateway.vercel.sh
+ *     MODEL=anthropic/claude-sonnet-4-5
+ *
+ *   离线 mock（CI 用）:
+ *     USE_SCRIPTED_PROVIDER=true
+ *     # 其他 env 不需要
+ *
+ *   复用 cc-switch / claude code 已注入的 env（0 改动接入）:
+ *     # cc-switch 自动注入 ANTHROPIC_AUTH_TOKEN / ANTHROPIC_BASE_URL
+ *     # 仅需补 MODEL 即可
+ *     AUTH_MODE=bearer
+ *     MODEL=deepseek-v4-flash
+ *     bun run examples/sdk-pure.ts
+ *
+ * ════════════════════════════════════════════════════════════════════════
  */
 
 import {AnthropicStreamingProvider} from '../src/engine/agent-loop/provider/AnthropicStreamingProvider.js'
 import type {StreamingProviderAdapter} from '../src/engine/agent-loop/provider/StreamingProviderAdapter.js'
-import {
-	ScriptedProvider,
-	textTurn,
-} from '../src/testing.js'
+import {ScriptedProvider, textTurn} from '../src/testing.js'
 
 export interface ResolvedProviderEnv {
 	provider: StreamingProviderAdapter
@@ -36,64 +103,68 @@ export interface ResolvedProviderEnv {
 	scripted: boolean
 }
 
+/** 读 env，缺失时返 undefined。空字符串视为未设置。 */
+function envOr(...keys: string[]): string | undefined {
+	for (const k of keys) {
+		const v = process.env[k]
+		if (v !== undefined && v.length > 0) return v
+	}
+	return undefined
+}
+
 /**
- * 从 env 决定走哪个 provider，返回 provider 实例 + model。
+ * 从 env 解析出 substrate StreamingProvider。
  *
- * 缺失关键 env 时不抛错，而是 process.exit(1) 并打印清晰的提示——
- * examples 是给人手动跑的，错误信息要直接可读。
+ * 缺失关键 env 时打印清晰提示并 process.exit(1)——examples 是给人手动跑的，
+ * 错误信息要直接可读。
  */
 export function resolveProvider(): ResolvedProviderEnv {
-	const scripted = process.env.USE_SCRIPTED_PROVIDER === 'true'
-
-	if (scripted) {
-		// 默认脚本：3 次 turn 都返一段固定文本，足够覆盖 sdk-pure / fs-store / server 三个示例
+	// 1) Mock 模式（CI 友好，0 API 消耗）
+	if (process.env.USE_SCRIPTED_PROVIDER === 'true') {
 		const provider = new ScriptedProvider([
 			textTurn('Hello from ScriptedProvider — substrate smoke OK'),
 			textTurn('Second turn ack'),
 			textTurn('Third turn ack'),
 		])
-		const model = process.env.MODEL || 'scripted-mock'
-		return {provider, model, scripted: true}
+		return {provider, model: process.env.MODEL || 'scripted-mock', scripted: true}
 	}
 
-	// 真 API 模式
-	const baseURL = process.env.BASE_URL
-	const isDeepSeek = !!baseURL && baseURL.includes('deepseek')
-	const isOpenCode = !!baseURL && baseURL.includes('opencode')
+	// 2) 真 API 模式：3 类正交配置
+	const authMode = (process.env.AUTH_MODE || 'apikey').toLowerCase()
+	const apiKey = envOr('API_KEY', 'ANTHROPIC_API_KEY')
+	const authToken = envOr('AUTH_TOKEN', 'ANTHROPIC_AUTH_TOKEN')
+	const baseURL = envOr('BASE_URL', 'ANTHROPIC_BASE_URL')
+	const model = envOr('MODEL')
 
-	// 认证 token：AUTH_TOKEN（Bearer，第三方网关首选）→ ANTHROPIC_AUTH_TOKEN env → vendor 专属 key
-	const authToken =
-		process.env.AUTH_TOKEN ||
-		process.env.ANTHROPIC_AUTH_TOKEN ||
-		(isOpenCode ? process.env.OPENCODE_API_KEY : undefined)
-
-	// API key：API_KEY → ANTHROPIC_API_KEY env → vendor 专属 key
-	const apiKey =
-		process.env.API_KEY ||
-		(isDeepSeek ? process.env.DEEPSEEK_API_KEY : undefined) ||
-		process.env.ANTHROPIC_API_KEY
-
-	if (!authToken && !apiKey) {
-		console.error('Set one of: AUTH_TOKEN / API_KEY / ANTHROPIC_AUTH_TOKEN / ANTHROPIC_API_KEY / DEEPSEEK_API_KEY / OPENCODE_API_KEY')
-		console.error('  - For Anthropic official:    ANTHROPIC_API_KEY=sk-ant-...')
-		console.error('  - For DeepSeek anthropic:    DEEPSEEK_API_KEY=... BASE_URL=https://api.deepseek.com/anthropic')
-		console.error('  - For OpenCode Go:           OPENCODE_API_KEY=... BASE_URL=https://opencode.ai/zen/go/v1 MODEL=minimax-m2.7')
-		console.error('  - For mock (no API):         USE_SCRIPTED_PROVIDER=true')
+	// 校验：认证至少一个
+	const useBearer = authMode === 'bearer'
+	const credential = useBearer ? authToken : apiKey
+	if (!credential) {
+		const expectedKey = useBearer
+			? 'AUTH_TOKEN (or ANTHROPIC_AUTH_TOKEN)'
+			: 'API_KEY (or ANTHROPIC_API_KEY)'
+		console.error(`Missing credential for AUTH_MODE=${authMode}: set ${expectedKey}`)
+		console.error('')
+		console.error('Three orthogonal env to configure any anthropic-compatible provider:')
+		console.error('  AUTH_MODE=apikey|bearer  (default: apikey)')
+		console.error('  API_KEY=... or AUTH_TOKEN=...')
+		console.error('  BASE_URL=...             (optional, defaults to Anthropic)')
+		console.error('  MODEL=...                (required)')
+		console.error('')
+		console.error('Or use mock for CI:  USE_SCRIPTED_PROVIDER=true')
 		process.exit(1)
 	}
 
-	const model = process.env.MODEL
+	// 校验：model 必填
 	if (!model) {
 		console.error('Set MODEL env var (substrate does not hardcode default)')
-		console.error('  - Anthropic:     MODEL=claude-sonnet-4-20250514')
-		console.error('  - DeepSeek:      MODEL=deepseek-v4-flash  (or deepseek-v4-pro)')
-		console.error('  - OpenCode Go:   MODEL=minimax-m2.7  (or qwen3.5-plus / qwen3.6-plus / minimax-m2.5)')
 		process.exit(1)
 	}
 
 	const provider = new AnthropicStreamingProvider({
-		...(authToken && {authToken}),
-		...(!authToken && apiKey && {apiKey}),
+		// authToken 与 apiKey 由 substrate 内部根据互斥优先级处理；
+		// 这里按 AUTH_MODE 单向注入，避免歧义。
+		...(useBearer ? {authToken: credential} : {apiKey: credential}),
 		...(baseURL && {baseURL}),
 		defaultModel: model,
 	})

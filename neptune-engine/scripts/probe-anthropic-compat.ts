@@ -1,55 +1,67 @@
 /**
- * probe-opencode-go.ts — 验证 substrate AnthropicStreamingProvider 能否接入 OpenCode Go
+ * probe-anthropic-compat.ts — 验证 substrate AnthropicStreamingProvider
+ *                            与任意 anthropic-compatible 端点的协议兼容性
  *
- * 这是一个最小验证脚本，跑 1 次 LLM 调用，输出协议层面的诊断信息：
+ * 跑 1 次 LLM 调用，输出协议层面的诊断信息：
  * - 认证 header 是否正确
- * - SSE 事件是否能被 ParsedSSEEvent 正确解析
+ * - SSE 事件能否被 ParsedSSEEvent 正确解析
  * - response 是否含真 LLM 输出文本
  *
- * 用法：
- *   OPENCODE_API_KEY=oc-... bun run scripts/probe-opencode-go.ts
+ * 配置（与 examples/_provider.ts 一致的 3 类正交 env）：
+ *   AUTH_MODE=apikey|bearer       (默认 apikey)
+ *   API_KEY=... 或 AUTH_TOKEN=...
+ *   BASE_URL=...                  (可选，缺省走 Anthropic 官方)
+ *   MODEL=...                     (必填)
  *
- * 可选：
- *   MODEL=qwen3.5-plus bun run scripts/probe-opencode-go.ts  # 默认 minimax-m2.7
+ * 也接受 Anthropic SDK 标准 env（ANTHROPIC_API_KEY / ANTHROPIC_AUTH_TOKEN /
+ * ANTHROPIC_BASE_URL），方便 0 改动接入 cc-switch / claude code 等已有工具链。
+ *
+ * 用法示例：
+ *   # Anthropic 官方
+ *   AUTH_MODE=apikey API_KEY=<api-key> MODEL=claude-sonnet-4-20250514 \
+ *     bun run scripts/probe-anthropic-compat.ts
+ *
+ *   # 自定义 anthropic-compatible 端点 (x-api-key)
+ *   API_KEY=... BASE_URL=https://your-proxy/anthropic MODEL=... \
+ *     bun run scripts/probe-anthropic-compat.ts
+ *
+ *   # Bearer 认证网关
+ *   AUTH_MODE=bearer AUTH_TOKEN=... BASE_URL=https://gateway/v1 MODEL=... \
+ *     bun run scripts/probe-anthropic-compat.ts
  */
 
 import {randomUUID} from 'crypto'
-import {AnthropicStreamingProvider} from '../src/engine/agent-loop/provider/AnthropicStreamingProvider.js'
 import type {Message} from '../src/engine/types/message.js'
+import {resolveProvider} from '../examples/_provider.js'
 
-const apiKey = process.env.OPENCODE_API_KEY || process.env.AUTH_TOKEN
-if (!apiKey) {
-	console.error('❌ Set OPENCODE_API_KEY=oc-... (or AUTH_TOKEN=...)')
+// resolveProvider 处理所有 env 解析与错误提示
+const {provider, model, scripted} = resolveProvider()
+
+if (scripted) {
+	console.error('❌ Probe 是真协议探针，不应启用 USE_SCRIPTED_PROVIDER。')
+	console.error('   请改用 examples scripted smoke：bash scripts/smoke-scripted.sh')
 	process.exit(1)
 }
 
-const model = process.env.MODEL || 'minimax-m2.7'
-const baseURL = process.env.BASE_URL || 'https://opencode.ai/zen/go/v1'
-
 console.log('==> probe config')
-console.log(`    BASE_URL  = ${baseURL}`)
+console.log(`    BASE_URL  = ${process.env.BASE_URL || process.env.ANTHROPIC_BASE_URL || '(default Anthropic)'}`)
 console.log(`    MODEL     = ${model}`)
-console.log(`    AUTH_MODE = Bearer (authToken via Anthropic SDK)`)
-console.log(`    KEY       = ${apiKey.slice(0, 6)}... (len=${apiKey.length})`)
+console.log(`    AUTH_MODE = ${(process.env.AUTH_MODE || 'apikey').toLowerCase()}`)
 console.log('')
-
-const provider = new AnthropicStreamingProvider({
-	authToken: apiKey,
-	baseURL,
-	defaultModel: model,
-})
 
 const userMessage: Message = {
 	type: 'user',
 	uuid: randomUUID() as unknown as Message['uuid'],
-	message: {role: 'user', content: 'Reply with exactly one word: hello'},
+	// content blocks 数组形式（部分严格 anthropic-compat 网关只接受此形式；
+	//  Anthropic 官方两种都接受，统一用数组形式覆盖最广兼容性）
+	message: {role: 'user', content: [{type: 'text', text: 'Reply with exactly one word: hello'}]} as never,
 }
 
 console.log('==> sending one-turn request, parsing SSE events...')
 console.log('')
 
 let eventCount = 0
-let textChunks: string[] = []
+const textChunks: string[] = []
 let saw_message_start = false
 let saw_message_stop = false
 let errorEvent: unknown = null
@@ -95,7 +107,7 @@ try {
 
 console.log('')
 console.log('==> verdict')
-console.log(`    events received: ${eventCount}`)
+console.log(`    events received:   ${eventCount}`)
 console.log(`    saw message_start: ${saw_message_start}`)
 console.log(`    saw message_stop:  ${saw_message_stop}`)
 console.log(`    text output:       "${textChunks.join('')}"`)
@@ -105,9 +117,9 @@ if (errorEvent) {
 	console.log('')
 	console.log('❌ probe FAILED — provider yielded error event')
 	console.log('   常见原因：')
-	console.log('   - 401: API key 无效或未订阅')
-	console.log('   - 404: model 名错误，请确认是 anthropic-compat 模型')
-	console.log('   - 协议不匹配：OpenCode Go 该 model 可能不走 anthropic 协议')
+	console.log('   - 401: 认证值无效或权限不足')
+	console.log('   - 404: model 名错误，或端点路径不匹配 anthropic 协议')
+	console.log('   - 协议不匹配：上游模型可能不走 anthropic 协议（比如只支持 OpenAI Chat Completions）')
 	process.exit(3)
 }
 
@@ -124,4 +136,4 @@ if (textChunks.join('').trim().length === 0) {
 }
 
 console.log('')
-console.log('✅ probe PASS — substrate AnthropicStreamingProvider 与 OpenCode Go 端到端兼容')
+console.log('✅ probe PASS — substrate AnthropicStreamingProvider 与目标端点协议兼容')

@@ -10,8 +10,8 @@
  *   GET  /runs/:id/events → SSE 流：实时 yield events（含历史 + 新）
  *
  * 用法：
- *   # 真 API（Anthropic）
- *   ANTHROPIC_API_KEY=sk-ant-... MODEL=claude-sonnet-4-20250514 bun run examples/sdk-with-server.ts
+ *   # 真 API（任意 anthropic-compatible 端点；详见 _provider.ts 全景图）
+ *   API_KEY=... [BASE_URL=...] MODEL=... bun run examples/sdk-with-server.ts
  *
  *   # CI / 离线 smoke（0 API 消耗，仅启动后立即退出验证 server 可启）
  *   USE_SCRIPTED_PROVIDER=true EXIT_AFTER_LISTEN=true bun run examples/sdk-with-server.ts
@@ -21,7 +21,7 @@
  *   curl http://localhost:3000/runs/<runId>/events
  *
  * env：
- *   PORT                  - 监听端口（默认 3000，0 = 随机）
+ *   PORT                  - 监听端口（默认 3000）
  *   EXIT_AFTER_LISTEN     - 'true' 启动后立即 exit(0)（CI smoke 用）
  */
 
@@ -56,7 +56,8 @@ async function runInBackground(runId: string, prompt: string): Promise<void> {
 	const userMessage: Message = {
 		type: 'user',
 		uuid: randomUUID() as unknown as Message['uuid'],
-		message: {role: 'user', content: prompt},
+		// content blocks 数组形式（OpenCode Go 等严格 anthropic-compat 网关只接受此形式）
+		message: {role: 'user', content: [{type: 'text', text: prompt}]} as never,
 	}
 	const ctx = createToolUseContext()
 	const gen = AgentLoop.runWithStore({

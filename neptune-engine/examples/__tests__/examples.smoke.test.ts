@@ -6,8 +6,8 @@
  * - 验证 example 文件本身可执行 + provider 切换逻辑正确 + 关键输出存在
  * - 进 substrate 守门 v2 D.10（CI 友好，无 API key 也能跑）
  *
- * 真 API smoke 由 scripts/smoke-real-api.sh 单独触发（需要真 ANTHROPIC_API_KEY
- * 或 DEEPSEEK_API_KEY，仅本地手动跑，不进守门）。
+ * 真 API smoke 由 scripts/smoke-real-api.sh 单独触发（需要真 API_KEY/AUTH_TOKEN
+ * 与可选的 BASE_URL/MODEL，仅本地手动跑，不进守门）。
  */
 
 import {describe, expect, it} from 'bun:test'
@@ -102,10 +102,19 @@ describe('examples scripted smoke', () => {
 
 	it('sdk-with-server.ts: USE_SCRIPTED_PROVIDER=true + EXIT_AFTER_LISTEN=true → 启动后立即退出', async () => {
 		// server example 默认死循环监听端口，加 EXIT_AFTER_LISTEN env 让它启动后 exit(0)
+		const tmpCwd = makeTempDir('server')
 		const result = await runExample('sdk-with-server.ts', {
-			extraEnv: {EXIT_AFTER_LISTEN: 'true', PORT: '0'},
+			cwd: tmpCwd,
+			extraEnv: {
+				EXIT_AFTER_LISTEN: 'true',
+				PORT: String(20_000 + Math.floor(Math.random() * 30_000)),
+			},
 		})
-		expect(result.exitCode).toBe(0)
-		expect(result.stdout).toContain('[server] listening on')
+		try {
+			expect(result.exitCode).toBe(0)
+			expect(result.stdout).toContain('[server] listening on')
+		} finally {
+			rmSync(tmpCwd, {recursive: true, force: true})
+		}
 	}, 35_000)
 })
