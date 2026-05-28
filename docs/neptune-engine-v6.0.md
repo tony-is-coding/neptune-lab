@@ -4,7 +4,7 @@
 
 > **Status**：v6.0 ✅ 完成（2026-05-26）— 单一查询路径 / 单一 Provider 接口 / 字段重构 / 跨 repo 死代码删除 ~2200 行
 > **守门**：substrate v2 **42/42 PASS**（含 10 项 functional substrate + examples scripted smoke）· v1 守门 **11/11 PASS**
-> **测试**：engine **1352 pass / 0 fail**（v5.0 1428 → v6.0 1352，删除 76 项 stub 测试合理）· substrate tsc 0 errors
+> **测试**：engine **1306 pass / 0 fail**（v6.0 P0.5.D exports 白名单后基线）· substrate tsc 0 errors
 > **文件规模**：193 源文件 / 95 测试文件（v5.0 → v6.0 净删除 ~38 文件 / 死代码 ~2200 行）
 
 ---
@@ -13,9 +13,9 @@
 
 1. **协议中心化**：v5.0 的「双轨制」（旧 ProviderAdapter + 新 StreamingProviderAdapter）一刀切删除，substrate 现在唯一对外协议是 `StreamingProviderAdapter`，唯一具体实现是 `AnthropicStreamingProvider`，唯一支持的 wire format 是 Anthropic Messages API（含 SSE）。
 2. **配置表面更小**：`AgentEngineConfig` 删除了 3 个无效字段（`useAgentLoop` / `provider` / `providerRegistry` / `circuitBreaker`），新增 1 个直接字段（`defaultModel`），表达力 0 损失，迷惑性 API 全部清除。
-3. **多 Provider 通过 Anthropic 兼容层支持**：DeepSeek（`api.deepseek.com/anthropic`）/ Anthropic 官方 / OpenRouter / Powapi / 任意 anthropic-compatible 第三方。**substrate 不做协议翻译，而是要求 provider 端兼容 Anthropic**——这是更可持续的多 provider 路径。
+3. **多 Provider 通过 Anthropic 兼容层支持**：substrate 不识别 vendor 名，只识别 Anthropic Messages/SSE compatible endpoint。Provider 端负责协议兼容，调用方只通过 `AUTH_MODE` / `API_KEY|AUTH_TOKEN` / `BASE_URL+MODEL` 三类正交配置接入。
 4. **substrate 唯一查询路径**：`AgentEngine.query → AgentLoop.runWithStore + AgentLoopBridge → SDK QueryEvent`。原 cc-runtime fallback 路径（HeadlessQueryEngine）和 OriginalQueryEngineBridge 全部删除。16 batch agent-loop 能力（retry/fallback/watchdog/caching/compaction/budget/governance/audit/runStore/sandbox）默认上线，无需切换。
-5. **examples 双模式 + DeepSeek-default smoke 脚本**：sdk-pure / sdk-with-fs-store / sdk-with-server 三件套统一支持 `USE_SCRIPTED_PROVIDER=true`（CI 友好，0 API 消耗）+ 真 API（默认 DeepSeek anthropic endpoint，节省成本）。
+5. **examples 双模式 + vendor-neutral smoke 脚本**：sdk-pure / sdk-with-fs-store / sdk-with-server 三件套统一支持 `USE_SCRIPTED_PROVIDER=true`（CI 友好，0 API 消耗）+ 真 API（显式 env 配置任意 anthropic-compatible endpoint）。
 
 ---
 
@@ -34,7 +34,7 @@ substrate 是一个 **Agent Runtime Kernel**——它需要消费 LLM 的流式�
 
 **事实层判断**：Anthropic 协议本身就是为 agent loop 设计的（content blocks / tool_use / thinking blocks 都是天然的 agent 原语）。OpenAI 协议虽然市场份额大，但需要在 substrate 上加一层翻译，引入额外的状态机（tool_calls 增量字符串累积 / SSE 事件重组）。
 
-**生态层事实**：DeepSeek、OpenRouter、Powapi、claude-code-copilot 等多个第三方主动提供 Anthropic-compatible endpoint。市场已经在用脚投票把 Anthropic 协议作为「**事实标准**」往 OpenAI 旁边推。
+**生态层事实**：多个官方 provider、第三方网关、本地协议转换代理都在主动提供 Anthropic-compatible endpoint。市场已经在用脚投票把 Anthropic 协议作为「**事实标准**」往 OpenAI 旁边推。
 
 **v6.0 决策**：substrate 押注 Anthropic 协议作为 lingua franca。第三方 provider 想接入 substrate，就在自己的 endpoint 实现 Anthropic-compatible 即可。我们不在 substrate 内做反向翻译。
 
@@ -96,7 +96,7 @@ v6.0 砍掉 false 分支：唯一路径是 substrate AgentLoop。删除 200 行 
 │  [9] Provider Routing ⭐ v6.0 简化         [10] Permission / Sandbox            │
 │      ✅ Anthropic（唯一具体 provider）     ✅ PermissionMode 5×5 矩阵           │
 │      ✅ AnthropicStreamingProvider          ✅ SandboxAdapter 协议               │
-│      ✅ DeepSeek anthropic endpoint 兼容    ✅ LocalSandbox 24 case 决策         │
+│      ✅ anthropic-compat endpoint 实证      ✅ LocalSandbox 24 case 决策         │
 │      ✅ Retry/Fallback/Watchdog 包装                                            │
 │      ❌ 删除：旧 ProviderAdapter / Registry / 6 product stub                    │
 │                                                                                │
@@ -115,8 +115,8 @@ v6.0 砍掉 false 分支：唯一路径是 substrate AgentLoop。删除 200 行 
 │                                                                                │
 │  ⭐ v6.0 协议表面：                                                              │
 │     - 唯一 Provider 接口：StreamingProviderAdapter (queryStream → ParsedSSEEvent)│
-│     - 唯一 Provider 实现：AnthropicStreamingProvider（覆盖 Anthropic + DeepSeek │
-│       + OpenRouter + 任意 anthropic-compatible 第三方）                          │
+│     - 唯一 Provider 实现：AnthropicStreamingProvider（覆盖任意 Anthropic         │
+│       Messages/SSE compatible endpoint）                                        │
 │     - 唯一查询路径：AgentEngine.query → runQueryViaAgentLoop → AgentLoop        │
 └────────────────────────────────────────────────────────────────────────────────┘
 
@@ -222,7 +222,7 @@ v5.0 → v6.0 删除：
 | 字段 | 类型 | 必填 | 说明 |
 |------|------|------|------|
 | `streamingProvider` | `StreamingProviderAdapter` | **是**（运行时校验） | substrate 唯一 LLM 调用入口。常用：`new AnthropicStreamingProvider({apiKey, baseURL?, defaultModel?})` |
-| `defaultModel` | `string` | 推荐 | 默认 model ID（如 `'claude-sonnet-4-20250514'` / `'deepseek-v4-flash'`）。**substrate 不再硬编码任何默认值**，缺失时由 provider 自报错 |
+| `defaultModel` | `string` | 推荐 | 默认 model ID（如 `'provider-specific-model-id'`）。**substrate 不再硬编码任何默认值**，缺失时由 provider 自报错 |
 | `systemPrompt` | `string \| () => Promise<string>` | 否 | 系统提示词。可同步传字符串或异步函数 |
 
 ### 4.2 协议注入（按需）
@@ -330,58 +330,55 @@ class AnthropicStreamingProvider implements StreamingProviderAdapter {
 
 ### 5.3 多 Provider 通过 Anthropic-compatible endpoint
 
-substrate 不在内部做协议翻译，而是要求 provider **在自己的 endpoint 端实现 Anthropic-compatible**。这是更可持续的多 provider 路径。
+substrate 不在内部做协议翻译，也不通过 `baseURL.includes(...)` 识别 vendor。它只消费 Anthropic Messages/SSE compatible endpoint；vendor 知识属于配置（env），不是代码分支。
 
-#### 5.3.1 已知 Anthropic-compatible provider
+#### 5.3.1 统一接入配置
 
-| Provider | Endpoint | 使用 |
-|----------|----------|------|
-| Anthropic 官方 | `https://api.anthropic.com` (默认) | `ANTHROPIC_API_KEY=sk-ant-... MODEL=claude-sonnet-4-20250514` |
-| **DeepSeek** | `https://api.deepseek.com/anthropic` | `DEEPSEEK_API_KEY=... MODEL=deepseek-v4-flash`（默认 smoke 选择，最便宜） |
-| OpenRouter | 部分 model 路由（claude-* 路径） | `API_KEY=... BASE_URL=https://openrouter.ai/api/v1/anthropic` |
-| Powapi / claude-code-copilot | 第三方 anthropic 兼容代理 | 看各自文档 |
+任意 anthropic-compatible provider 都通过 3 类正交 env 接入：
 
-#### 5.3.2 DeepSeek anthropic endpoint 兼容性细节
+| 维度 | Env | 说明 |
+|------|-----|------|
+| 认证模式 | `AUTH_MODE=apikey|bearer` | `apikey` 使用 `x-api-key`；`bearer` 使用 `Authorization: Bearer` |
+| 认证值 | `API_KEY` 或 `AUTH_TOKEN` | 也兼容 `ANTHROPIC_API_KEY` / `ANTHROPIC_AUTH_TOKEN` |
+| 端点 + 模型 | `BASE_URL` + `MODEL` | `BASE_URL` 可缺省为 Anthropic 官方；`MODEL` 必须显式提供 |
 
-基于 DeepSeek 官方文档（https://api-docs.deepseek.com/guides/anthropic_api）：
+#### 5.3.2 已实证的 anthropic-compatible 接入路径
 
-**完整支持**：
-- `system` / `messages` / `max_tokens` / `temperature` / `top_p` / `stop_sequences` / `stream`
-- `tools.name` / `input_schema` / `description`
-- `tool_choice` (none / auto / any / tool)
-- Message `tool_use` (id / input / name)
-- Message `tool_result` (tool_use_id / content)
-- Message `text` block
-- Message `thinking` block
-- `temperature` 范围 [0.0, 2.0]
+| 路径类型 | 实例 | 认证 | 验证方式 |
+|----------|------|------|----------|
+| Anthropic 官方 | `https://api.anthropic.com` | `x-api-key` | `API_KEY + MODEL` |
+| Vendor 官方 anthropic endpoint | provider-provided `/anthropic` endpoint | `x-api-key` | `scripts/probe-anthropic-compat.ts` |
+| 本地协议转换代理 | `127.0.0.1:<port>`（OpenAI ↔ Anthropic 翻译） | `x-api-key` | P0.3 true API smoke 3/3 |
+| 第三方 Bearer 网关 | gateway endpoint | `Bearer` | `AUTH_MODE=bearer` |
 
-**Silently Ignored（不报错，无效果）**：
-- `cache_control` 标记（DeepSeek 自有 KV cache）
-- `anthropic-beta` / `anthropic-version` HTTP header
-- `disable_parallel_tool_use` flag
+这张表不是 vendor 排名，也不是默认推荐。它表达的是 substrate 的边界：只要 endpoint 对 Anthropic Messages API 与 SSE 事件兼容，substrate 就不需要知道背后是谁。
 
-**Not Supported**：
-- `image` / `document` / `search_result` / `mcp_tool_use` / `container_upload` content blocks
-- `metadata.user_id` 之外的 metadata 字段
+#### 5.3.3 Provider contract
 
-**对 substrate 的影响**：
-- substrate 不依赖 image / document / mcp_tool_use（业务侧），无影响
-- substrate 默认 cachePolicy 不启用，启用时 DeepSeek silently ignore，无功能影响（仅缓存命中率不同）
-- substrate 不显式 set anthropic-beta / version header，无影响
+provider endpoint 至少需要满足：
 
-#### 5.3.3 模型名映射
+- 接收 Anthropic Messages 形态的 `system` / `messages` / `tools` / `tool_choice` / `stream` 参数
+- 支持 content blocks 数组形式，尤其 `text` / `tool_use` / `tool_result`
+- 返回 Anthropic SSE 事件序列，至少覆盖 `message_start` / `content_block_delta` / `message_stop`
+- 对不支持的扩展字段给出稳定行为：显式报错或安全忽略，但不能改变基础协议语义
 
-DeepSeek anthropic endpoint 自动映射：
-- `claude-opus-*` → `deepseek-v4-pro`
-- `claude-haiku-*` / `claude-sonnet-*` → `deepseek-v4-flash`
-- 直接传 `deepseek-v4-pro` / `deepseek-v4-flash` 也可
+#### 5.3.4 代码层显式配置示例
 
-substrate caller 推荐显式传 model name：
 ```ts
 const provider = new AnthropicStreamingProvider({
-  apiKey: process.env.DEEPSEEK_API_KEY,
-  baseURL: 'https://api.deepseek.com/anthropic',
-  defaultModel: 'deepseek-v4-flash',
+  apiKey: process.env.API_KEY,
+  baseURL: process.env.BASE_URL,
+  defaultModel: process.env.MODEL,
+})
+```
+
+如果目标网关要求 Bearer token，则改用 `authToken`，不要同时注入 `apiKey` 与 `authToken`：
+
+```ts
+const provider = new AnthropicStreamingProvider({
+  authToken: process.env.AUTH_TOKEN,
+  baseURL: process.env.BASE_URL,
+  defaultModel: process.env.MODEL,
 })
 ```
 
@@ -439,13 +436,13 @@ caller code
 
 ---
 
-## 7. Examples（双模式 + DeepSeek default）
+## 7. Examples（scripted + vendor-neutral real API）
 
 ### 7.1 三件套结构
 
 ```
 neptune-engine/examples/
-├── _provider.ts                    ── 共享 provider factory（双模式逻辑）
+├── _provider.ts                    ── 共享 provider factory（三类正交 env）
 ├── sdk-pure.ts                     ── in-process LLM call，无 store
 ├── sdk-with-fs-store.ts            ── + FileRunStore 状态外化 + resume
 └── sdk-with-server.ts              ── + 极简 HTTP server + SSE 转发（生产场景核心模式）
@@ -459,23 +456,26 @@ USE_SCRIPTED_PROVIDER=true bun run examples/sdk-pure.ts
 USE_SCRIPTED_PROVIDER=true bun run examples/sdk-with-fs-store.ts
 USE_SCRIPTED_PROVIDER=true EXIT_AFTER_LISTEN=true bun run examples/sdk-with-server.ts
 
-# 模式 2：真 API（DeepSeek 默认，最便宜）
-DEEPSEEK_API_KEY=sk-... bash scripts/smoke-real-api.sh
+# 模式 2：真 API（任意 anthropic-compatible endpoint）
+API_KEY=... BASE_URL=https://your-provider/anthropic MODEL=provider-model \
+  bash scripts/smoke-real-api.sh
 
-# 模式 3：真 API（Anthropic 官方）
-ANTHROPIC_API_KEY=sk-ant-... MODEL=claude-sonnet-4-20250514 bash scripts/smoke-real-api.sh
+# 模式 3：真 API（Anthropic 官方 env 兼容）
+ANTHROPIC_API_KEY=<api-key> MODEL=provider-model \
+  bash scripts/smoke-real-api.sh
 
-# 模式 4：真 API（自定义 anthropic-compatible 第三方）
-API_KEY=... BASE_URL=https://your-proxy/anthropic MODEL=... bash scripts/smoke-real-api.sh
+# 模式 4：真 API（Bearer 网关）
+AUTH_MODE=bearer AUTH_TOKEN=... BASE_URL=https://your-gateway/v1 MODEL=provider-model \
+  bash scripts/smoke-real-api.sh
 ```
 
 ### 7.3 _provider.ts factory 规则
 
 ```ts
 // 1. USE_SCRIPTED_PROVIDER=true → ScriptedProvider（mock，3 turn 预设文本）
-// 2. BASE_URL 含 'deepseek' + DEEPSEEK_API_KEY → 自动走 DeepSeek 路径
-// 3. ANTHROPIC_API_KEY → 走 Anthropic 官方
-// 4. API_KEY + BASE_URL → 走自定义 anthropic-compatible
+// 2. AUTH_MODE=apikey → API_KEY 或 ANTHROPIC_API_KEY → x-api-key
+// 3. AUTH_MODE=bearer → AUTH_TOKEN 或 ANTHROPIC_AUTH_TOKEN → Bearer
+// 4. BASE_URL 或 ANTHROPIC_BASE_URL → endpoint（不做 vendor 名识别）
 // 5. MODEL 必填，缺失 process.exit(1) + 清晰提示
 ```
 
@@ -668,7 +668,7 @@ v6.0 已完成 substrate 一刀切清理。可选下一步：
 
 ### 12.1 高优先级（基于实战验证可能必需）
 
-- **Anthropic-compatible Provider 矩阵扩展**：当前 substrate 用 anthropic SDK + DeepSeek anthropic endpoint 跑通。增加 OpenRouter / Powapi / Bedrock anthropic 模式 / Vertex anthropic 模式的实测验证。
+- **Anthropic-compatible Provider 矩阵扩展**：当前 substrate 已用 anthropic SDK + 本地协议转换代理完成 true API smoke 3/3。下一步应建立 provider conformance matrix，按协议能力验证，而不是按 vendor 名称写分支。
 - **Smoke 矩阵化**：当前 smoke 一次跑 3 个 example，未来扩展到 tool_use / multi-turn / async background / cross-instance resume 等真 API smoke。
 - **product 端死代码联合修复**：QueryEngine.ts / PgSessionStore.ts 等 4 处引用断点。
 
@@ -676,7 +676,7 @@ v6.0 已完成 substrate 一刀切清理。可选下一步：
 
 - **OpenAI-compatible Provider（可选第二条路径）**：调研显示 OpenAI 协议与 Anthropic 不兼容（content blocks vs tool_calls / SSE 结构差异）。如果未来要支持纯 OpenAI / 部分 Gemini 模型，需要写 SSE 翻译层 + tool_calls 累积。**但用户应当优先要求 provider 端实现 anthropic-compatible**。
 - **MessageSerializer 多 provider 翻译策略**：当前序列化器写死 Anthropic 格式，所有 anthropic-compatible endpoint 都通用。如果引入 OpenAI，需要拆策略。
-- **ProviderRouter（model name → provider 路由）**：当前每个 AgentEngine 实例绑定一个 streamingProvider。未来考虑 per-call 路由（例如用 deepseek-v4-flash 跑 sub-agent，用 claude-opus 跑 main agent）。
+- **ProviderRouter（model capability → provider 路由）**：当前每个 AgentEngine 实例绑定一个 streamingProvider。未来考虑 per-call 路由，例如用 `low-cost-model` 跑 sub-agent、用 `high-capability-model` 跑 main agent；路由依据应是能力/成本/延迟标签，而不是 vendor 字符串特判。
 
 ### 12.3 长期（生态）
 
@@ -697,7 +697,7 @@ v6.0 一刀切删除所有 stub 代码（~3400 行），让 substrate 表面**�
 - 唯一 Provider 实现（AnthropicStreamingProvider）
 - 唯一 wire format（Anthropic Messages API）
 
-**多 provider 的支持依赖 provider 端实现 anthropic-compatible endpoint**——这是更可持续的路径，DeepSeek / OpenRouter / Powapi / claude-code-copilot 都已经在做。
+**多 provider 的支持依赖 provider 端实现 anthropic-compatible endpoint**——这是更可持续的路径。substrate 的边界是协议消费与执行闭环，不是 vendor 路由表。
 
 substrate 的承诺：**给你一个干净、强大、协议明确的 agent runtime kernel**。剩下的事——实现 provider 兼容、做 product 业务装饰、跑生产环境——交给生态。
 
